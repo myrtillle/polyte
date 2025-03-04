@@ -54,16 +54,11 @@ export const postsService = {
       .from('posts')
       .select(`
         *,
-        users:auth.users (
-          email,
-          raw_user_meta_data,
-          avatar_url
-        ),
-        category:categories (
+        category:categories!posts_category_id_fkey (
           id,
           name
         ),
-        collection_mode:collection_modes (
+        collection_mode:collection_modes!posts_collection_mode_id_fkey (
           id,
           name,
           icon
@@ -208,27 +203,15 @@ export const postsService = {
     const { data: post, error } = await supabase
       .from('posts')
       .select(`
-        *,
-        users:auth.users (
-          email,
-          raw_user_meta_data,
-          avatar_url
-        ),
-        category:categories (
-          id,
-          name
-        ),
-        collection_mode:collection_modes (
-          id,
-          name,
-          icon
-        ),
-        post_item_types (
-          item_types (
-            id,
-            name
-          )
-        )
+        id,
+        user_id,
+        category_id,
+        description,
+        kilograms,
+        collection_mode_id,
+        status,
+        created_at,
+        updated_at
       `)
       .eq('id', id)
       .single();

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, FlatList, RefreshControl } from 'react-native';
+import { View, StyleSheet, FlatList, RefreshControl, Modal, TouchableOpacity } from 'react-native';
 import { 
   Text, 
   Card, 
@@ -10,14 +10,13 @@ import {
   ActivityIndicator 
 } from 'react-native-paper';
 import { postsService } from '../../services/postsService';
+import { useNavigation } from '@react-navigation/native';
+import { RootStackParamList } from '../../types/navigation';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { CommonActions } from '@react-navigation/native';
 
 // Define interfaces
-interface Category {
-  id: number;
-  name: string;
-}
-
-interface Post {
+export interface Post {
   id: string;
   user_id: string;
   description: string;
@@ -51,6 +50,14 @@ interface Post {
     };
   }>;
 }
+
+interface Category {
+  id: number;
+  name: string;
+}
+
+// Define the navigation prop type
+type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Main'>;
 
 function formatTimeAgo(date: string) {
   const now = new Date();
@@ -88,10 +95,14 @@ export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const navigation = useNavigation<HomeScreenNavigationProp>();
 
   const fetchPosts = async () => {
     try {
       const data = await postsService.getPosts();
+      console.log('Fetched posts:', data);
       setPosts(data);
     } catch (error) {
       console.error('Error fetching posts:', error);
@@ -186,32 +197,35 @@ export default function HomeScreen() {
       <Card.Content>
         {/* User Info */}
         <View style={styles.userInfo}>
-          <Text variant="titleMedium">
+          <Text variant="titleMedium" style={styles.userName}>
             {item.users?.raw_user_meta_data?.username || item.users?.email}
           </Text>
-          <Text variant="bodySmall">
+          <Text variant="bodySmall" style={styles.timePosted}>
             {formatTimeAgo(item.created_at)}
           </Text>
         </View>
 
-        {/* Post Content */}
-        <Text variant="bodyMedium" style={styles.type}>
-          {item.category?.name}
+        {/* Collection Type */}
+        <Text variant="bodyMedium" style={styles.collectionType}>
+          {item.collection_mode?.name || 'No Collection Mode'}
         </Text>
-        <Text variant="bodyMedium" style={styles.category}>
-          {item.collection_mode?.name}
-        </Text>
+
+        {/* Description */}
         <Text variant="bodyMedium" style={styles.description}>
-          {item.description}
+          {item.description || 'No Description'}
         </Text>
-        
+
         {/* Item Types List */}
         <View style={styles.itemList}>
-          {item.post_item_types?.map((postItemType, index) => (
-            <Chip key={index} style={styles.itemChip}>
-              {postItemType.item_types.name}
-            </Chip>
-          ))}
+          {item.post_item_types && item.post_item_types.length > 0 ? (
+            item.post_item_types.map((postItemType, index) => (
+              <Chip key={index} style={styles.itemChip}>
+                {postItemType.item_types.name}
+              </Chip>
+            ))
+          ) : (
+            <Text>No Item Types</Text>
+          )}
         </View>
 
         {/* Post Image if exists */}
@@ -221,7 +235,19 @@ export default function HomeScreen() {
 
         {/* Action Buttons */}
         <View style={styles.actions}>
-          {/* Add action buttons if needed */}
+          <Button mode="contained" onPress={() => {/* Handle send message action */}}>Send Message</Button>
+          <View style={styles.commentContainer}>
+            <Button mode="outlined" onPress={() => {/* Handle comment action */}}>Comment</Button>
+          </View>
+          <TouchableOpacity
+            style={styles.dotsContainer}
+            onPress={() => {
+              setSelectedPost(item);
+              navigation.navigate('Options', { post: item });
+            }}
+          >
+            <Text style={styles.dots}>⋮</Text>
+          </TouchableOpacity>
         </View>
       </Card.Content>
     </Card>
@@ -240,6 +266,28 @@ export default function HomeScreen() {
         }
         contentContainerStyle={styles.listContent}
       />
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Options</Text>
+            <TouchableOpacity onPress={() => {/* Handle option 1 */}}>
+              <Text style={styles.modalOption}>Option 1</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => {/* Handle option 2 */}}>
+              <Text style={styles.modalOption}>Option 2</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setModalVisible(false)}>
+              <Text style={styles.modalClose}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -275,27 +323,35 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     padding: 16,
     backgroundColor: '#023F0F',
+    color: '#fff',
   },
   categoryChip: {
     marginRight: 8,
   },
   card: {
     marginBottom: 16,
+    borderRadius: 8,
+    backgroundColor: '#1A3620',
   },
   userInfo: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 8,
   },
-  type: {
+  userName: {
+    fontWeight: 'bold',
+  },
+  timePosted: {
+    color: '#888',
+  },
+  collectionType: {
     fontWeight: 'bold',
     marginBottom: 4,
-  },
-  category: {
-    marginBottom: 8,
+    color: '#fff',
   },
   description: {
     marginBottom: 8,
+    color: '#fff',
   },
   itemList: {
     flexDirection: 'row',
@@ -307,16 +363,64 @@ const styles = StyleSheet.create({
   },
   postImage: {
     marginVertical: 8,
+    borderRadius: 8,
   },
   actions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 8,
+    color: '#fff',
+  },
+  commentContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2C5735',
+    borderRadius: 4,
+  },
+  dotsContainer: {
+    // borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 2,
+    padding: 4,
+    marginLeft: 8,
+    backgroundColor: '#2C5735',
+  },
+  dots: {
+    fontSize: 20,
+    color: '#fff',
+    fontWeight: 'bold',
   },
   listContent: {
     padding: 16,
   },
   errorText: {
     color: 'red',
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    width: '80%',
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 20,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 20,
+  },
+  modalOption: {
+    fontSize: 16,
+    marginVertical: 10,
+  },
+  modalClose: {
+    fontSize: 16,
+    color: 'red',
+    marginTop: 20,
   },
 }); 

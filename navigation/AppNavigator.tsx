@@ -3,6 +3,7 @@ import { BottomTabNavigator } from './BottomTabNavigator';
 import LoginScreen from '../screens/LoginScreen';
 import SignupScreen from '../screens/SignupScreen';
 import PostDetailScreen from '../screens/PostDetailScreen';
+import OptionsScreen from '../screens/OptionsScreen';
 import { RootStackParamList } from '../types/navigation';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -30,6 +31,7 @@ export function AppNavigator() {
         component={PostDetailScreen}
         options={{ title: 'Post Details' }}
       />
+      <Stack.Screen name="Options" component={OptionsScreen} />
     </Stack.Navigator>
   );
 } 
