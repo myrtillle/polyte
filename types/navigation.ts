@@ -27,13 +27,13 @@ export interface Post {
   status: string;
   created_at: string;
   photos?: string[];
-  users?: {
+  user?: {
     email: string;
-    raw_user_meta_data?: {
-      username?: string;
-      first_name?: string;
-      last_name?: string;
-    };
+    name: string;
+    barangay: number;
+    purok: string;
+    first_name: string;
+    last_name: string;
   };
   category?: {
     id: number;
@@ -62,13 +62,9 @@ export type PostType = {
   status: string;
   created_at: string;
   photos?: string[];
-  users?: {
+  user?: {
     email: string;
-    raw_user_meta_data?: {
-      username?: string;
-      first_name?: string;
-      last_name?: string;
-    };
+    name: string;
   };
   category?: {
     id: number;

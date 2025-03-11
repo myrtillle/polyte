@@ -4,8 +4,8 @@ import { View, Text, StyleSheet, Image, TextInput, TouchableOpacity, ScrollView 
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../types/navigation';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { useRoute } from '@react-navigation/native';
-import { Button, Divider } from 'react-native-paper';
+import { useRoute, useNavigation } from '@react-navigation/native';
+import { Button, Divider, IconButton } from 'react-native-paper';
 import { commentsService } from '../../services/commentsService';
 import { supabase } from '../../services/supabase';
 
@@ -28,12 +28,13 @@ interface Comment {
 
 const ViewPost = () => {
   const route = useRoute<viewPostRouteProp>();
+  const navigation = useNavigation<viewPostNavigationProp>();
   const post = route?.params?.post ?? null;
-  console.log('ViewPost Route:', route);
-  console.log('ViewPost Route Params:', route?.params);
+  
   const [activeTab, setActiveTab] = useState('post');
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentText, setCommentText] = useState('');
+  const [error, setError] = useState('');
 
   if (!post) {
     return (
@@ -45,40 +46,80 @@ const ViewPost = () => {
 
   const fetchComments = async () => {
     if (!post?.id) return;
-    const data = await commentsService.getComments(post.id);
-    setComments(data);
-  };
-
-  const handleSendComment = async () => {
-    if (!commentText.trim() || !post?.id || !currentUser?.id) return;
-  
-    const newComment = await commentsService.addComment(post.id, currentUser.id, commentText);
-  
-    if (newComment) {
-      setComments(prev => [newComment, ...prev]); // Update UI immediately
-      setCommentText('');
+    try {
+      console.log('🔄 Fetching comments for post ID:', post.id);
+      const data = await commentsService.getComments(post.id);
+      console.log('📌 Fetched Comments:', JSON.stringify(data, null, 2)); // Logs comments
+      setComments(data);
+    } catch (error) {
+      console.error('❌ Error fetching comments:', error);
     }
   };  
+
+  const handleSendComment = async () => {
+    console.log("🔍 Debugging handleSendComment:");
+  console.log("➡️ commentText:", commentText);
+  console.log("➡️ post.id:", post?.id);
+  console.log("➡️ currentUser.id:", currentUser?.id);
+    if (!commentText.trim() || !post?.id || !currentUser?.id) {
+      console.warn("⚠️ Cannot send comment: Missing data!");
+      return;
+    }
+    
+    try {
+      console.log("📨 Sending comment:", commentText);
+  
+      const newComment = await commentsService.addComment(post.id, currentUser.id, commentText);
+  
+      if (newComment) {
+        console.log("✅ Comment Posted:", JSON.stringify(newComment, null, 2));
+        fetchComments(); // Reload comments
+        setCommentText('');
+      }
+    } catch (error) {
+      console.error("❌ Error posting comment:", error);
+    }
+  };  
+   
 
   const [currentUser, setCurrentUser] = useState<{ id: string } | null>(null);
   
   useEffect(() => {
+    if (post?.id) {
+      fetchComments();
+    }
+    console.log('ViewPost Route:', route);
+    console.log('ViewPost Route Params:', route?.params);
+  
+    console.log('📌 Post Data:', JSON.stringify(post, null, 2));
+  }, [post]);
+
+  useEffect(() => {
     const getUser = async () => {
       const { data, error } = await supabase.auth.getUser();
       if (error) {
-        console.error('Error fetching user:', error.message);
+        console.error('❌ Error fetching user:', error.message);
       } else {
-        setCurrentUser(data.user);
+        console.log("✅ Fetched User:", JSON.stringify(data.user, null, 2));
+        setCurrentUser(data.user); // ✅ Ensure this updates
       }
     };
   
     getUser();
   }, []);
-
+  
   console.log('ViewPost Post Object:', post);
 
   return (
     <View style={styles.container}> 
+      {/* Back Button */}
+      <IconButton
+        icon="arrow-left"
+        size={24}
+        onPress={() => navigation.goBack()}
+        style={styles.backButton}
+      />
+
       {/* Header Tabs */}
       <View style={styles.tabContainer}>
         <TouchableOpacity onPress={() => setActiveTab('post')} style={[styles.tab, activeTab === 'post' && styles.activeTab]}>
@@ -97,8 +138,8 @@ const ViewPost = () => {
             <Image source={{ uri: 'https://i.pravatar.cc/40' }} style={styles.avatar} />
 
             <View>
-              <Text style={styles.userName}>{post.users?.first_name} {post.users?.last_name}</Text>
-              <Text style={styles.userLocation}>📍 {post.users?.barangay}, Purok {post.users?.purok}</Text>
+              <Text style={styles.userName}>{post.user?.name}</Text>
+              <Text style={styles.userLocation}>📍 {post.user?.barangay}, Purok {post.user?.purok}</Text>
             </View>
             <Text style={styles.timeAgo}>⏳ {post.created_at}</Text>
           </View>
@@ -145,9 +186,13 @@ const ViewPost = () => {
               value={commentText}
               onChangeText={setCommentText}
             />
-            <TouchableOpacity onPress={handleSendComment} style={styles.sendButton}>
+            <TouchableOpacity onPress={() => {
+              console.log("📝 Comment button clicked!"); // Check if button is registering clicks
+              handleSendComment();
+            }} style={styles.sendButton}>
               <Text style={styles.sendButtonText}>📩</Text>
             </TouchableOpacity>
+
           </View>
         </ScrollView>
       ) : (
@@ -163,6 +208,10 @@ const styles = StyleSheet.create({
   container: { 
     flex: 1, 
     backgroundColor: '#122C0F' 
+  },
+  backButton: {
+    marginLeft: 10,
+    marginBottom: 10,
   },
   tabContainer: { 
     flexDirection: 'row', 

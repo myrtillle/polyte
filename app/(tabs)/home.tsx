@@ -19,6 +19,10 @@ export interface Post {
   user?: {
     email: string;
     name: string;
+    barangay: number;
+    purok: string;
+    first_name: string;
+    last_name: string;
   };
   category?: {
     id: number;
@@ -88,7 +92,7 @@ export default function HomeScreen() {
     try {
       const data = await postsService.getPosts();
       console.log('Fetched posts:', data);
-      console.log('Fetched posts:', JSON.stringify(data, null, 2)); 
+      // console.log('Fetched posts:', JSON.stringify(data, null, 2)); 
       setPosts(data);
     } catch (error) {
       console.error('Error fetching posts:', error);
@@ -206,7 +210,7 @@ export default function HomeScreen() {
         </Text>
 
         <View style={styles.itemList}>
-          {(item.post_item_types ?? []).length > 0 ? ( // ✅ Ensures it's always an array
+          {(item.post_item_types ?? []).length > 0 ? ( 
             (item.post_item_types ?? []).map((type, index) => (
               <Chip key={index} style={styles.itemChip}>
                 {type?.item_types?.name ?? "Unknown Type"} 
@@ -232,11 +236,9 @@ export default function HomeScreen() {
             style={styles.dotsContainer}
             onPress={() => {
               setSelectedPost(item);
-              if (!selectedPost) { // Prevent duplicate navigation
-                setSelectedPost(item);
                 console.log('Navigating to ViewPost with post:', item);
+                console.log('🚀 Navigating to ViewPost with post:', JSON.stringify(item, null, 2));
                 navigation.navigate('ViewPost', { post: item });
-              }
               // navigation.navigate('ViewPost', { post:item  });
               // navigation.getParent()?.navigate('ViewPost', { post: item });
              }}
