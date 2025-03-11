@@ -1,21 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, FlatList, RefreshControl, Modal, TouchableOpacity } from 'react-native';
-import { 
-  Text, 
-  Card, 
-  Button, 
-  Chip, 
-  Searchbar, 
-  IconButton,
-  ActivityIndicator 
-} from 'react-native-paper';
+import { Text, Card, Button, Chip, Searchbar, IconButton, ActivityIndicator } from 'react-native-paper';
 import { postsService } from '../../services/postsService';
 import { useNavigation } from '@react-navigation/native';
 import { RootStackParamList } from '../../types/navigation';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { CommonActions } from '@react-navigation/native';
 
-// Define interfaces
 export interface Post {
   id: string;
   user_id: string;
@@ -26,13 +16,9 @@ export interface Post {
   status: string;
   created_at: string;
   photos?: string[];
-  users?: {
+  user?: {
     email: string;
-    raw_user_meta_data?: {
-      username?: string;
-      first_name?: string;
-      last_name?: string;
-    };
+    name: string;
   };
   category?: {
     id: number;
@@ -56,7 +42,6 @@ interface Category {
   name: string;
 }
 
-// Define the navigation prop type
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Main'>;
 
 function formatTimeAgo(date: string) {
@@ -103,6 +88,7 @@ export default function HomeScreen() {
     try {
       const data = await postsService.getPosts();
       console.log('Fetched posts:', data);
+      console.log('Fetched posts:', JSON.stringify(data, null, 2)); 
       setPosts(data);
     } catch (error) {
       console.error('Error fetching posts:', error);
@@ -112,6 +98,7 @@ export default function HomeScreen() {
       setRefreshing(false);
     }
   };
+  
 
   useEffect(() => {
     fetchPosts();
@@ -187,40 +174,42 @@ export default function HomeScreen() {
     </View>
   );
 
-  // Filter posts based on selected category
   const filteredPosts = selectedCategory 
     ? posts.filter(post => post.category_id === selectedCategory)
     : posts;
 
+  // const navigateToViewPost = (post: Post) => {
+  //   navigation.navigate('ViewPost', { post });
+  // };
+
   const renderPost = ({ item }: { item: Post }) => (
     <Card style={styles.card}>
       <Card.Content>
-        {/* User Info */}
         <View style={styles.userInfo}>
-          <Text variant="titleMedium" style={styles.userName}>
-            {item.users?.raw_user_meta_data?.username || item.users?.email}
-          </Text>
+        <Text variant="titleMedium" style={styles.userName}>
+          
+        {item.user?.name ?? item.user?.email ?? 'Unknown User'}
+        </Text>
+
+
           <Text variant="bodySmall" style={styles.timePosted}>
             {formatTimeAgo(item.created_at)}
           </Text>
         </View>
-
-        {/* Collection Type */}
+      
         <Text variant="bodyMedium" style={styles.collectionType}>
           {item.collection_mode?.name || 'No Collection Mode'}
         </Text>
 
-        {/* Description */}
         <Text variant="bodyMedium" style={styles.description}>
           {item.description || 'No Description'}
         </Text>
 
-        {/* Item Types List */}
         <View style={styles.itemList}>
-          {item.post_item_types && item.post_item_types.length > 0 ? (
-            item.post_item_types.map((postItemType, index) => (
+          {(item.post_item_types ?? []).length > 0 ? ( // ✅ Ensures it's always an array
+            (item.post_item_types ?? []).map((type, index) => (
               <Chip key={index} style={styles.itemChip}>
-                {postItemType.item_types.name}
+                {type?.item_types?.name ?? "Unknown Type"} 
               </Chip>
             ))
           ) : (
@@ -228,23 +217,29 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* Post Image if exists */}
         {item.photos && item.photos.length > 0 && (
           <Card.Cover source={{ uri: item.photos[0] }} style={styles.postImage} />
         )}
 
-        {/* Action Buttons */}
         <View style={styles.actions}>
           <Button mode="contained" onPress={() => {/* Handle send message action */}}>Send Message</Button>
           <View style={styles.commentContainer}>
-            <Button mode="outlined" onPress={() => {/* Handle comment action */}}>Comment</Button>
+            <Button mode="outlined" onPress={() => {
+              navigation.navigate('Comment', { post: item }); 
+            }}>Comment</Button>
           </View>
           <TouchableOpacity
             style={styles.dotsContainer}
             onPress={() => {
               setSelectedPost(item);
-              navigation.navigate('Options', { post: item });
-            }}
+              if (!selectedPost) { // Prevent duplicate navigation
+                setSelectedPost(item);
+                console.log('Navigating to ViewPost with post:', item);
+                navigation.navigate('ViewPost', { post: item });
+              }
+              // navigation.navigate('ViewPost', { post:item  });
+              // navigation.getParent()?.navigate('ViewPost', { post: item });
+             }}
           >
             <Text style={styles.dots}>⋮</Text>
           </TouchableOpacity>
@@ -340,6 +335,7 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontWeight: 'bold',
+    color: '#fff',
   },
   timePosted: {
     color: '#888',

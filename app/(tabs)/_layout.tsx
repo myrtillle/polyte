@@ -59,19 +59,10 @@ export default function TabsLayout() {
           ),
         }}
       />
-      {/* Remove or hide the index and explore tabs */}
-      {/* <Tabs.Screen
-        name="index"
-        options={{
-          href: null, // This will hide the tab
-        }}
-      />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          href: null, // This will hide the tab
-        }}
-      /> */}
+      <Tabs.Screen name="index" options={{ href: null }} />
+      <Tabs.Screen name="explore" options={{ href: null }} />
+      <Tabs.Screen name="ViewPost" options={{ href: null }} />
+      <Tabs.Screen name="CommentScreen" options={{ href: null }} />
     </Tabs>
   );
 }

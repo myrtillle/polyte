@@ -8,23 +8,22 @@ export interface Location {
 export interface Post {
   id: string;
   user_id: string;
-  category_id: number;
   description: string;
   kilograms: number;
+  category_id: number;
   collection_mode_id: number;
-  location?: Location;
-  photos?: string[];
   status: string;
   created_at: string;
   updated_at: string;
+  photos?: string[];
   users?: {
+    id: string; // ✅ Added to match Supabase data
     email: string;
-    raw_user_meta_data: {
+    raw_user_meta_data?: {
+      username?: string;
       first_name?: string;
       last_name?: string;
-      username?: string;
     };
-    avatar_url?: string;
   };
   category?: {
     id: number;
@@ -41,7 +40,7 @@ export interface Post {
       name: string;
     };
   }>;
-}
+} 
 
 // New interface for creating a post
 export interface CreatePostData extends Omit<Post, 'id' | 'created_at' | 'updated_at'> {
@@ -68,14 +67,28 @@ export const postsService = {
             id,
             name
           )
+        ),
+        personal_users (
+          id,
+          email,
+          first_name,
+          last_name
         )
       `)
       .eq('status', 'active')
       .order('created_at', { ascending: false });
 
     if (postsError) throw postsError;
-    return posts;
-  },
+    
+    const formattedPosts = posts.map(post => ({
+      ...post,
+      user: post.personal_users
+        ? { email: post.personal_users.email, name: `${post.personal_users.first_name} ${post.personal_users.last_name}` }
+        : null
+    }));
+  
+    return formattedPosts;
+  }, 
 
   async createPost(postData: CreatePostData) {
     const { item_type_ids, ...post } = postData;

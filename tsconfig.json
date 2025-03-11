@@ -20,7 +20,8 @@
     "types": [
       "react",
       "react-native",
-      "react-native-maps"
+      "react-native-maps",
+      "jest"
     ]
   },
   "include": [

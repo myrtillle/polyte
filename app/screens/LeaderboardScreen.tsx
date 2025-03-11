@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, FlatList } from 'react-native';
 import { Title, Card, Text, SegmentedButtons } from 'react-native-paper';
-import { supabase } from '../services/supabase';
+import { supabase } from '../../services/supabase';
 
 type TimeFilter = 'Weekly' | 'Monthly' | 'Yearly' | 'All-time';
 type RankingType = 'Individual' | 'Purok';
@@ -71,7 +71,7 @@ export default function LeaderboardScreen() {
 
       <SegmentedButtons
         value={rankingType}
-        onValueChange={setRankingType}
+        onValueChange={(value) => setRankingType(value as RankingType)}
         buttons={[
           { label: 'Individual', value: 'Individual' },
           { label: 'Purok', value: 'Purok' },
@@ -81,7 +81,7 @@ export default function LeaderboardScreen() {
 
       <SegmentedButtons
         value={timeFilter}
-        onValueChange={setTimeFilter}
+        onValueChange={(value) => setTimeFilter(value as TimeFilter)}
         buttons={[
           { label: 'Weekly', value: 'Weekly' },
           { label: 'Monthly', value: 'Monthly' },

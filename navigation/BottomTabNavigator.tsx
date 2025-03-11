@@ -1,10 +1,10 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import HomeScreen from '../screens/HomeScreen';
-import LeaderboardScreen from '../screens/LeaderboardScreen';
-import PostScreen from '../screens/PostScreen';
-import MessagesScreen from '../screens/MessagesScreen';
-import ProfileScreen from '../screens/ProfileScreen';
+import HomeScreen from '../app/(tabs)/home';
+import LeaderboardScreen from '../app/screens/LeaderboardScreen';
+import PostScreen from '../app/(tabs)/post';
+import MessagesScreen from '../app/(tabs)/messages';
+import ProfileScreen from '../app/(tabs)/profile';
 import { BottomTabParamList } from '../types/navigation';
 
 const Tab = createBottomTabNavigator<BottomTabParamList>();

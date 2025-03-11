@@ -1,9 +1,10 @@
+import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { BottomTabNavigator } from './BottomTabNavigator';
-import LoginScreen from '../screens/LoginScreen';
-import SignupScreen from '../screens/SignupScreen';
-import PostDetailScreen from '../screens/PostDetailScreen';
-import OptionsScreen from '../screens/OptionsScreen';
+import LoginScreen from '../app/screens/LoginScreen';
+import SignupScreen from '../app/screens/SignupScreen';
+import ViewPost from '../app/(tabs)/ViewPost';  
+import CommentScreen from '../app/(tabs)/CommentScreen';
 import { RootStackParamList } from '../types/navigation';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -21,18 +22,24 @@ export function AppNavigator() {
         component={SignupScreen}
         options={{ headerShown: false }}
       />
+      {/* ✅ Ensured BottomTabNavigator is inside the same Stack */}
       <Stack.Screen 
         name="Main" 
         component={BottomTabNavigator}
-        options={{ headerShown: false }}
+        options={{ headerShown: false }} 
+      />
+      {/* ✅ Added ViewPost to the stack so home.tsx can navigate to it */}
+      <Stack.Screen 
+        name="ViewPost" 
+        component={ViewPost}
+        options={{ title: 'View Post' }} 
       />
       <Stack.Screen 
-        name="PostDetail" 
-        component={PostDetailScreen}
-        options={{ title: 'Post Details' }}
+        name="Comment" 
+        component={CommentScreen} 
       />
-      <Stack.Screen name="Options" component={OptionsScreen} />
     </Stack.Navigator>
   );
-} 
+};
 
+export default AppNavigator;

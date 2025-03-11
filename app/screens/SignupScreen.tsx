@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { TextInput, Button, Title, Text, SegmentedButtons } from 'react-native-paper';
 import { router } from 'expo-router';
-import { authService } from '../services/authService';
+import { authService } from '../../services/authService';
 
 type AccountType = 'Personal' | 'Barangay';
 
@@ -45,8 +45,8 @@ export default function SignupScreen() {
         last_name: lastName,
         username,
         barangay: 'Bankerohan', // Default value
-        purok: parseInt(purok),
-        account_type: accountType,
+        purok: String(purok),
+        account_type: accountType.toLowerCase() as 'personal' | 'barangay',
       });
 
       if (error) throw error;

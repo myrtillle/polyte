@@ -72,7 +72,7 @@ export const authService = {
       return { data: authData, error: null };
     } catch (error) {
       console.error('Error in signUp:', error);
-      return { data: null, error };
+      return { data: null, error: error as AuthError | null };
     }
   },
 
@@ -127,7 +127,11 @@ export const authService = {
   },
 
   async resendConfirmation(email: string) {
-    const { error } = await supabase.auth.resendConfirmationEmail(email);
+    const { error } = await supabase.auth.resend({
+      type: 'signup', // ✅ Use "signup" for email confirmation resend
+      email,
+    });
+    
     return { error };
   }
 };

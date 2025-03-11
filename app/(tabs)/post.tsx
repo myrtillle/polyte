@@ -121,7 +121,7 @@ export default function PostScreen() {
     }
   };
 
-  // Helper function to toggle item type selection
+  // toggle item type selection
   const toggleItemType = (typeId: number) => {
     setFormData(prev => ({
       ...prev,
