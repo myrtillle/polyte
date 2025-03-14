@@ -1,114 +1,221 @@
 // ViewPostScreen.tsx
 import React,  { useState, useEffect }  from 'react';
-import { View, Text, StyleSheet, Image, TextInput, TouchableOpacity, ScrollView  } from 'react-native';
+import { View, Text, StyleSheet, Image, TextInput, TouchableOpacity, ScrollView, ActivityIndicator  } from 'react-native';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../types/navigation';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Button, Divider, IconButton } from 'react-native-paper';
 import { commentsService } from '../../services/commentsService';
+// import { offersService } from '../../services/offersService';
 import { supabase } from '../../services/supabase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Post } from '../../types/navigation'; 
+import { Comment } from '../../types/navigation'; 
+import { getOffersByPost } from '../../services/offersService'; 
 
-type viewPostRouteProp = RouteProp<RootStackParamList, 'ViewPost'>;
-type viewPostNavigationProp = StackNavigationProp<RootStackParamList, 'ViewPost'>;
-
-type Props = {
-  route: viewPostRouteProp;
-  navigation: viewPostNavigationProp;
-};
-
-interface Comment {
+interface Offer {
   id: string;
   post_id: string;
   user_id: string;
-  user_name: string;
-  comment_text: string;
-  created_at: string;
+  offered_items: string[];
+  offered_weight: number;
+  requested_weight: number;
+  price: number;
+  message?: string;
+  images?: string[];
 }
 
+
+type ViewPostRouteProp = RouteProp<RootStackParamList, 'ViewPost'>;
+type viewPostNavigationProp = StackNavigationProp<RootStackParamList, 'ViewPost'>;
+
 const ViewPost = () => {
-  const route = useRoute<viewPostRouteProp>();
+  const route = useRoute<ViewPostRouteProp>();
   const navigation = useNavigation<viewPostNavigationProp>();
-  const post = route?.params?.post ?? null;
-  
-  const [activeTab, setActiveTab] = useState('post');
+
+  // Only ONE state for post
+  const [post, setPost] = useState<Post | null>(route.params?.post ?? null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentText, setCommentText] = useState('');
   const [error, setError] = useState('');
-
-  if (!post) {
-    return (
-      <View style={styles.container}>
-        <Text>No post data available.</Text>
-      </View>
-    );
-  }
-
-  const fetchComments = async () => {
-    if (!post?.id) return;
-    try {
-      console.log('🔄 Fetching comments for post ID:', post.id);
-      const data = await commentsService.getComments(post.id);
-      console.log('📌 Fetched Comments:', JSON.stringify(data, null, 2)); // Logs comments
-      setComments(data);
-    } catch (error) {
-      console.error('❌ Error fetching comments:', error);
-    }
-  };  
-
-  const handleSendComment = async () => {
-    console.log("🔍 Debugging handleSendComment:");
-  console.log("➡️ commentText:", commentText);
-  console.log("➡️ post.id:", post?.id);
-  console.log("➡️ currentUser.id:", currentUser?.id);
-    if (!commentText.trim() || !post?.id || !currentUser?.id) {
-      console.warn("⚠️ Cannot send comment: Missing data!");
-      return;
-    }
-    
-    try {
-      console.log("📨 Sending comment:", commentText);
-  
-      const newComment = await commentsService.addComment(post.id, currentUser.id, commentText);
-  
-      if (newComment) {
-        console.log("✅ Comment Posted:", JSON.stringify(newComment, null, 2));
-        fetchComments(); // Reload comments
-        setCommentText('');
-      }
-    } catch (error) {
-      console.error("❌ Error posting comment:", error);
-    }
-  };  
-   
-
+  const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<{ id: string } | null>(null);
-  
-  useEffect(() => {
-    if (post?.id) {
-      fetchComments();
-    }
-    console.log('ViewPost Route:', route);
-    console.log('ViewPost Route Params:', route?.params);
-  
-    console.log('📌 Post Data:', JSON.stringify(post, null, 2));
-  }, [post]);
+  const [activeTab, setActiveTab] = useState('post');
+  const [offers, setOffers] = useState<Offer[]>([]);
 
-  useEffect(() => {
-    const getUser = async () => {
-      const { data, error } = await supabase.auth.getUser();
-      if (error) {
-        console.error('❌ Error fetching user:', error.message);
-      } else {
-        console.log("✅ Fetched User:", JSON.stringify(data.user, null, 2));
-        setCurrentUser(data.user); // ✅ Ensure this updates
+
+    // Fetch comments
+    const fetchComments = async (postId: string) => {
+      try {
+        console.log('🔄 Fetching comments for post ID:', postId);
+        const data = await commentsService.getComments(postId);
+        // console.log('Fetched Comments:', JSON.stringify(data, null, 2));
+        setComments(data);
+      } catch (error) {
+        console.error('Error fetching comments:', error);
       }
     };
   
-    getUser();
-  }, []);
-  
-  console.log('ViewPost Post Object:', post);
+    const handleSendComment = async () => {
+      console.log("🔍 Debugging handleSendComment:");
+      console.log("➡️ commentText:", commentText);
+      console.log("➡️ post.id:", post?.id);
+      console.log("➡️ currentUser.id:", currentUser?.id);
+      
+      if (!commentText.trim() || !post?.id || !currentUser?.id) {
+        console.warn("⚠️ Cannot send comment: Missing data!");
+        return;
+      }
+      
+      try {
+        console.log("Sending comment:", commentText);
+        const newComment = await commentsService.addComment(post.id, currentUser.id, commentText);
+    
+        if (newComment) {
+          console.log("Comment Posted:", JSON.stringify(newComment, null, 2));
+          fetchComments(post.id);
+          setCommentText('');
+        }
+      } catch (error) {
+        console.error("Error posting comment:", error);
+      }
+    };
+
+    const fetchOffers = async () => {
+      if (!post?.id) return;
+      try {
+        console.log("Fetching offers for post ID:", post.id);
+        const data = await getOffersByPost(post.id);
+        
+        if (!data) {
+          console.error("No offers received.");
+          setOffers([]);
+          return;
+        }
+    
+        // images parsed correctly
+        const formattedOffers = data.map(offer => ({
+          ...offer,
+          images: typeof offer.images === "string" ? JSON.parse(offer.images) : offer.images ?? [],
+        }));
+    
+        console.log("Fetched Offers:", JSON.stringify(formattedOffers, null, 2));
+        setOffers(formattedOffers);
+      } catch (error) {
+        console.error("Error fetching offers:", error);
+      }
+    };
+    
+    const handleDeleteOffer = async (offerId: string) => {
+      try {
+        const { error } = await supabase
+          .from("offers")
+          .delete()
+          .eq("id", offerId);
+    
+        if (error) throw error;
+    
+        console.log("✅ Offer deleted successfully");
+        setOffers((prev) => prev.filter((offer) => offer.id !== offerId));
+      } catch (error) {
+        console.error("❌ Error deleting offer:", error);
+      }
+    };
+    
+    const handleDeclineOffer = async (offerId: string) => {
+      console.log("Declining offer ID:", offerId);
+      // Add your logic here to mark the offer as "declined"
+    };
+    
+    const handleAcceptOffer = async (offerId: string) => {
+      console.log("Accepting offer ID:", offerId);
+      // Add logic to mark the offer as "accepted"
+    };
+    
+    const handleChatWithUser = (userId: string) => {
+      console.log("Chatting with user ID:", userId);
+      // Navigate to chat screen
+      // navigation.navigate("Messages", { userId });
+    };    
+
+    const isOfferOwner = (offer: Offer) => {
+      console.log(`Checking if ${currentUser?.id} is owner of offer ${offer.id}: ${offer.user_id === currentUser?.id}`);
+      return offer.user_id === currentUser?.id;
+    };
+    
+    const isPostOwner = () => {
+      console.log(`Checking if ${currentUser?.id} is owner of post ${post?.id}: ${post?.user_id === currentUser?.id}`);
+      return post?.user_id === currentUser?.id;
+    };
+    
+    
+    // Load post from AsyncStorage if missing
+    useEffect(() => {
+      const loadPost = async () => {
+        if (!post) {
+          const storedPost = await AsyncStorage.getItem('currentPost');
+          if (storedPost) {
+            setPost(JSON.parse(storedPost));
+          }
+        }
+        setLoading(false);
+      };
+      loadPost();
+    }, []);
+
+    // Store post in AsyncStorage when navigating
+    useEffect(() => {
+      if (route.params?.post) {
+        setPost(route.params.post);
+        AsyncStorage.setItem('currentPost', JSON.stringify(route.params.post));
+      }
+    }, [route.params?.post]);
+
+    // Fetch comments only when a new post is received
+    useEffect(() => {
+      if (route.params?.post?.id) {
+        fetchComments(route.params.post.id);
+      }
+    }, [route.params?.post]);
+
+    if (!post) {
+      return (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Text>Post not found</Text>
+        </View>
+      );
+    }
+
+    // Logged in user
+    useEffect(() => {
+      const getUser = async () => {
+        const { data, error } = await supabase.auth.getUser();
+        if (error) {
+          console.error('Error fetching user:', error.message);
+        } else {
+          console.log("Authenticated User:", JSON.stringify(data.user, null, 2));
+          setCurrentUser(data.user);
+        }
+      };
+      getUser();
+    }, []);    
+   
+    useEffect(() => {
+      if (activeTab === 'offers' && offers.length === 0) {
+        fetchOffers();
+      }
+    }, [activeTab]);       
+    
+    useEffect(() => {
+      console.log("Current User ID:", currentUser?.id);
+      console.log("Post Owner ID:", post?.user_id);
+      offers.forEach((offer) => {
+        console.log(`Offer ID: ${offer.id}, Made By User ID: ${offer.user_id}`);
+      });
+    }, [currentUser, offers]);
+    
+    // console.log('ViewPost  Post Object:', post);
 
   return (
     <View style={styles.container}> 
@@ -158,7 +265,16 @@ const ViewPost = () => {
           {/* Action Buttons */}
           <View style={styles.actions}>
             <Button mode="contained" style={styles.actionButton}>Send Message</Button>
-            <Button mode="contained" style={styles.actionButton}>Send Offer</Button>
+            {/* <Button mode="contained" style={styles.actionButton}>Send Offer</Button> */}
+            <TouchableOpacity 
+              style={styles.actionButton} 
+              onPress={() => {
+                console.log("🚀 Navigating to MakeOffer with:", JSON.stringify(post, null, 2));
+                navigation.navigate('MakeOffer', { post });
+              }}>
+              <Text>Send Offer</Text>
+            </TouchableOpacity>
+
             <TouchableOpacity style={styles.moreOptions}>
               <Text style={styles.moreOptionsText}>⋮</Text>
             </TouchableOpacity>
@@ -196,9 +312,80 @@ const ViewPost = () => {
           </View>
         </ScrollView>
       ) : (
-        <View style={styles.emptyTab}>
-          <Text>No offers yet.</Text>
-        </View>
+        activeTab === 'offers' ? (
+          <ScrollView style={styles.content}>
+            {offers.length === 0 ? (
+              <Text style={styles.noOffers}>No offers yet.</Text>
+            ) : (
+              offers.map((offer, index) => {
+                const isUserOfferOwner = isOfferOwner(offer);
+                const isUserPostOwner = isPostOwner();
+        
+                return (
+                  <View key={index} style={styles.offerCard}>
+                    <Text style={styles.offerUser}>👤 User ID: {offer.user_id}</Text>
+                    <Text style={styles.offerDetails}>📦 Items: {offer.offered_items.join(', ')}</Text>
+                    <Text style={styles.offerDetails}>⚖️ Weight: {offer.offered_weight} of {offer.requested_weight} kg</Text>
+                    <Text style={styles.offerDetails}>💰 Price: ₱{offer.price.toFixed(2)}</Text>
+                    <Text style={styles.offerMessage}>📩 {offer.message || 'No message provided'}</Text>
+        
+                    {/* Offer Images */}
+                    {offer.images && offer.images.length > 0 ? (
+                      <ScrollView horizontal style={styles.imageScroll}>
+                        {offer.images.map((image, i) => (
+                          <Image key={i} source={{ uri: image }} style={styles.offerImage} />
+                        ))}
+                      </ScrollView>
+                    ) : (
+                      <Text style={styles.noImage}>No images available</Text>
+                    )}
+        
+                    {/* Conditional Buttons */}
+                    <View style={styles.actionButtons}>
+                      {isUserOfferOwner ? (
+                        <>
+                          <TouchableOpacity 
+                            style={styles.deleteButton} 
+                            onPress={() => handleDeleteOffer(offer.id)}
+                          >
+                            <Text style={styles.buttonText}>🗑 Delete My Offer</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity style={styles.moreOptions}>
+                            <Text style={styles.moreOptionsText}>⋮</Text>
+                          </TouchableOpacity>
+                        </>
+                      ) : isUserPostOwner ? (
+                        <>
+                          <TouchableOpacity 
+                            style={styles.declineButton} 
+                            onPress={() => handleDeclineOffer(offer.id)}
+                          >
+                            <Text style={styles.buttonText}>❌ Decline</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity 
+                            style={styles.chatButton} 
+                            onPress={() => handleChatWithUser(offer.user_id)}
+                          >
+                            <Text style={styles.buttonText}>💬 Chat</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity 
+                            style={styles.acceptButton} 
+                            onPress={() => handleAcceptOffer(offer.id)}
+                          >
+                            <Text style={styles.buttonText}>✅ Accept</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity style={styles.moreOptions}>
+                            <Text style={styles.moreOptionsText}>⋮</Text>
+                          </TouchableOpacity>
+                        </>
+                      ) : null}
+                    </View>
+                  </View>
+                );
+              })
+            )}
+          </ScrollView>
+        ) : null
       )}
     </View>
   );
@@ -345,6 +532,102 @@ const styles = StyleSheet.create({
     justifyContent: 'center', 
     alignItems: 'center' 
   },
+  noOffers: {
+    color: '#B0B0B0',
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 20,
+  },
+  
+  offerCard: {
+    backgroundColor: '#1F3D19',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+  
+  offerUser: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#00FF57',
+  },
+  
+  offerDetails: {
+    fontSize: 14,
+    color: 'white',
+    marginTop: 4,
+  },
+  
+  offerMessage: {
+    fontSize: 12,
+    fontStyle: 'italic',
+    color: '#B0B0B0',
+    marginTop: 8,
+  },  
+  imageScroll: {
+    marginTop: 10,
+    flexDirection: 'row',
+  },
+  
+  offerImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    marginRight: 8,
+  },
+  
+  noImage: {
+    color: '#B0B0B0',
+    fontSize: 12,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: 5,
+  },
+  actionButtons: {
+    flex: 1, 
+    marginHorizontal: 5 
+  },
+  buttonText:{
+    flex: 1, 
+    marginHorizontal: 5 
+  },
+  deleteButton: {
+    flex: 1, 
+    marginHorizontal: 5,
+    backgroundColor: 'red', // ✅ Ensure visibility
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  
+  declineButton: {
+    flex: 1, 
+    marginHorizontal: 5,
+    backgroundColor: '#B22222', // Dark Red
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  
+  chatButton: {
+    flex: 1, 
+    marginHorizontal: 5,
+    backgroundColor: '#007bff', // Blue
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  
+  acceptButton: {
+    flex: 1, 
+    marginHorizontal: 5, 
+    backgroundColor: '#28a745', // Green
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  
+
 });
 
 export default ViewPost;

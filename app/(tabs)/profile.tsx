@@ -7,7 +7,7 @@ const ProfileScreen = () => {
     <View style={styles.container}>
       <View style={styles.profileHeader}>
         <Image
-          source={{ uri: 'https://via.placeholder.com/100' }} // Static profile image
+          source={{ uri: 'https://i.pravatar.cc/100' }} // Static profile image
           style={styles.profileImage}
         />
         <Text style={styles.profileName}>Minji Kim</Text>

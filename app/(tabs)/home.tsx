@@ -226,10 +226,10 @@ export default function HomeScreen() {
         )}
 
         <View style={styles.actions}>
-          <Button mode="contained" onPress={() => {/* Handle send message action */}}>Send Message</Button>
+          <Button mode="contained" onPress={() => {/* send message action */}}>Send Message</Button>
           <View style={styles.commentContainer}>
             <Button mode="outlined" onPress={() => {
-              navigation.navigate('Comment', { post: item }); 
+              navigation.navigate('ViewPost', { post: item }); 
             }}>Comment</Button>
           </View>
           <TouchableOpacity

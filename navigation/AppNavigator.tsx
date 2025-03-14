@@ -4,7 +4,7 @@ import { BottomTabNavigator } from './BottomTabNavigator';
 import LoginScreen from '../app/screens/LoginScreen';
 import SignupScreen from '../app/screens/SignupScreen';
 import ViewPost from '../app/(tabs)/ViewPost';  
-import CommentScreen from '../app/(tabs)/CommentScreen';
+import MakeOffer from '../app/(tabs)/MakeOffer';
 import { RootStackParamList } from '../types/navigation';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -22,21 +22,19 @@ export function AppNavigator() {
         component={SignupScreen}
         options={{ headerShown: false }}
       />
-      {/* ✅ Ensured BottomTabNavigator is inside the same Stack */}
       <Stack.Screen 
         name="Main" 
         component={BottomTabNavigator}
         options={{ headerShown: false }} 
       />
-      {/* ✅ Added ViewPost to the stack so home.tsx can navigate to it */}
       <Stack.Screen 
         name="ViewPost" 
         component={ViewPost}
         options={{ title: 'View Post' }} 
       />
       <Stack.Screen 
-        name="Comment" 
-        component={CommentScreen} 
+        name="MakeOffer" 
+        component={MakeOffer} 
       />
     </Stack.Navigator>
   );

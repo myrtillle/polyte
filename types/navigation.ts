@@ -5,8 +5,8 @@ export type RootStackParamList = {
   Signup: undefined;
   Main: undefined;
   Leaderboard: undefined;
-  ViewPost: { post: Post } | undefined;
-  Comment: { post: Post };
+  ViewPost: { post: Post };
+  MakeOffer: {post: Post };
 };
 
 export type BottomTabParamList = {
@@ -51,6 +51,15 @@ export interface Post {
     };
   }>;
 }
+
+export type Comment = {
+  id: string;
+  post_id: string;
+  user_id: string;
+  user_name: string;
+  comment_text: string;
+  created_at: string;
+};
 
 export type PostType = {
   id: string;
