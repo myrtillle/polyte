@@ -341,7 +341,7 @@ const ViewPost = () => {
                     )}
         
                     {/* Conditional Buttons */}
-                    <View style={styles.actionButtons}>
+                    <View style={styles.actionButton}>
                       {isUserOfferOwner ? (
                         <>
                           <TouchableOpacity 
@@ -355,7 +355,7 @@ const ViewPost = () => {
                           </TouchableOpacity>
                         </>
                       ) : isUserPostOwner ? (
-                        <>
+                        <View style={styles.actionButtonContainer}>
                           <TouchableOpacity 
                             style={styles.declineButton} 
                             onPress={() => handleDeclineOffer(offer.id)}
@@ -377,7 +377,7 @@ const ViewPost = () => {
                           <TouchableOpacity style={styles.moreOptions}>
                             <Text style={styles.moreOptionsText}>⋮</Text>
                           </TouchableOpacity>
-                        </>
+                        </View>
                       ) : null}
                     </View>
                   </View>
@@ -467,13 +467,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between', 
     marginBottom: 10 
   },
-  actionButton: { 
-    flex: 1, 
-    marginHorizontal: 5 
-  },
   moreOptions: { 
-    justifyContent: 'center', 
-    alignItems: 'center', 
+    backgroundColor: '#ccc', // Gray
     padding: 10 
   },
   moreOptionsText: { 
@@ -583,9 +578,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 5,
   },
-  actionButtons: {
+  actionButton: {
     flex: 1, 
-    marginHorizontal: 5 
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginHorizontal: 5, 
+  },
+  actionButtonContainer:{
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    marginTop: 10,
   },
   buttonText:{
     flex: 1, 
@@ -597,34 +600,24 @@ const styles = StyleSheet.create({
     backgroundColor: 'red', // ✅ Ensure visibility
     padding: 10,
     borderRadius: 5,
-    alignItems: 'center',
   },
   
   declineButton: {
-    flex: 1, 
-    marginHorizontal: 5,
     backgroundColor: '#B22222', // Dark Red
     padding: 10,
     borderRadius: 5,
-    alignItems: 'center',
   },
   
   chatButton: {
-    flex: 1, 
-    marginHorizontal: 5,
     backgroundColor: '#007bff', // Blue
     padding: 10,
     borderRadius: 5,
-    alignItems: 'center',
   },
   
   acceptButton: {
-    flex: 1, 
-    marginHorizontal: 5, 
     backgroundColor: '#28a745', // Green
     padding: 10,
     borderRadius: 5,
-    alignItems: 'center',
   },
   
 

@@ -1,8 +1,27 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
-import { Card } from 'react-native-paper';
+import { View, Text, StyleSheet, Image, TouchableOpacity  } from 'react-native';
+import { Card, Button } from 'react-native-paper';
+import { supabase } from '../../services/supabase';
+import { useNavigation } from '@react-navigation/native';
+import type { NavigationProp } from '@react-navigation/native'; 
+import { RootStackParamList } from '../../types/navigation';
 
 const ProfileScreen = () => {
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error("❌ Logout Failed:", error.message);
+    } else {
+      console.log("✅ Logged out successfully!");
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' as keyof RootStackParamList }], // ✅ Ensure TypeScript recognizes 'Login'
+      });
+    }
+  };  
+
   return (
     <View style={styles.container}>
       <View style={styles.profileHeader}>
@@ -45,6 +64,11 @@ const ProfileScreen = () => {
           <Text style={styles.statLabel}>Transaction History</Text>
         </Card.Content>
       </Card>
+
+      {/* Logout Button */}
+      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        <Text style={styles.logoutButtonText}>Logout</Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -101,6 +125,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  logoutButton: {
+    marginTop: 20,
+    backgroundColor: 'red',
+    padding: 12,
+    borderRadius: 5,
+    alignItems: 'center',
+  },
+  logoutButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 });
 
-export default ProfileScreen; 
+export default ProfileScreen;
