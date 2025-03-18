@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, Image, StyleSheet } from 'react-native';
 import { TextInput, Button, Text } from 'react-native-paper';
 import { router, useLocalSearchParams } from 'expo-router';
 import { authService } from '../../services/authService';
@@ -53,7 +53,12 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Login</Text>
+    {/* 🔹 Logo & Login Text */}
+    <View style={styles.logoContainer}>
+      <Image source={require('../../assets/images/polyte-logo.png')} style={styles.logo} />
+
+      <Text style={styles.loginText}>LOGIN</Text>
+    </View>
 
       {/* Show success message from signup if exists */}
       {successMessage ? (
@@ -64,9 +69,9 @@ export default function LoginScreen() {
 
       {/* Show error message if exists */}
       {error ? (
-        <View style={styles.messageContainer}>
+         <View style={styles.errorContainer}>
           <Text style={styles.error}>{error}</Text>
-        </View>
+         </View>
       ) : null}
 
       {showResend && (
@@ -81,27 +86,33 @@ export default function LoginScreen() {
       )}
 
       <TextInput
-        label="Email"
-        value={email}
-        onChangeText={setEmail}
-        mode="outlined"
-        style={styles.input}
-      />
+      label="EMAIL" 
+      value={email}
+      onChangeText={setEmail}
+      mode="outlined" 
+      style={styles.input}
+      outlineStyle={{ borderRadius: 25 }}
+      theme={inputTheme}
+    />
+
       <TextInput
-        label="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        mode="outlined"
-        style={styles.input}
+       label="PASSWORD"
+       value={password}
+       onChangeText={setPassword}
+       secureTextEntry
+       mode="outlined"
+       style={styles.input}
+       outlineStyle={{ borderRadius: 25 }}
+       theme={inputTheme}
       />
       <Button
         mode="contained"
         onPress={handleLogin}
         loading={loading}
         style={styles.button}
+        labelStyle={styles.buttonText}
       >
-        Login
+        LOGIN
       </Button>
       
       <View style={styles.signupContainer}>
@@ -117,14 +128,40 @@ export default function LoginScreen() {
     </View>
   );
 }
-
+const inputTheme = {
+  colors: {
+    outline: '#237A36', // Default border color (red-orange)
+    primary: '#00FF57', // Focused border color (neon green)
+  },
+};
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
     backgroundColor: '#023F0F',
     justifyContent: 'center',
+
+
+
   },
+  logoContainer: {
+    alignItems: 'flex-start', // Align logo and text to the left
+    paddingLeft: 10, // Adjust left padding
+    marginBottom: 20, // Space below logo
+  },
+  logo: {
+    width: 150, // Adjust width as needed
+    height: 40, // Adjust height as needed
+    resizeMode: 'contain', // Keep aspect ratio
+  },
+  loginText: {
+    fontSize: 20, // Match "LOGIN" text size
+    color: '#FFFFFF', // White text
+    marginTop: 2, // Space between logo and text
+  },
+
+
+
   title: {
     fontSize: 24,
     fontWeight: 'bold',
@@ -133,17 +170,40 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   input: {
-    marginBottom: 16,
-    backgroundColor: '#333',
+    backgroundColor: '#237A36', // Dark gray background
+    paddingHorizontal:10, // Padding for better spacing
+    height:55, // Normal input height
+    fontSize: 12, // Increase text size
+    color: '#023F0F', // White text color
+    textAlignVertical: 'center', // Centers text inside input
+    marginBottom: 20,
+  },
+  labelSmall: {
+    fontSize: 40, // Force label to be small
+    fontWeight: 'normal', // Prevent bold label
   },
   button: {
     marginTop: 24,
-    backgroundColor: '#00FF57',
+    backgroundColor: '#00FF57', // Neon green button color
+    borderRadius: 25, // Fully rounded button
+    height: 55, // Match button height
+    justifyContent: 'center', // Ensure text is centered
+  },
+  buttonText: {
+    fontSize: 12, // Larger text size
+    fontWeight: 'thin', // Make it bold
+    color: '#023F0F', // Dark green text
+    textTransform: 'uppercase', // Force uppercase text
   },
   error: {
     color: 'red',
-    marginBottom: 16,
+    fontSize: 12, // Smaller font size
+    marginBottom: 0, // Reduce bottom margin
+    textAlign: 'center', // Center text and prevent it from stretching
+    alignSelf: 'center', // Ensures it stays compact
+    maxWidth: '100%', // Prevents it from expanding too much
   },
+
   signupContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -171,5 +231,11 @@ const styles = StyleSheet.create({
   resendButton: {
     marginTop: 16,
     backgroundColor: '#00FF57',
+  },
+  errorContainer: {
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    marginBottom: 8, // Reduced to avoid extra spacing
+    paddingHorizontal:10, // Keeps text compact
   },
 }); 
