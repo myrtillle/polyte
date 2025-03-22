@@ -6,6 +6,9 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { postsService, CreatePostData } from '../../services/postsService';
 import { supabase } from '../../services/supabase';
 
+import { LinearGradient } from 'expo-linear-gradient';
+import { Image } from 'react-native';
+
 type IconName = 'account-multiple' | 'map-marker' | 'home' | 'image-plus';
 
 const itemOptions = [
@@ -141,98 +144,154 @@ export default function PostScreen() {
       />
 
       {/* Category Selection */}
-      <Text style={styles.sectionTitle}>Category</Text>
-      <SegmentedButtons
-        value={formData.category_id?.toString() || ''}
-        onValueChange={value => 
-          setFormData(prev => ({ ...prev, category_id: parseInt(value) }))
-        }
-        buttons={categories.map(cat => ({
-          value: cat.id.toString(),
-          label: cat.name
-        }))}
-      />
+      <View style={styles.categoryContainer}>
+  <Text style={styles.sectionTitle}>CATEGORY</Text>
 
-      {/* Item Types Selection */}
-      <Text style={styles.sectionTitle}>Item Types</Text>
-      <View style={styles.itemTypes}>
-        {itemTypes.map(type => (
-          <Chip
-            key={type.id}
-            selected={formData.item_type_ids.includes(type.id)}
-            onPress={() => toggleItemType(type.id)}
-            style={styles.chip}
-          >
-            {type.name}
-          </Chip>
-        ))}
-      </View>
+  {/* Selling Category Button */}
+  <TouchableOpacity onPress={() => setFormData(prev => ({ ...prev, category_id: categories[0]?.id }))}>
+    <LinearGradient
+      colors={formData.category_id === categories[0]?.id ? ['#023F0F', '#00FF57'] : ['#103D20', '#103D20']}
+      style={styles.categoryButton}
+    >
+      <Text style={styles.categoryText}>SELLING</Text>
+      <Image source={require('../../assets/images/selling.png')} style={styles.categoryImage} />
+    </LinearGradient>
+  </TouchableOpacity>
+
+  {/* Seeking Category Button */}
+  <TouchableOpacity onPress={() => setFormData(prev => ({ ...prev, category_id: categories[1]?.id }))}>
+    <LinearGradient
+      colors={formData.category_id === categories[1]?.id ? ['#023F0F', '#00FF57'] : ['#103D20', '#103D20']}
+      style={styles.categoryButton}
+    >
+      <Text style={styles.categoryText}>SEEKING</Text>
+      <Image source={require('../../assets/images/seeking.png')} style={styles.categoryImage} />
+    </LinearGradient>
+  </TouchableOpacity>
+</View>
+
+<Text style={styles.sectionTitle}>WASTER INFORMATION</Text>
+      {/* Item Types Section */}
+      <View style={styles.itemTypesContainer}>
+  <View style={styles.itemTypesHeader}>
+    <Text style={styles.itemTypesTitle}>TYPE OF PLASTICS</Text>
+    <Text style={styles.itemTypesInfo}>SELECT AT LEAST 2</Text>
+    <MaterialCommunityIcons name="information-outline" size={18} color="limegreen" />
+  </View>
+
+  <View style={styles.itemTypesGrid}>
+    {itemTypes.map(type => (
+      <TouchableOpacity
+        key={type.id}
+        style={[styles.itemTypeButton, formData.item_type_ids.includes(type.id) && styles.selectedItemType]}
+        onPress={() => toggleItemType(type.id)}
+      >
+        <Text style={styles.itemTypeText}>{type.name}</Text>
+      </TouchableOpacity>
+    ))}
+  </View>
+</View>
 
       {/* Description */}
-      <TextInput
-        label="Description"
-        value={formData.description}
-        onChangeText={text => 
-          setFormData(prev => ({ ...prev, description: text }))
-        }
-        multiline
-        style={styles.input}
-      />
+      <View style={styles.descriptionContainer}>
+  <Text style={styles.sectionTitle}>DESCRIPTION</Text>
+  <View style={styles.descriptionBox}>
+    <TextInput
+      label=""
+      value={formData.description}
+      onChangeText={text => setFormData(prev => ({ ...prev, description: text }))}
+      multiline
+      style={styles.input}
+      underlineColor="transparent"
+
+    />
+  </View>
+</View>
 
       {/* Weight */}
-      <TextInput
-        label="Weight (kg)"
-        value={formData.kilograms}
-        onChangeText={text => 
-          setFormData(prev => ({ ...prev, kilograms: text }))
-        }
-        keyboardType="numeric"
-        style={styles.input}
+      <View style={styles.kilogramsContainer}>
+  <View style={styles.kilogramsHeader}>
+    <Image source={require('../../assets/images/trashbag.png')} style={styles.kilogramsIcon} />
+    <Text style={styles.kilogramsTitle}>TOTAL KILOGRAMS</Text>
+  </View>
+
+  <View style={styles.kilogramsInputContainer}>
+    <TextInput
+      value={formData.kilograms}
+      onChangeText={text => setFormData(prev => ({ ...prev, kilograms: text }))}
+      keyboardType="numeric"
+      underlineColor="transparent"
+      style={styles.kilogramsInput}
+    />
+  </View>
+  
+</View>
+<View style={styles.galleryContainer}>
+  <Text style={styles.sectionTitle}>GALLERY</Text>
+  
+  <View style={styles.imageUploadWrapper}>
+    <TouchableOpacity style={styles.imageUploadBox}>
+      <MaterialCommunityIcons 
+        name={'image-plus' as IconName} 
+        size={50} 
+        color="#aaa" 
       />
+      <Text style={styles.uploadText}>ADD IMAGE OF YOUR WASTE</Text>
+    </TouchableOpacity>
+  </View>
+</View>
 
-      <View style={styles.imageUploadSection}>
-        <Text style={styles.sectionTitle}>GALLERY</Text>
-        <TouchableOpacity style={styles.imageUploadBox}>
-          <MaterialCommunityIcons 
-            name={'image-plus' as IconName} 
-            size={40} 
-            color="#666" 
-          />
-          <Text style={styles.uploadText}>ADD IMAGE OF YOUR WASTE</Text>
-        </TouchableOpacity>
-      </View>
+{/* Collection Mode */}
+<View style={styles.modeContainer}>
+  <View style={styles.collectionModeSection}>
+    <Text style={styles.sectionTitle}>MODE OF COLLECTION:</Text>
+    
+    {collectionModes.map((mode) => {
+  // Ensure mode.id is a string for proper comparison
+  const modeIdStr = mode.id.toString().toLowerCase();
 
-      {/* Collection Mode */}
-      <View style={styles.modeContainer}>
-        <View style={styles.collectionModeSection}>
-          <Text style={styles.sectionTitle}>MODE OF COLLECTION:</Text>
-          {collectionModes.map((mode) => (
-            <TouchableOpacity
-              key={mode.id}
-              style={[
-                styles.modeButton,
-                formData.collection_mode_id === mode.id && styles.selectedModeButton
-              ]}
-              onPress={() => setFormData(prev => ({ 
-                ...prev, 
-                collection_mode_id: mode.id 
-              }))}
-            >
-              <MaterialCommunityIcons 
-                name={mode.icon as IconName}
-                size={24} 
-                color={formData.collection_mode_id === mode.id ? '#fff' : '#000'} 
-              />
-              <Text style={[
-                styles.modeButtonText,
-                formData.collection_mode_id === mode.id && styles.selectedModeText
-              ]}>
-                {mode.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
+  // Map mode.id to corresponding images
+  const imageSources: Record<string, any> = {
+    pickup: require('../../assets/images/pickup.png'),
+    dropoff: require('../../assets/images/dropoff.png'),
+    meetup: require('../../assets/images/meetup.png'),
+  };
+
+  const modeImage = imageSources[modeIdStr] || null;
+
+  return (
+    <TouchableOpacity
+      key={mode.id}
+      style={[
+        styles.modeButton,
+        formData.collection_mode_id === mode.id && styles.selectedModeButton,
+      ]}
+      onPress={() => setFormData((prev) => ({
+        ...prev,
+        collection_mode_id: mode.id,
+      }))}
+    >
+      {/* Show image only if it exists */}
+      {modeImage && (
+        <Image
+          source={modeImage}
+          style={styles.modeIcon}
+        />
+      )}
+
+      <Text style={[
+        styles.modeButtonText,
+        formData.collection_mode_id === mode.id && styles.selectedModeText,
+      ]}>
+        {mode.name}
+      </Text>
+    </TouchableOpacity>
+  );
+})}
+  </View>
+</View>
+
+
 
       <Button 
         mode="contained" 
@@ -240,13 +299,138 @@ export default function PostScreen() {
         loading={loading}
         style={styles.button}
       >
-        Create Post
+        CREATE POST
       </Button>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  
+  categoryContainer: {
+    marginBottom: 20,
+  },
+  categoryButton: {
+    flexDirection: 'row', // Align text & image in a row
+    justifyContent: 'space-between', // Push image to the right
+    alignItems: 'center', // Align vertically
+    paddingHorizontal: 20,
+    paddingVertical: 0,
+    borderRadius: 12,
+    marginBottom: 12,
+    height:100,
+  },
+  categoryText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+  },
+  categoryImage: {
+    width: 150, // Adjust size based on your image
+    height: 100,
+    resizeMode: 'contain',
+  },
+  
+  galleryContainer: {
+    backgroundColor: '#1A3620', // Dark green background
+    borderRadius: 12,
+    paddingVertical: 20,
+    paddingHorizontal: 25,
+    marginBottom: 20,
+  },
+  
+  imageUploadWrapper: {
+    justifyContent: 'center',
+  },
+  
+  imageUploadBox: {
+    width: '100%',
+    height: 180,
+    borderWidth: 2, // **Ultra-thin border**
+    borderColor: 'rgba(255, 255, 255, 0.2)', // **Even lighter color for subtle effect**
+    borderStyle: 'dashed',
+    borderRadius: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)', // **Softer background**
+  },
+  
+  uploadText: {
+    color: '#bbb', // **Slightly brighter for better visibility**
+    marginTop: 8,
+    fontSize: 14,
+    fontWeight: '500',
+    textTransform: 'uppercase',
+  },
+  
+
+  itemTypesContainer: {
+    backgroundColor: '#1A3620', // Dark green background
+    borderRadius: 12,
+    marginBottom: 5,
+    paddingHorizontal: 12,
+    paddingVertical:25,
+  },
+  
+  itemTypesHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+    width: '100%',
+  },
+  
+  itemTypesTitle: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    flex: 1,
+    marginLeft: 8,
+
+  },
+  
+  itemTypesInfo: {
+    color: '#aaa',
+    fontSize: 8,
+    textTransform: 'uppercase',
+    marginRight: 8,
+  },
+  
+  itemTypesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 10,
+    paddingHorizontal:10,
+  },
+  
+  itemTypeButton: {
+    backgroundColor: '#2C5735',
+    paddingVertical: 5,
+    paddingHorizontal:12,
+    borderRadius: 5,
+    width: '30%', // 3 columns layout
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 50,
+    margin: 0.01, // 5px total gap (2.5px on each side)
+  },
+  
+  selectedItemType: {
+    backgroundColor: '#34B951', // Selected color
+    
+  },
+  
+  itemTypeText: {
+    color: '#fff',
+    fontSize: 14,
+    textAlign: 'center', // Centers text for multiline support
+    flexWrap: 'wrap', // Ensures text wraps inside button
+  },
+  
+
+  
   container: {
     flex: 1,
     padding: 16,
@@ -271,10 +455,133 @@ const styles = StyleSheet.create({
   chip: {
     margin: 4,
   },
-  input: {
-    marginBottom: 16,
-    backgroundColor: '#333',
+  
+
+
+  descriptionContainer: {
+    backgroundColor: '#1A3620', // Dark green background
+    borderRadius: 12,
+    marginBottom: 5,
+    paddingHorizontal: 20,
+    paddingVertical:25,
   },
+  
+  descriptionBox: {
+    backgroundColor: '#1A3A20', // Slightly lighter green inside
+    borderRadius: 8,
+    padding: 10,
+    borderWidth: 1.5,
+    borderColor: '#949B84', // Light grayish-green border
+  },
+  
+  input: {
+    backgroundColor: 'transparent', // Transparent to blend in
+    borderWidth: 0, // Remove default border
+    fontSize: 14,
+    color: '#FFFFFF',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginBottom:10,
+  },
+
+  modeContainer: {
+    backgroundColor: '#1A3620', // Dark green box
+    borderRadius: 12,
+    paddingVertical: 20,
+    paddingHorizontal: 25,
+    marginBottom: 20,
+    
+  },
+  
+  collectionModeSection: {
+    marginBottom: 10,
+  },
+  
+  modeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#234A2D',
+    borderRadius: 8,
+    padding: 12,
+    height:55,
+    marginBottom: 10,
+  },
+  
+  selectedModeButton: {
+    backgroundColor: '#00FF57', // Highlight selected mode
+  },
+  
+  modeIcon: {
+    width: 30, 
+    height: 30, 
+    resizeMode: 'contain',
+    marginRight: 10,
+    paddingVertical:25,
+    paddingHorizontal: 20,
+  },
+  
+  modeButtonText: {
+    color: '#fff',
+    fontSize: 14,
+  },
+  
+  selectedModeText: {
+    color: '#000',
+  },
+  
+
+
+  kilogramsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#1A3620', // Background box
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    paddingVertical: 15,
+    marginBottom: 5,
+    gap:10
+  },
+  
+  kilogramsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  
+  kilogramsIcon: {
+    width: 20, // Adjust icon size
+    height: 20,
+    resizeMode: 'contain',
+    marginRight: 10,
+  },
+  
+  kilogramsTitle: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  
+  kilogramsInputContainer: {
+    backgroundColor: '#234A2D', // Dark Green input box
+    
+    borderRadius: 5,
+    paddingHorizontal: 2,
+    paddingVertical: 10,
+    minWidth: 80, // Adjust based on design
+    alignItems: 'center',
+  },
+  
+  kilogramsInput: {
+    color: '#fff',
+    fontSize: 14,
+    textAlign: 'center',
+    backgroundColor: 'transparent',
+    height:20,
+    
+  },
+  
+
+
   tagContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -292,43 +599,8 @@ const styles = StyleSheet.create({
   tagText: {
     color: 'white',
   },
-  imageUploadSection: {
-    marginVertical: 16,
-  },
-  imageUploadBox: {
-    borderWidth: 2,
-    borderColor: '#666',
-    borderStyle: 'dashed',
-    borderRadius: 8,
-    height: 200,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  uploadText: {
-    color: '#666',
-    marginTop: 8,
-  },
-  collectionModeSection: {
-    marginVertical: 16,
-  },
-  modeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#1A3620',
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  selectedModeButton: {
-    backgroundColor: '#00FF57',
-  },
-  modeButtonText: {
-    color: '#fff',
-    marginLeft: 12,
-  },
-  selectedModeText: {
-    color: '#000',
-  },
+
+
   locationPlaceholder: {
     marginBottom: 24,
   },
@@ -348,7 +620,5 @@ const styles = StyleSheet.create({
     backgroundColor: '#00FF00',
     paddingVertical: 8,
   },
-  modeContainer: {
-    marginVertical: 16,
-  },
+ 
 }); 
