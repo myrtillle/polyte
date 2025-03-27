@@ -242,57 +242,52 @@ export default function PostScreen() {
 </View>
 
 {/* Collection Mode */}
-<View style={styles.modeContainer}>
-  <View style={styles.collectionModeSection}>
-    <Text style={styles.sectionTitle}>MODE OF COLLECTION:</Text>
-    
-    {collectionModes.map((mode) => {
-  // Ensure mode.id is a string for proper comparison
-  const modeIdStr = mode.id.toString().toLowerCase();
+<View>
+<View style={{ marginTop: 20 }}>
+  <Text style={styles.sectionTitle}>MODE OF COLLECTION:</Text>
 
-  // Map mode.id to corresponding images
-  const imageSources: Record<string, any> = {
-    pickup: require('../../assets/images/pickup.png'),
-    dropoff: require('../../assets/images/dropoff.png'),
-    meetup: require('../../assets/images/meetup.png'),
-  };
+  {collectionModes.map((mode) => {
+  const modeName = mode.name.toLowerCase();
 
-  const modeImage = imageSources[modeIdStr] || null;
+  let iconSource;
+  if (modeName.includes('pickup')) {
+    iconSource = require('../../assets/images/NEW/CAR.png');
+  } else if (modeName.includes('drop')) {
+    iconSource = require('../../assets/images/NEW/ORANGE.png');
+  } else if (modeName.includes('meet')) {
+    iconSource = require('../../assets/images/NEW/HOUSE.png');
+  } else {
+    iconSource = require('../../assets/images/NEW/HOUSE.png'); // fallback
+  }
 
   return (
     <TouchableOpacity
       key={mode.id}
       style={[
-        styles.modeButton,
-        formData.collection_mode_id === mode.id && styles.selectedModeButton,
+        styles.collectionCard,
+        formData.collection_mode_id === mode.id && styles.collectionCardSelected,
       ]}
-      onPress={() => setFormData((prev) => ({
-        ...prev,
-        collection_mode_id: mode.id,
-      }))}
+      onPress={() =>
+        setFormData((prev) => ({ ...prev, collection_mode_id: mode.id }))
+      }
     >
-      {/* Show image only if it exists */}
-      {modeImage && (
-        <Image
-          source={modeImage}
-          style={styles.modeIcon}
-        />
-      )}
-
-      <Text style={[
-        styles.modeButtonText,
-        formData.collection_mode_id === mode.id && styles.selectedModeText,
-      ]}>
-        {mode.name}
+      <Image source={iconSource} style={styles.collectionIcon} />
+      <Text
+        style={[
+          styles.collectionText,
+          formData.collection_mode_id === mode.id && styles.collectionTextSelected,
+        ]}
+      >
+        {mode.name.toUpperCase()}
       </Text>
     </TouchableOpacity>
   );
 })}
-  </View>
+
 </View>
 
 
-
+</View>
       <Button 
         mode="contained" 
         onPress={handleSubmit}
@@ -306,7 +301,38 @@ export default function PostScreen() {
 }
 
 const styles = StyleSheet.create({
+  collectionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#234A2D',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
   
+  collectionCardSelected: {
+    backgroundColor: '#00FF57',
+  },
+  
+  collectionIcon: {
+    width: 30,
+    height: 30,
+    resizeMode: 'contain',
+    marginRight: 16,
+  },
+  
+  collectionText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    textTransform: 'uppercase',
+  },
+  
+  collectionTextSelected: {
+    color: '#000000',
+  },
+  
+
   categoryContainer: {
     marginBottom: 20,
   },
@@ -483,52 +509,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     marginBottom:10,
   },
-
-  modeContainer: {
-    backgroundColor: '#1A3620', // Dark green box
-    borderRadius: 12,
-    paddingVertical: 20,
-    paddingHorizontal: 25,
-    marginBottom: 20,
-    
-  },
-  
-  collectionModeSection: {
-    marginBottom: 10,
-  },
-  
-  modeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#234A2D',
-    borderRadius: 8,
-    padding: 12,
-    height:55,
-    marginBottom: 10,
-  },
-  
-  selectedModeButton: {
-    backgroundColor: '#00FF57', // Highlight selected mode
-  },
-  
-  modeIcon: {
-    width: 30, 
-    height: 30, 
-    resizeMode: 'contain',
-    marginRight: 10,
-    paddingVertical:25,
-    paddingHorizontal: 20,
-  },
-  
-  modeButtonText: {
-    color: '#fff',
-    fontSize: 14,
-  },
-  
-  selectedModeText: {
-    color: '#000',
-  },
-  
 
 
   kilogramsContainer: {

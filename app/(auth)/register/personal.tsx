@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
-import { TextInput, Button, Title, Text } from 'react-native-paper';
+import { View, Image, StyleSheet, ScrollView } from 'react-native';
+import { TextInput, Button, Text } from 'react-native-paper';
 import { router } from 'expo-router';
 import { authService } from '../../../services/authService';
 import { Picker } from '@react-native-picker/picker';
@@ -12,10 +12,22 @@ export default function PersonalSignupScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [barangay, setBarangay] = useState('Bankerohan');
-  const [purok, setPurok] = useState('1');
+  const [barangay, setBarangay] = useState('');
+  const [purok, setPurok] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Define Puroks available for each Barangay
+  const PUROKS: { [key: string]: string[] } = {
+    Bankerohan: ['1', '2', '3', '4', '5'],
+    Matina: ['1', '2', '3', '4', '5', '6'],
+    Agdao: ['1', '2', '3', '4'],
+  };
+
+  // Function to get available Puroks based on Barangay
+  const getPuroks = () => {
+    return PUROKS[barangay] || [];
+  };
 
   const handleSignup = async () => {
     if (password !== confirmPassword) {
@@ -23,7 +35,7 @@ export default function PersonalSignupScreen() {
       return;
     }
 
-    if (!firstName || !lastName || !username) {
+    if (!firstName || !lastName || !username || !barangay || !purok) {
       setError('Please fill in all required fields');
       return;
     }
@@ -39,7 +51,7 @@ export default function PersonalSignupScreen() {
         last_name: lastName,
         username,
         barangay,
-        purok: purok.toString(),
+        purok,
         account_type: 'personal',
       });
 
@@ -47,9 +59,9 @@ export default function PersonalSignupScreen() {
 
       router.push({
         pathname: '/(auth)/login',
-        params: { 
-          message: 'Please check your email to confirm your account before logging in.'
-        }
+        params: {
+          message: 'Please check your email to confirm your account before logging in.',
+        },
       });
     } catch (err) {
       setError('Failed to create account');
@@ -60,127 +72,168 @@ export default function PersonalSignupScreen() {
 
   return (
     <ScrollView style={styles.container}>
-      <Title style={styles.title}>Personal Account</Title>
+      {/* 🔹 Logo & Header */}
+      <View style={styles.logoContainer}>
+        <Image source={require('../../../assets/images/polyte-logo.png')} style={styles.logo} />
+        <Text style={styles.signUpText}>SIGN UP</Text>
+      </View>
 
-      <TextInput
-        label="First Name"
-        value={firstName}
-        onChangeText={setFirstName}
-        mode="outlined"
-        style={styles.input}
-      />
+      {/* Input Fields */}
+      <TextInput label="Surname" value={lastName}  theme={inputTheme} onChangeText={setLastName} mode="outlined" style={styles.input} outlineStyle={{ borderRadius: 25 }}/>
+      <TextInput label="Firstname" value={firstName}  theme={inputTheme}onChangeText={setFirstName} mode="outlined" style={styles.input} outlineStyle={{ borderRadius: 25 }}/>
+      <TextInput label="Username" value={username} theme={inputTheme} onChangeText={setUsername} mode="outlined" style={styles.input} autoCapitalize="none" outlineStyle={{ borderRadius: 25 }}/>
+      <TextInput label="Email" value={email}  theme={inputTheme} onChangeText={setEmail} mode="outlined" style={styles.input} autoCapitalize="none" keyboardType="phone-pad" outlineStyle={{ borderRadius: 25 }}/>
 
-      <TextInput
-        label="Last Name"
-        value={lastName}
-        onChangeText={setLastName}
-        mode="outlined"
-        style={styles.input}
-      />
+      {/* Password Fields */}
+      <TextInput label="Password" value={password}  theme={inputTheme} onChangeText={setPassword} mode="outlined" style={styles.input} secureTextEntry outlineStyle={{ borderRadius: 25 }}/>
+      <TextInput label="Confirm Password" value={confirmPassword}  theme={inputTheme} onChangeText={setConfirmPassword} mode="outlined" style={styles.input} secureTextEntry outlineStyle={{ borderRadius: 25 }}/>
 
-      <TextInput
-        label="Username"
-        value={username}
-        onChangeText={setUsername}
-        mode="outlined"
-        style={styles.input}
-        autoCapitalize="none"
-      />
+      {/* Barangay Selection */}
+      <Text style={styles.label}>Select Address</Text>
+      <View style={styles.pickerContainer}>
+        <Picker selectedValue={barangay} onValueChange={(itemValue: string) => setBarangay(itemValue)}  theme={inputTheme}style={styles.picker}>
+          <Picker.Item label="Select a Barangay" value="" />
+          {Object.keys(PUROKS).map((barangay) => (
+            <Picker.Item key={barangay} label={barangay} value={barangay} />
+            
+          ))}
+        </Picker>
+      </View>
 
-      <TextInput
-        label="Email"
-        value={email}
-        onChangeText={setEmail}
-        mode="outlined"
-        style={styles.input}
-        autoCapitalize="none"
-        keyboardType="email-address"
-      />
+      {/* Purok Selection (Appears Only After Selecting Barangay) */}
+      {barangay ? (
+        <View style={styles.pickerContainer}>
+          <Picker selectedValue={purok} onValueChange={(itemValue: string) => setPurok(itemValue)} style={styles.picker}>
+            <Picker.Item label="Select a Purok" value="" />
+            {getPuroks().map((purok) => (
+              <Picker.Item key={purok} label={`Purok ${purok}`} value={purok} />
+            ))}
+          </Picker>
+        </View>
+      ) : null}
 
-      <TextInput
-        label="Password"
-        value={password}
-        onChangeText={setPassword}
-        mode="outlined"
-        style={styles.input}
-        secureTextEntry
-      />
+      {/* Error Message */}
+      {error ? (
+        <View style={styles.errorContainer}>
+          <Text style={styles.error}>{error}</Text>
+        </View>
+      ) : null}
 
-      <TextInput
-        label="Confirm Password"
-        value={confirmPassword}
-        onChangeText={setConfirmPassword}
-        mode="outlined"
-        style={styles.input}
-        secureTextEntry
-      />
-
-      <Picker
-        selectedValue={barangay}
-        onValueChange={(itemValue: string) => setBarangay(itemValue)}
-        style={styles.picker}
-      >
-        <Picker.Item label="Bankerohan" value="Bankerohan" />
-        {/*more options*/}
-      </Picker>
-
-      <Picker
-        selectedValue={purok}
-        onValueChange={(itemValue: string) => setPurok(itemValue)}
-        style={styles.picker}
-      >
-        {[...Array(14)].map((_, index) => (
-          <Picker.Item key={index + 1} label={`${index + 1}`} value={`${index + 1}`} />
-        ))}
-      </Picker>
-
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-
-      <Button
-        mode="contained"
-        onPress={handleSignup}
-        loading={loading}
-        style={styles.button}
-      >
-        Create Account
+      {/* Sign Up Button */}
+      <Button mode="contained" onPress={handleSignup} loading={loading} style={styles.button} labelStyle={styles.buttonText}>
+        SIGN UP
       </Button>
 
-      <Button
-        mode="text"
-        onPress={() => router.back()}
-        style={styles.button}
-      >
-        Back
+      {/* Back Button */}
+      <Button mode="text" onPress={() => router.back()} style={styles.backButton}>
+        BACK
       </Button>
     </ScrollView>
   );
 }
 
+const inputTheme = {
+  colors: {
+    outline: '#237A36',
+    primary: '#00FF57',
+  },
+};
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
+    backgroundColor: '#023F0F',
   },
-  title: {
-    fontSize: 32,
-    textAlign: 'center',
-    marginBottom: 32,
+  logoContainer: {
+    alignItems: 'flex-start',
+    paddingLeft: 10,
+    marginBottom: 20,
+    marginTop:90,
+  },
+  logo: {
+    width: 150,
+    height: 40,
+    resizeMode: 'contain',
+  },
+  signUpText: {
+    fontSize: 20,
+    color: '#FFFFFF',
+    marginTop: 2,
   },
   input: {
-    marginBottom: 16,
+    backgroundColor: '#237A36',
+    paddingHorizontal: 10,
+    height: 55,
+    fontSize: 12,
+    color: '#023F0F',
+    textAlignVertical: 'center',
+    marginBottom: 20,
   },
-  picker: {
+  pickerContainer: {
+    backgroundColor: '#237A36', // Dark green background
+    borderRadius: 30,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 4,
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    justifyContent: 'center',
+    borderWidth: 0,
+    overflow: 'hidden',
+  },
+  
+  picker: {
+    color: '#fff', // White text for selected item
+    fontSize: 14,
+    width: '100%',
+    height: 50,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+  },
+  
+  // **New Styles for the Dropdown Menu**
+  pickerDropdown: {
+    backgroundColor: '#145C2C', // Dark green background for dropdown items
+    color: '#fff', // White text for options
+  },
+  
+  label: {
+    color: '#fff',
+    marginBottom: 5,
+    textAlignVertical:'center',
   },
   button: {
-    marginTop: 16,
-    marginBottom: 16,
+    marginTop: 24,
+    backgroundColor: '#00FF57',
+    borderRadius: 25,
+    height: 55,
+    justifyContent: 'center',
+  },
+  buttonText: {
+    fontSize: 12,
+    fontWeight: 'thin',
+    color: '#023F0F',
+    textTransform: 'uppercase',
+  },
+  errorContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+    paddingHorizontal: 10,
   },
   error: {
     color: 'red',
-    marginBottom: 16,
+    fontSize: 12,
+    textAlign: 'center',
+    alignSelf: 'center',
+    maxWidth: '100%',
   },
-}); 
+  backButton: {
+    marginTop: 10,
+    backgroundColor: '#237A36',
+    borderRadius: 25,
+    height: 55,
+    justifyContent: 'center',
+  },
+  
+});
+

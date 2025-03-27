@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity  } from 'react-native';
-import { Card, Button } from 'react-native-paper';
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView  } from 'react-native';
+import { Card } from 'react-native-paper';
 import { supabase } from '../../services/supabase';
 import { useNavigation } from '@react-navigation/native';
-import type { NavigationProp } from '@react-navigation/native'; 
+import type { NavigationProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../types/navigation';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const ProfileScreen = () => {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
@@ -17,119 +18,236 @@ const ProfileScreen = () => {
       console.log("✅ Logged out successfully!");
       navigation.reset({
         index: 0,
-        routes: [{ name: 'Login' as keyof RootStackParamList }], // ✅ Ensure TypeScript recognizes 'Login'
+        routes: [{ name: 'Login' as keyof RootStackParamList }],
       });
     }
-  };  
+  };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.profileHeader}>
+          <LinearGradient
+        colors={['#023F0F', '#05A527']}
+        style={styles.container}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+      >
+      <ScrollView contentContainerStyle={styles.listContent}>
+      {/* Header image background with circular profile image overlay */}
+      <View style={styles.headerBackground}>
         <Image
-          source={{ uri: 'https://i.pravatar.cc/100' }} // Static profile image
-          style={styles.profileImage}
+          source={{ uri: 'https://i.pravatar.cc/100' }}
+          style={styles.overlayProfileImage}
         />
-        <Text style={styles.profileName}>Minji Kim</Text>
-        <Text style={styles.profileLocation}>
-          Lambingan Street, Milan, Buhangin, Davao City
-        </Text>
-        <Text style={styles.memberSince}>Member Since: July 1, 2023</Text>
       </View>
 
-      <Card style={styles.statsCard}>
+      {/* User Details Card */}
+      <Card style={styles.userCard}>
         <Card.Content>
-          <Text style={styles.statsTitle}>ALL TIME STATS</Text>
-          <Text style={styles.statLabel}>Carbon Emission Saved</Text>
-          <Text style={styles.statValue}>1140 kg CO2</Text>
-
-          <View style={styles.statRow}>
-            <Text style={styles.statLabel}>Sack of Trash Collected</Text>
-            <Text style={styles.statValue}>20</Text>
-          </View>
-
-          <View style={styles.statRow}>
-            <Text style={styles.statLabel}>Sack of Trash Donated</Text>
-            <Text style={styles.statValue}>38</Text>
-          </View>
-
-          <Text style={styles.statLabel}>Average Monthly Contribution</Text>
-          <Text style={styles.statValue}>15 sacks per month</Text>
-
-          <Text style={styles.statLabel}>Total Polys Collected</Text>
-          <Text style={styles.statValue}>135</Text>
-
-          <Text style={styles.statLabel}>User Rating</Text>
-          <Text style={styles.statValue}>⭐⭐⭐⭐⭐</Text>
-
-          <Text style={styles.statLabel}>Transaction History</Text>
+          <Text style={styles.profileName}>Minji Kim</Text>
+          <Text style={styles.profileLocation}>📍 Lambingan Street, Milan, Buhangin, Davao City</Text>
+          <Text style={styles.memberSince}>Member Since: July 1, 2023</Text>
         </Card.Content>
       </Card>
 
-      {/* Logout Button */}
+      {/* Stats Section */}
+      <Text style={styles.sectionTitle}>ALL TIME STATS</Text>
+
+      <Card style={styles.statCard}>
+        <Card.Content>
+          <Text style={styles.statLabel}>CARBON EMISSION SAVED</Text>
+          <View style={styles.statValueRow}>
+            <Text style={styles.statValue}>1140 kg CO2</Text>
+            <Text style={styles.statIcon}>🌫️</Text>
+          </View>
+        </Card.Content>
+      </Card>
+
+      <View style={styles.doubleCardRow}>
+        <Card style={styles.smallCard}>
+          <Card.Content>
+            <Text style={styles.statLabel}>SACK OF TRASH COLLECTED</Text>
+            <View style={styles.statValueRow}>
+              <Text style={styles.statValue}>20</Text>
+              <Text style={styles.statIcon}>🟢</Text>
+            </View>
+          </Card.Content>
+        </Card>
+
+        <Card style={styles.smallCard}>
+          <Card.Content>
+            <Text style={styles.statLabel}>SACK OF TRASH DONATED</Text>
+            <View style={styles.statValueRow}>
+              <Text style={styles.statValue}>38</Text>
+              <Text style={styles.statIcon}>⚫</Text>
+            </View>
+          </Card.Content>
+        </Card>
+      </View>
+
+      <Card style={styles.statCard}>
+        <Card.Content>
+          <View style={styles.statRowSpaceBetween}>
+            <Text style={styles.statLabel}>AVERAGE MONTHLY CONTRIBUTION</Text>
+            <Text style={styles.suffix}>SACKS PER MONTH</Text>
+          </View>
+          <Text style={styles.statValue}>15</Text>
+        </Card.Content>
+      </Card>
+
+      <Card style={styles.statCard}>
+        <Card.Content>
+          <View style={styles.statRowSpaceBetween}>
+            <Text style={styles.statLabel}>TOTAL POLYS COLLECTED</Text>
+            <Text style={styles.statIcon}>🟩</Text>
+          </View>
+          <Text style={styles.statValue}>135</Text>
+        </Card.Content>
+      </Card>
+
+      <Card style={styles.statCard}>
+        <Card.Content>
+          <View style={styles.statRowSpaceBetween}>
+            <Text style={styles.statLabel}>USER RATING</Text>
+            <Text style={styles.suffix}>AS OF THIS MONTH</Text>
+          </View>
+          <Text style={styles.statValue}>⭐⭐⭐⭐⭐</Text>
+        </Card.Content>
+      </Card>
+
+      <Card style={styles.statCard}>
+        <Card.Content>
+          <Text style={styles.transactionText}>TRANSACTION HISTORY</Text>
+        </Card.Content>
+      </Card>
+
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Text style={styles.logoutButtonText}>Logout</Text>
       </TouchableOpacity>
-    </View>
+      </ScrollView>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+
+
+  listContent: {
+    paddingTop: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  
+
+
+  headerBackground: {
+    height: 200,
+    backgroundColor: '#023F0F',
+    justifyContent: 'flex-end',
+    alignItems: 'flex-start',
+    paddingLeft: 20,
+  },
+  overlayProfileImage: {
+    width: 120,
+    height: 120,
+    borderRadius: 100,
+    borderWidth: 6,
+    borderColor: '#023F0F',
+    marginBottom: -45,
+    zIndex: 10,
+  },
+  userCard: {
     backgroundColor: '#1A3620',
-    padding: 16,
-  },
-  profileHeader: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  profileImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    marginBottom: 10,
+    borderRadius: 12,
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    marginTop: 50,
+    marginBottom: 16,
   },
   profileName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  profileLocation: {
-    color: '#ccc',
-  },
-  memberSince: {
-    color: '#ccc',
-  },
-  statsCard: {
-    backgroundColor: '#2C5735',
-    borderRadius: 8,
-    padding: 16,
-  },
-  statsTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#fff',
-    marginBottom: 10,
+    marginBottom: 4,
+  },
+  profileLocation: {
+    color: '#ccc',
+    fontSize: 13,
+    marginBottom: 2,
+  },
+  memberSince: {
+    color: '#888',
+    fontSize: 12,
+  },
+  sectionTitle: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    marginLeft: 4,
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
+  },
+  statCard: {
+    backgroundColor: '#1A3620',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 6,
   },
   statLabel: {
     color: '#fff',
-    marginTop: 10,
+    fontSize: 13,
+    marginBottom: 4,
   },
   statValue: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 18,
+    color: '#FFFFFF',
+    fontWeight: '700',
+    letterSpacing: 0.25,
   },
-  statRow: {
+  statValueRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  statRowSpaceBetween: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginBottom: 6,
+  },
+  doubleCardRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 12,
+  },
+  smallCard: {
+    flex: 1,
+    backgroundColor: '#1A3620',
+    borderRadius: 12,
+    padding: 16,
+  },
+  suffix: {
+    fontSize: 10,
+    color: '#9CA3AF', // muted gray
+    fontWeight: '400',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  statIcon: {
+    fontSize: 16,
+  },
+  transactionText: {
+    color: '#fff',
+    textAlign: 'center',
+    fontWeight: '600',
+  },
   logoutButton: {
-    marginTop: 20,
+    marginTop: 2,
     backgroundColor: 'red',
     padding: 12,
-    borderRadius: 5,
+    borderRadius: 100,
     alignItems: 'center',
   },
   logoutButtonText: {

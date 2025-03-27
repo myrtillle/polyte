@@ -1,46 +1,32 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
-import { TextInput, Button, Title, Text, SegmentedButtons, Card } from 'react-native-paper';
-import { router } from 'expo-router';
-import { Stack } from 'expo-router';
-
-const PUROK_OPTIONS = Array.from({ length: 14 }, (_, i) => ({
-  label: `${i + 1}`,
-  value: `${i + 1}`,
-}));
+import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function AccountTypeScreen() {
+  const router = useRouter();
+
   return (
     <View style={styles.container}>
-      <Title style={styles.title}>Choose Account Type</Title>
-      
-      <Card 
-        style={styles.card} 
-        onPress={() => router.push('/(auth)/register/personal')}
-      >
-        <Card.Content>
-          <Title>Personal Account</Title>
-          <Text>For individual users who want to participate in recycling activities</Text>
-        </Card.Content>
-      </Card>
+      {/* Header */}
+      <Text style={styles.header}>SIGN UP <Text style={styles.boldText}>ACCOUNT FOR</Text></Text>
 
-      <Card 
-        style={styles.card} 
-        onPress={() => router.push('/(auth)/register/barangay')}
-      >
-        <Card.Content>
-          <Title>Barangay/Purok Account</Title>
-          <Text>For barangay officials and purok leaders</Text>
-        </Card.Content>
-      </Card>
+      {/* Personal Account */}
+      <TouchableOpacity style={styles.optionBox} onPress={() => router.push('/register/personal')}>
+        <Text style={styles.optionText}>PERSONAL USE</Text>
+        <Ionicons name="person-circle-outline" size={40} color="#023F0F" />
+      </TouchableOpacity>
 
-      <Button
-        mode="text"
-        onPress={() => router.back()}
-        style={styles.backButton}
-      >
-        Back to Login
-      </Button>
+      {/* Barangay / Recycling Firm */}
+      <TouchableOpacity style={[styles.optionBox, styles.barangayOption]} onPress={() => router.push('/register/barangay')}>
+        <Text style={[styles.optionText, styles.barangayText]}>BUSINESS / RECYCLING FIRM</Text>
+        <Ionicons name="people-circle-outline" size={40} color="#fff" />
+      </TouchableOpacity>
+
+      {/* Back Button */}
+      <TouchableOpacity style={styles.backButton} onPress={() => router.push('/auth/login')}>
+        <Text style={styles.backButtonText}>BACK</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -48,46 +34,51 @@ export default function AccountTypeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
+    backgroundColor: '#023F0F',
+    padding: 20,
     justifyContent: 'center',
   },
-  title: {
-    fontSize: 32,
+  header: {
+    fontSize: 18,
+    color: '#FFFFFF',
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: 40,
   },
-  card: {
-    marginBottom: 16,
+  boldText: {
+    fontWeight: 'bold',
+  },
+  optionBox: {
+    flexDirection: 'row',
+    backgroundColor: '#00FF57',
+    borderRadius: 16,
+    paddingVertical: 25,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  barangayOption: {
+    backgroundColor: '#237A36',
+  },
+  optionText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#023F0F',
+  },
+  barangayText: {
+    color: '#FFFFFF',
   },
   backButton: {
-    marginTop: 16,
+    backgroundColor: '#00FF57',
+    borderRadius: 30,
+    paddingVertical: 18,
+    alignItems: 'center',
+    marginTop: 30,
+  },
+  backButtonText: {
+    fontSize: 16,
+    color: '#023F0F',
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
   },
 });
-
-export function SignupLayout() {
-  return (
-    <Stack>
-      <Stack.Screen 
-        name="index" 
-        options={{ 
-          title: 'Sign Up',
-          headerShown: false 
-        }} 
-      />
-      <Stack.Screen 
-        name="personal" 
-        options={{ 
-          title: 'Personal Account',
-          headerShown: false 
-        }} 
-      />
-      <Stack.Screen 
-        name="barangay" 
-        options={{ 
-          title: 'Barangay Account',
-          headerShown: false 
-        }} 
-      />
-    </Stack>
-  );
-} 
