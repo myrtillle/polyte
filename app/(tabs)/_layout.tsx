@@ -64,6 +64,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="ViewPost" options={{ href: null }} />
       <Tabs.Screen name="CommentScreen" options={{ href: null }} />
       <Tabs.Screen name="MakeOffer" options={{ href: null }} />
+      <Tabs.Screen name="EditOffer" options={{ href: null }} />
     </Tabs>
   );
 }

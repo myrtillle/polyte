@@ -1,4 +1,5 @@
 // import { Post } from "@/app/(tabs)/home";
+import { Offer } from '../services/offersService'
 
 export type RootStackParamList = {
   Login: undefined;
@@ -7,6 +8,8 @@ export type RootStackParamList = {
   Leaderboard: undefined;
   ViewPost: { post: Post };
   MakeOffer: {post: Post };
+  EditOffer: { offer: Offer };
+  ScheduleOffer: { offer: Offer; post: Post };
 };
 
 export type BottomTabParamList = {

@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 
-interface Offer {
+export interface Offer {
+  id: string;
   post_id: string;
   user_id: string;
   offered_items: string[];
@@ -10,6 +11,12 @@ interface Offer {
   message?: string;
   images: string[];
   status?: string;
+  post_item_types?: Array<{ // ✅ Add this property
+    item_types: {
+      id: number;
+      name: string;
+    };
+  }>;
 }
 
 /**
@@ -32,7 +39,15 @@ export const createOffer = async (offerData: Offer) => {
 export const getOffersByPost = async (postId: string) => {
   const { data, error } = await supabase
     .from('offers')
-    .select('*')
+    .select(`
+      *,
+      personal_users (
+        id,
+        email,
+        first_name,
+        last_name
+      )
+    `)
     .eq('post_id', postId)
     .order('created_at', { ascending: false });
 
@@ -61,3 +76,35 @@ export const getUserOffers = async (userId: string) => {
 
   return data;
 };
+
+export const updateOffer = async (offer: Offer) => { 
+  if (!offer.id) {
+    console.error("❌ Error: Offer ID is required for updating.");
+    return false;
+  }
+
+  try {
+    const { error } = await supabase
+      .from('offers')
+      .update({
+        offered_items: offer.offered_items,
+        price: offer.price,
+        offered_weight: offer.offered_weight,
+        message: offer.message,       
+        images: offer.images,
+      })
+      .eq('id', offer.id);
+
+    if (error) {
+      console.error("❌ Error updating offer:", error.message);
+      return false;
+    }
+
+    console.log("✅ Offer updated successfully:", offer);
+    return true;
+  } catch (error) {
+    console.error("❌ Unexpected error updating offer:", error);
+    return false;
+  }
+};
+

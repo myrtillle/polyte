@@ -183,7 +183,6 @@ export const postsService = {
     return data;
   },
 
-  // Add methods to fetch categories and item types
   async getCategories() {
     const { data, error } = await supabase
       .from('categories')
@@ -214,24 +213,47 @@ export const postsService = {
     return data;
   },
 
-  async getPostById(id: string) {
+  async getPostById(postId: string) {
     const { data: post, error } = await supabase
       .from('posts')
       .select(`
-        id,
-        user_id,
-        category_id,
-        description,
-        kilograms,
-        collection_mode_id,
-        status,
-        created_at,
-        updated_at
+        *,
+        category:categories!posts_category_id_fkey (
+          id,
+          name
+        ),
+        collection_mode:collection_modes!posts_collection_mode_id_fkey (
+          id,
+          name,
+          icon
+        ),
+        post_item_types (
+          item_types (
+            id,
+            name
+          )
+        ),
+        personal_users (
+          id,
+          email,
+          first_name,
+          last_name,
+          purok,
+          barangay
+        )
       `)
-      .eq('id', id)
+      .eq('id', postId)
       .single();
-
+  
     if (error) throw error;
-    return post;
+    
+    console.log("✅ Fetch Result from Supabase:", post);
+    
+    return {
+      ...post,
+      user: post.personal_users
+        ? { email: post.personal_users.email, name: `${post.personal_users.first_name} ${post.personal_users.last_name}` }
+        : null
+    };
   }
 }; 

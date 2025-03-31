@@ -1,9 +1,9 @@
 # POLY.TE User Guide
 
 ## Tech Stack:
-- Frontend: React Native with TypeScript, Expo, and Expo Router
-- Backend/Database: Supabase
-- UI Framework: React Native Paper
+- **Frontend**: React Native with TypeScript, Expo, and Expo Router
+- **Backend/Database**: Supabase
+- **UI Framework**: React Native Paper
 
 ## Authentication
 
@@ -77,11 +77,11 @@ Users can create two types of posts:
   - More Options ⋮
 
 ### Bottom Navigation
-🏠 Home
-⭐ Leaderboard
-➕ Post
-💬 Messages
-👤 Profile
+🏠 Home  
+⭐ Leaderboard  
+➕ Post  
+💬 Messages  
+👤 Profile  
 
 ## Post Interactions
 
@@ -229,33 +229,33 @@ After offer acceptance:
 - **rank**: Integer
 
 ## Optimal Folder Structure
-
-```
 polytev2/
-├── assets/                # Static assets (images, fonts, etc.)
-├── components/            # Reusable components
-│   ├── Header/
-│   ├── Footer/
-│   ├── Post/
-│   └── UserProfile/
-├── screens/              # Screen components
-│   ├── HomeScreen/
-│   ├── ProfileScreen/
-│   ├── PostDetailScreen/
-│   └── LeaderboardScreen/
-├── navigation/           # Navigation setup
-│   └── AppNavigator.js
-├── services/             # API services
-│   ├── authService.js
-│   ├── postService.js
-│   └── transactionService.js
-├── store/                # State management (Redux, Context API)
-│   └── store.js
-├── utils/                # Utility functions
-│   └── helpers.js
-├── App.tsx               # Main application file
-└── index.js              # Entry point
-```
+├── assets/ # Static assets (images, fonts, etc.)
+├── components/ # Reusable components
+│ ├── Header/
+│ ├── Footer/
+│ ├── Post/
+│ └── UserProfile/
+├── screens/ # Screen components
+│ ├── HomeScreen/
+│ ├── ProfileScreen/
+│ ├── PostDetailScreen/
+│ ├── MakeOffer/ # New MakeOffer screen
+│ └── LeaderboardScreen/
+├── navigation/ # Navigation setup
+│ └── AppNavigator.js
+├── services/ # API services
+│ ├── authService.js
+│ ├── postService.js
+│ ├── commentsService.js
+│ └── transactionService.js
+├── store/ # State management (Redux, Context API)
+│ └── store.js
+├── utils/ # Utility functions
+│ └── helpers.js
+├── App.tsx # Main application file
+└── index.js # Entry point
+
 
 ## Dependencies
 - expo: ~50.0.0

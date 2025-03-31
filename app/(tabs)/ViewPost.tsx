@@ -1,30 +1,20 @@
 // ViewPostScreen.tsx
 import React,  { useState, useEffect }  from 'react';
-import { View, Text, StyleSheet, Image, TextInput, TouchableOpacity, ScrollView, ActivityIndicator  } from 'react-native';
+import { View, Text, StyleSheet, Image, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert  } from 'react-native';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../types/navigation';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Button, Divider, IconButton } from 'react-native-paper';
 import { commentsService } from '../../services/commentsService';
-// import { offersService } from '../../services/offersService';
 import { supabase } from '../../services/supabase';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Post } from '../../types/navigation'; 
 import { Comment } from '../../types/navigation'; 
 import { getOffersByPost } from '../../services/offersService'; 
-
-interface Offer {
-  id: string;
-  post_id: string;
-  user_id: string;
-  offered_items: string[];
-  offered_weight: number;
-  requested_weight: number;
-  price: number;
-  message?: string;
-  images?: string[];
-}
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { postsService } from '../../services/postsService';
+import { MaterialIcons } from '@expo/vector-icons';
+import { Offer } from '../../services/offersService';
 
 
 type ViewPostRouteProp = RouteProp<RootStackParamList, 'ViewPost'>;
@@ -35,187 +25,262 @@ const ViewPost = () => {
   const navigation = useNavigation<viewPostNavigationProp>();
 
   // Only ONE state for post
-  const [post, setPost] = useState<Post | null>(route.params?.post ?? null);
+  const [post, setPost] = useState<Post | null>(route.params?.post);
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentText, setCommentText] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ id: string } | null>(null);
   const [activeTab, setActiveTab] = useState('post');
   const [offers, setOffers] = useState<Offer[]>([]);
 
+  
+  const fetchPostAndOffers = async () => {
+    try {
+      // ✅ Get post ID from existing state or route params
+      const postId = post?.id || route.params?.post?.id;
+  
+      if (!postId) {
+        console.error("❌ No valid post ID!");
+        return;
+      }
+  
+      console.log("🔄 Fetching post and offers for ID:", postId);
+  
+      // ✅ Fetch post details (including post_item_types)
+      const fetchedPost = await postsService.getPostById(postId);
+      setPost(fetchedPost);
+  
+      // ✅ Fetch offers for this post
+      const fetchedOffers = await getOffersByPost(postId);
+      setOffers(fetchedOffers);
+  
+    } catch (error) {
+      console.error("❌ Error fetching post and offers:", error);
+    }
+  };
+  
+  
+  // ✅ Ensure both post & offers are fetched on mount
+  useEffect(() => {
+    fetchPostAndOffers();
+  }, []);
+  
 
-    // Fetch comments
-    const fetchComments = async (postId: string) => {
-      try {
-        console.log('🔄 Fetching comments for post ID:', postId);
-        const data = await commentsService.getComments(postId);
-        // console.log('Fetched Comments:', JSON.stringify(data, null, 2));
-        setComments(data);
-      } catch (error) {
-        console.error('Error fetching comments:', error);
+  useEffect(() => {
+    fetchPostAndOffers();
+  }, []);
+
+
+  // Fetch comments
+  const fetchComments = async (postId: string) => {
+    try {
+      console.log('🔄 Fetching comments for post ID:', postId);
+      const data = await commentsService.getComments(postId);
+      setComments(data);
+    } catch (error) {
+      console.error('Error fetching comments:', error);
+    }
+  };
+  
+  const handleSendComment = async () => {
+    console.log("🔍 Debugging handleSendComment:");
+    console.log("➡️ commentText:", commentText);
+    console.log("➡️ post.id:", post?.id);
+    console.log("➡️ currentUser.id:", currentUser?.id);
+    
+    if (!commentText.trim() || !post?.id || !currentUser?.id) {
+      console.warn("⚠️ Cannot send comment: Missing data!");
+      return;
+    }
+    
+    try {
+      console.log("Sending comment:", commentText);
+      const newComment = await commentsService.addComment(post.id, currentUser.id, commentText);
+  
+      if (newComment) {
+        console.log("Comment Posted:", JSON.stringify(newComment, null, 2));
+        fetchComments(post.id);
+        setCommentText('');
+      }
+    } catch (error) {
+      console.error("Error posting comment:", error);
+    }
+  };
+  
+  const fetchOffers = async () => {
+    if (!post?.id) return;
+    try {
+      console.log("Fetching offers for post ID:", post.id);
+      const data = await getOffersByPost(post.id);
+      
+      if (!data) {
+        console.error("No offers received.");
+        setOffers([]);
+        return;
+      }
+  
+      // images parsed correctly
+      const formattedOffers = data.map(offer => ({
+        ...offer,
+        images: typeof offer.images === "string" ? JSON.parse(offer.images) : offer.images ?? [],
+      }));
+  
+      console.log("Fetched Offers:", JSON.stringify(formattedOffers, null, 2));
+      setOffers(formattedOffers);
+    } catch (error) {
+      console.error("Error fetching offers:", error);
+    }
+  };
+  
+  const handleDeleteOffer = async (offerId: string) => {
+    try {
+      const { error } = await supabase
+        .from("offers")
+        .delete()
+        .eq("id", offerId);
+  
+      if (error) throw error;
+  
+      console.log("✅ Offer deleted successfully");
+      setOffers((prev) => prev.filter((offer) => offer.id !== offerId));
+    } catch (error) {
+      console.error("❌ Error deleting offer:", error);
+    }
+  };
+
+  const handleEditOffer = (offer: Offer) => {
+    const offerWithPostTypes = {
+      ...offer,
+      post_item_types: post?.post_item_types ?? [],
+    };
+  
+    console.log("✏️ Navigating to EditOffer with:", offerWithPostTypes);
+    navigation.navigate("EditOffer", { offer: offerWithPostTypes });
+  };    
+  
+  const handleDeclineOffer = async (offerId: string) => {
+    console.log("Declining offer ID:", offerId);
+    // logic 
+  };
+  
+  const handleAcceptOffer = (offer: Offer) => {
+    if (!post) {
+      console.error("Cannot navigate to ScheduleOffer: post is null");
+      return;
+    }
+
+    console.log("✅ Accepting offer, navigating to ScheduleOffer:", offer);
+    
+    navigation.navigate("ScheduleOffer", { offer, post });
+  };
+  
+  
+  const handleChatWithUser = (userId: string) => {
+    console.log("Chatting with user ID:", userId);
+    // Navigate to chat screen
+    // navigation.navigate("Messages", { userId });
+  };    
+
+  const isOfferOwner = (offer: Offer) => {
+    console.log(`Checking if ${currentUser?.id} is owner of offer ${offer.id}: ${offer.user_id === currentUser?.id}`);
+    return offer.user_id === currentUser?.id;
+  };
+  
+  const isPostOwner = () => {
+    console.log(`Checking if ${currentUser?.id} is owner of post ${post?.id}: ${post?.user_id === currentUser?.id}`);
+    return post?.user_id === currentUser?.id;
+  };
+
+  // const onRefresh = () => {
+  //   setRefreshing(true);
+  //   fetchPost();
+  // };
+
+  // Fetch comments only when a new post is received
+  useEffect(() => {
+    if (route.params?.post?.id) {
+      fetchComments(route.params.post.id);
+    }
+  }, [route.params?.post]);
+
+  if (!post) {
+    console.log("post is NULL before rendering!");
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text>Post not found</Text>
+      </View>
+    );
+  } else {
+    console.log("Rendering ViewPost with post data:", post);  
+  }
+
+  // Logged in user
+  useEffect(() => {
+    const getUser = async () => {
+      console.log("🔍 Fetching authenticated user...");
+      const { data, error } = await supabase.auth.getUser();
+  
+      if (error) {
+        console.error("❌ Error fetching user:", error.message);
+      } else {
+        console.log("✅ Authenticated User:", data.user);
+        setCurrentUser(data.user);
       }
     };
   
-    const handleSendComment = async () => {
-      console.log("🔍 Debugging handleSendComment:");
-      console.log("➡️ commentText:", commentText);
-      console.log("➡️ post.id:", post?.id);
-      console.log("➡️ currentUser.id:", currentUser?.id);
-      
-      if (!commentText.trim() || !post?.id || !currentUser?.id) {
-        console.warn("⚠️ Cannot send comment: Missing data!");
-        return;
-      }
-      
-      try {
-        console.log("Sending comment:", commentText);
-        const newComment = await commentsService.addComment(post.id, currentUser.id, commentText);
-    
-        if (newComment) {
-          console.log("Comment Posted:", JSON.stringify(newComment, null, 2));
-          fetchComments(post.id);
-          setCommentText('');
-        }
-      } catch (error) {
-        console.error("Error posting comment:", error);
-      }
-    };
-
-    const fetchOffers = async () => {
-      if (!post?.id) return;
-      try {
-        console.log("Fetching offers for post ID:", post.id);
-        const data = await getOffersByPost(post.id);
-        
-        if (!data) {
-          console.error("No offers received.");
-          setOffers([]);
-          return;
-        }
-    
-        // images parsed correctly
-        const formattedOffers = data.map(offer => ({
-          ...offer,
-          images: typeof offer.images === "string" ? JSON.parse(offer.images) : offer.images ?? [],
-        }));
-    
-        console.log("Fetched Offers:", JSON.stringify(formattedOffers, null, 2));
-        setOffers(formattedOffers);
-      } catch (error) {
-        console.error("Error fetching offers:", error);
-      }
-    };
-    
-    const handleDeleteOffer = async (offerId: string) => {
-      try {
-        const { error } = await supabase
-          .from("offers")
-          .delete()
-          .eq("id", offerId);
-    
-        if (error) throw error;
-    
-        console.log("✅ Offer deleted successfully");
-        setOffers((prev) => prev.filter((offer) => offer.id !== offerId));
-      } catch (error) {
-        console.error("❌ Error deleting offer:", error);
-      }
-    };
-    
-    const handleDeclineOffer = async (offerId: string) => {
-      console.log("Declining offer ID:", offerId);
-      // Add your logic here to mark the offer as "declined"
-    };
-    
-    const handleAcceptOffer = async (offerId: string) => {
-      console.log("Accepting offer ID:", offerId);
-      // Add logic to mark the offer as "accepted"
-    };
-    
-    const handleChatWithUser = (userId: string) => {
-      console.log("Chatting with user ID:", userId);
-      // Navigate to chat screen
-      // navigation.navigate("Messages", { userId });
-    };    
-
-    const isOfferOwner = (offer: Offer) => {
-      console.log(`Checking if ${currentUser?.id} is owner of offer ${offer.id}: ${offer.user_id === currentUser?.id}`);
-      return offer.user_id === currentUser?.id;
-    };
-    
-    const isPostOwner = () => {
-      console.log(`Checking if ${currentUser?.id} is owner of post ${post?.id}: ${post?.user_id === currentUser?.id}`);
-      return post?.user_id === currentUser?.id;
-    };
-    
-    
-    // Load post from AsyncStorage if missing
-    useEffect(() => {
-      const loadPost = async () => {
-        if (!post) {
-          const storedPost = await AsyncStorage.getItem('currentPost');
-          if (storedPost) {
-            setPost(JSON.parse(storedPost));
-          }
-        }
-        setLoading(false);
-      };
-      loadPost();
-    }, []);
-
-    // Store post in AsyncStorage when navigating
-    useEffect(() => {
-      if (route.params?.post) {
-        setPost(route.params.post);
-        AsyncStorage.setItem('currentPost', JSON.stringify(route.params.post));
-      }
-    }, [route.params?.post]);
-
-    // Fetch comments only when a new post is received
-    useEffect(() => {
-      if (route.params?.post?.id) {
-        fetchComments(route.params.post.id);
-      }
-    }, [route.params?.post]);
-
-    if (!post) {
-      return (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <Text>Post not found</Text>
-        </View>
-      );
+    getUser();
+  }, []);      
+  
+  useEffect(() => {
+    console.log("Current User ID:", currentUser?.id);
+    console.log("Post Owner ID:", post?.user_id);
+    offers.forEach((offer) => {
+      console.log(`Offer ID: ${offer.id}, Made By User ID: ${offer.user_id}`);
+    });
+  }, [currentUser, offers]);
+  
+  useEffect(() => {
+    if (activeTab === 'offers' && offers.length === 0) {
+      fetchOffers();
     }
+  }, [activeTab, post?.id]);
 
-    // Logged in user
-    useEffect(() => {
-      const getUser = async () => {
-        const { data, error } = await supabase.auth.getUser();
-        if (error) {
-          console.error('Error fetching user:', error.message);
-        } else {
-          console.log("Authenticated User:", JSON.stringify(data.user, null, 2));
-          setCurrentUser(data.user);
-        }
-      };
-      getUser();
-    }, []);    
-   
-    useEffect(() => {
-      if (activeTab === 'offers' && offers.length === 0) {
-        fetchOffers();
-      }
-    }, [activeTab]);       
-    
-    useEffect(() => {
-      console.log("Current User ID:", currentUser?.id);
-      console.log("Post Owner ID:", post?.user_id);
-      offers.forEach((offer) => {
-        console.log(`Offer ID: ${offer.id}, Made By User ID: ${offer.user_id}`);
-      });
-    }, [currentUser, offers]);
-    
-    // console.log('ViewPost  Post Object:', post);
+  useEffect(() => {
+    console.log("🔄 Resetting activeTab and clearing offers...");
+    setActiveTab('post'); // ✅ Reset tab to "Post" when a new post is loaded
+    setOffers([]); // ✅ Clear previous offers
+    fetchPostAndOffers();
+  }, [route.params?.post]);
+
+  useEffect(() => {
+    const commentSubscription = supabase
+      .channel('realtime:comments')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'comments' }, (payload) => {
+        console.log('🔄 New comment added:', payload.new);
+  
+        // Transform the payload to conform to the Comment type
+        const newComment: Comment = {
+          id: payload.new.id,
+          post_id: payload.new.post_id,
+          user_id: payload.new.user_id,
+          user_name: payload.new.user_name,
+          comment_text: payload.new.text,
+          created_at: payload.new.created_at,
+        };
+  
+        // Add the new comment to the existing state
+        setComments((prevComments) => [...prevComments, newComment]);
+      })
+      .subscribe();
+  
+    return () => {
+      supabase.removeChannel(commentSubscription);
+    };
+  }, []);  
+
+  // console.log('ViewPost  Post Object:', post);
 
   return (
     <View style={styles.container}> 
@@ -270,7 +335,13 @@ const ViewPost = () => {
               style={styles.actionButton} 
               onPress={() => {
                 console.log("🚀 Navigating to MakeOffer with:", JSON.stringify(post, null, 2));
-                navigation.navigate('MakeOffer', { post });
+
+                if (!post.post_item_types || post.post_item_types.length === 0) {
+                  console.error("❌ Missing post_item_types before navigating to MakeOffer!");
+                  Alert.alert("Error", "Plastic item types are missing. Please refresh and try again.");
+                  return;
+                }
+                navigation.navigate('MakeOffer', { post: { ...post } });
               }}>
               <Text>Send Offer</Text>
             </TouchableOpacity>
@@ -343,17 +414,17 @@ const ViewPost = () => {
                     {/* Conditional Buttons */}
                     <View style={styles.actionButton}>
                       {isUserOfferOwner ? (
-                        <>
+                        <View style={styles.actionButtonContainer}>
                           <TouchableOpacity 
                             style={styles.deleteButton} 
                             onPress={() => handleDeleteOffer(offer.id)}
                           >
                             <Text style={styles.buttonText}>🗑 Delete My Offer</Text>
                           </TouchableOpacity>
-                          <TouchableOpacity style={styles.moreOptions}>
-                            <Text style={styles.moreOptionsText}>⋮</Text>
+                          <TouchableOpacity style={styles.editButton} onPress={() => handleEditOffer(offer)}>
+                            <MaterialIcons name="edit" size={20} color="white" />
                           </TouchableOpacity>
-                        </>
+                        </View>
                       ) : isUserPostOwner ? (
                         <View style={styles.actionButtonContainer}>
                           <TouchableOpacity 
@@ -370,7 +441,7 @@ const ViewPost = () => {
                           </TouchableOpacity>
                           <TouchableOpacity 
                             style={styles.acceptButton} 
-                            onPress={() => handleAcceptOffer(offer.id)}
+                            onPress={() => handleAcceptOffer(offer)}
                           >
                             <Text style={styles.buttonText}>✅ Accept</Text>
                           </TouchableOpacity>
@@ -467,10 +538,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between', 
     marginBottom: 10 
   },
-  moreOptions: { 
-    backgroundColor: '#ccc', // Gray
-    padding: 10 
-  },
   moreOptionsText: { 
     fontSize: 24, 
     color: 'white' 
@@ -515,9 +582,7 @@ const styles = StyleSheet.create({
     color: 'white', 
     padding: 10 
   },
-  sendButton: { 
-    padding: 10 
-  },
+
   sendButtonText: { 
     fontSize: 18, 
     color: 'white' 
@@ -578,6 +643,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 5,
   },
+
+  // Buttons
   actionButton: {
     flex: 1, 
     padding: 10,
@@ -588,7 +655,14 @@ const styles = StyleSheet.create({
   actionButtonContainer:{
     flexDirection: 'row', 
     justifyContent: 'space-between', 
-    marginTop: 10,
+    marginTop: 5,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  moreOptions: { 
+    backgroundColor: '#ccc', // Gray
+    padding: 8,
+    borderRadius: 3, 
   },
   buttonText:{
     flex: 1, 
@@ -597,17 +671,23 @@ const styles = StyleSheet.create({
   deleteButton: {
     flex: 1, 
     marginHorizontal: 5,
-    backgroundColor: 'red', // ✅ Ensure visibility
+    backgroundColor: 'red',
     padding: 10,
     borderRadius: 5,
   },
-  
+  editButton:{
+    backgroundColor: '#2C5735', // Gray
+    padding: 8,
+    borderRadius: 3,
+  },
   declineButton: {
     backgroundColor: '#B22222', // Dark Red
     padding: 10,
     borderRadius: 5,
   },
-  
+  sendButton: { 
+    padding: 10 
+  },
   chatButton: {
     backgroundColor: '#007bff', // Blue
     padding: 10,

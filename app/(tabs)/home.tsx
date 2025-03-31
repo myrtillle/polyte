@@ -11,6 +11,7 @@ import pickupIcon from '../../assets/images/pickup.png';
 import dropoffIcon from '../../assets/images/dropoff.png';
 import paperplaneIcon from '../../assets/images/paperplane.png';
 import messagebubbleIcon from '../../assets/images/messagebubble.png';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface Post {
   id: string;
@@ -122,6 +123,16 @@ export default function HomeScreen() {
     }
   };
   
+  const navigateToViewPost = async (post: Post) => {
+    try {
+      console.log("🚀 Navigating to ViewPost with post:", post);
+      await AsyncStorage.setItem('lastViewedPost', JSON.stringify(post));
+      
+      navigation.navigate('ViewPost', { post });
+    } catch (error) {
+      console.error("❌ Error saving post:", error);
+    }
+  };  
 
   useEffect(() => {
     fetchPosts();
@@ -338,8 +349,13 @@ export default function HomeScreen() {
             style={styles.actionMenu}
             onPress={() => {
               setSelectedPost(item);
-              navigation.navigate('ViewPost', { post: item });
-            }}
+                console.log('Navigating to ViewPost with post:', item);
+                console.log('🚀 Navigating to ViewPost with post:', JSON.stringify(item, null, 2));
+                // navigation.navigate('ViewPost', { post: item });
+                navigateToViewPost(item);
+              // navigation.navigate('ViewPost', { post:item  });
+              // navigation.getParent()?.navigate('ViewPost', { post: item });
+             }}
           >
             <Text style={styles.dots}>⋮</Text>
           </TouchableOpacity>

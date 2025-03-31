@@ -6,6 +6,8 @@ import SignupScreen from '../app/screens/SignupScreen';
 import ViewPost from '../app/(tabs)/ViewPost';  
 import MakeOffer from '../app/(tabs)/MakeOffer';
 import { RootStackParamList } from '../types/navigation';
+import EditOffer from '../app/(tabs)/EditOffer';
+import ScheduleOffer from '../app/(tabs)/ScheduleOffer'
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -35,6 +37,14 @@ export function AppNavigator() {
       <Stack.Screen 
         name="MakeOffer" 
         component={MakeOffer} 
+      />
+      <Stack.Screen 
+        name="EditOffer" 
+        component={EditOffer} 
+      />
+      <Stack.Screen
+        name="ScheduleOffer"
+        component={ScheduleOffer}
       />
     </Stack.Navigator>
   );

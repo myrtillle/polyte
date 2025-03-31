@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, TextInput, TouchableOpacity, 
   Image, ScrollView, Alert
 } from 'react-native';
-import { Button } from 'react-native-paper';
+import { Button,  IconButton } from 'react-native-paper';
 import * as ImagePicker from 'expo-image-picker';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../types/navigation';
@@ -91,8 +91,6 @@ const MakeOffer = () => {
     }
   };
   
-  
-  
   const handleSendOffer = async () => {
     if (!currentUser?.id) {
       console.error("Cannot send offer: No authenticated user!");
@@ -123,6 +121,7 @@ const MakeOffer = () => {
       console.error("Error posting offer:", error.message);
     } else {
       console.log("Offer posted successfully:", data);
+      navigation.goBack();
     }
   };
 
@@ -140,9 +139,29 @@ const MakeOffer = () => {
     getUser();
   }, []);   
 
+  useEffect(() => {
+    console.log("📌 Received new post in MakeOffer:", JSON.stringify(post, null, 2));
+  
+    if (post?.post_item_types) {
+      console.log("✅ post_item_types exists, resetting selection.");
+      setSelectedItems(post.post_item_types.map(item => item.item_types)); // 🔄 Reset selected items
+    } else {
+      console.error("❌ post_item_types is missing in MakeOffer!");
+      setSelectedItems([]); // Prevent lingering state
+    }
+  }, [post]); // Runs whenever post changes  
+
   return (
     <View style={styles.container}>
       <ScrollView style={styles.content}>
+
+      {/* Back Button */}
+      <IconButton
+        icon="arrow-left"
+        size={24}
+        onPress={() => navigation.goBack()}
+        style={styles.backButton}
+      />
 
         {/* Plastic Types Selection */}
         <Text style={styles.label}>TYPE OF PLASTICS</Text>
@@ -292,6 +311,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     textTransform: 'capitalize',
+  },
+  backButton: {
+    marginLeft: 10,
+    marginBottom: 10,
   },
 });
 
