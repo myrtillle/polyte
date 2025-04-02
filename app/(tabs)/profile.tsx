@@ -48,6 +48,14 @@ const ProfileScreen = () => {
         </Card.Content>
       </Card>
 
+      <Card style={styles.userCard}>
+        <Card.Content>
+          <TouchableOpacity>
+            <Text style={styles.profileName}>My Posts</Text>
+          </TouchableOpacity>
+        </Card.Content>
+      </Card>
+
       {/* Stats Section */}
       <Text style={styles.sectionTitle}>ALL TIME STATS</Text>
 

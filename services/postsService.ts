@@ -1,4 +1,6 @@
 import { supabase } from './supabase';
+import * as FileSystem from 'expo-file-system';
+import { Platform } from 'react-native';
 
 export interface Location {
   latitude: number;
@@ -16,8 +18,9 @@ export interface Post {
   created_at: string;
   updated_at: string;
   photos?: string[];
+  location?: string;
   users?: {
-    id: string; // ✅ Added to match Supabase data
+    id: string; 
     email: string;
     raw_user_meta_data?: {
       username?: string;
@@ -45,6 +48,7 @@ export interface Post {
 // New interface for creating a post
 export interface CreatePostData extends Omit<Post, 'id' | 'created_at' | 'updated_at'> {
   item_type_ids: number[];
+  location: string; 
 }
 
 export const postsService = {
@@ -93,7 +97,7 @@ export const postsService = {
   }, 
 
   async createPost(postData: CreatePostData) {
-    const { item_type_ids, ...post } = postData;
+    const { item_type_ids, photos, ...post } = postData;
 
     // Create the post
     const { data: newPost, error: postError } = await supabase
@@ -102,7 +106,8 @@ export const postsService = {
         ...post,
         collection_mode_id: post.collection_mode_id,
         category_id: post.category_id,
-        status: 'active'
+        status: 'active',
+        photos: postData.photos, 
       }])
       .select(`
         *,
@@ -122,6 +127,8 @@ export const postsService = {
       console.error('Error creating post:', postError);
       throw postError;
     }
+
+    console.log("Photos before submission (should be an array):", Array.isArray(postData.photos), postData.photos);
 
     // Create item type relationships
     if (item_type_ids && item_type_ids.length > 0) {
@@ -143,23 +150,68 @@ export const postsService = {
     return newPost;
   },
 
-  async uploadPhoto(file: any) {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random()}.${fileExt}`;
-    const filePath = `${fileName}`;
+  async uploadImage(fileUri: string, bucketName: string = 'images') {
+    try {
+      const fileType = fileUri.split('.').pop();
+      const fileName = `image_${Date.now()}.${fileType}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from('post-photos')
-      .upload(filePath, file);
+      let fileData: any;
+      if (Platform.OS === 'web') {
+        // Web-specific handling
+        const response = await fetch(fileUri);
+        const blob = await response.blob();
+        fileData = blob;
+      } else {
+        // Android and iOS handling
+        fileData = {
+          uri: fileUri,
+          name: fileName,
+          type: `image/${fileType}`,
+        };
+      }
 
-    if (uploadError) throw uploadError;
+      const { data, error } = await supabase.storage
+        .from(bucketName)
+        .upload(fileName, fileData);
 
-    const { data } = supabase.storage
-      .from('post-photos')
-      .getPublicUrl(filePath);
+      if (error) {
+        console.error("Error uploading image to Supabase:", error.message);
+        throw new Error(`Upload failed: ${error.message}`);
+      }
 
-    return data.publicUrl;
+      // Generate public URL for the uploaded image
+      const { data: urlData } = supabase.storage
+        .from(bucketName)
+        .getPublicUrl(fileName);
+
+      if (!urlData?.publicUrl) {
+        throw new Error("Failed to generate the public URL.");
+      }
+
+      console.log("Image uploaded successfully:", urlData.publicUrl);
+      return urlData.publicUrl;
+    } catch (error: any) {
+      console.error("Image upload failed:", error.message || "Unknown error");
+      throw new Error(error.message || "Unknown error");
+    }
   },
+  // async uploadPhoto(file: any) {
+  //   const fileExt = file.name.split('.').pop();
+  //   const fileName = `${Math.random()}.${fileExt}`;
+  //   const filePath = `${fileName}`;
+
+  //   const { error: uploadError } = await supabase.storage
+  //     .from('post-photos')
+  //     .upload(filePath, file);
+
+  //   if (uploadError) throw uploadError;
+
+  //   const { data } = supabase.storage
+  //     .from('post-photos')
+  //     .getPublicUrl(filePath);
+
+  //   return data.publicUrl;
+  // },
 
   async getUserPosts(userId: string) {
     const { data, error } = await supabase

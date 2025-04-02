@@ -111,7 +111,7 @@ export default function HomeScreen() {
   const fetchPosts = async () => {
     try {
       const data = await postsService.getPosts();
-      console.log('Fetched posts:', data);
+      // console.log('Fetched posts:', data);
       // console.log('Fetched posts:', JSON.stringify(data, null, 2)); 
       setPosts(data);
     } catch (error) {
@@ -279,55 +279,60 @@ export default function HomeScreen() {
       item.category_id === 2 && { backgroundColor: '#172B1F' } // Darker for SEEKING
     ]}>
       <Card.Content>
-        {/* Name and time */}
-        <View style={styles.userInfo}>
-          <Text style={styles.userName}>
-            {item.user?.name ?? item.user?.email ?? 'Unknown User'}
-          </Text>
-          <Text style={styles.timePosted}>
-            {formatTimeAgo(item.created_at)}
-          </Text>
-        </View>
-  
-        {/* Mode label (yellow icon + text) */}
-        <View style={styles.labelRow}>
-          {(() => {
-            const mode = getModeData(item.collection_mode?.name || '');
-            return (
-              <>
-                <Image
-                  source={mode.icon}
-                  style={[styles.labelImage, { tintColor: mode.color }]}
-                  resizeMode="contain"
-                />
-                <Text style={[styles.labelText, { color: mode.color }]}>
-                  {item.collection_mode?.name || 'MEET UP'}
-                </Text>
-              </>
-            );
-          })()}
+        <View style={styles.cardWrapper}>
+          <View style={styles.infoWrapper}>
+            {/* Name and time */}
+            <View style={styles.userInfo}>
+              <Text style={styles.userName}>
+                {item.user?.name ?? item.user?.email ?? 'Unknown User'}
+              </Text>
+              <Text style={styles.timePosted}>
+                {formatTimeAgo(item.created_at)}
+              </Text>
+            </View>
+      
+            {/* Mode label (yellow icon + text) */}
+            <View style={styles.labelRow}>
+              {(() => {
+                const mode = getModeData(item.collection_mode?.name || '');
+                return (
+                  <>
+                    <Image
+                      source={mode.icon}
+                      style={[styles.labelImage, { tintColor: mode.color }]}
+                      resizeMode="contain"
+                    />
+                    <Text style={[styles.labelText, { color: mode.color }]}>
+                      {item.collection_mode?.name || 'MEET UP'}
+                    </Text>
+                  </>
+                );
+              })()}
+            </View>
+      
+            {/* Item labels */}
+            <View style={styles.itemList}>
+            {(item.post_item_types ?? []).map((type, index) => (
+              <Chip
+                key={index}
+                style={styles.itemChip}
+                textStyle={styles.itemChipText}
+              >
+                {type?.item_types?.name ?? 'Unknown'}
+              </Chip>
+            ))}
+            </View>
+          </View>
+
+          {/* Image from database */}
+          {item.photos && item.photos.length > 0 && (
+            <Image
+              source={{ uri: item.photos[0] }} 
+              style={styles.postImage}
+            />
+          )}
         </View>
 
-
-  
-        {/* Description */}
-        <Text style={styles.description}>
-          {item.description || 'No Description'}
-        </Text>
-  
-        {/* Item labels */}
-        <View style={styles.itemList}>
-        {(item.post_item_types ?? []).map((type, index) => (
-          <Chip
-            key={index}
-            style={styles.itemChip}
-            textStyle={styles.itemChipText}
-          >
-            {type?.item_types?.name ?? 'Unknown'}
-          </Chip>
-        ))}
-        </View>
-  
         {/* Actions */}
         <View style={styles.actionsRow}>
           <TouchableOpacity style={styles.actionButton}>
@@ -415,8 +420,6 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
 
-
-  
   container: {
     flex: 1,
   },
@@ -427,112 +430,110 @@ const styles = StyleSheet.create({
     backgroundColor: '#023F0F',
   },
 
+  cardWrapper:{
+    flexDirection: 'row',
+  },
+  infoWrapper:{
+    width: '75%',
+  },
   categoryStickyWrapper: {
     zIndex: 1,
     backgroundColor: '#235F30',
     paddingBottom: 8,
   },  
 
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    gap: 4,
+  },
 
-labelRow: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  marginBottom: 4,
-  gap: 4,
-},
+  labelImage: {
+    width: 20,
+    height: 20,
+    marginRight: 6,
+  },
 
-labelImage: {
-  width: 20,
-  height: 20,
-  marginRight: 6,
-},
+  labelText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#FFD700',
+    textTransform: 'uppercase',
+  },
 
-labelText: {
-  fontSize: 12,
-  fontWeight: 'bold',
-  color: '#FFD700',
-  textTransform: 'uppercase',
-},
+  itemList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginVertical: 6,
+    gap: 6,
+  },
 
-itemList: {
-  flexDirection: 'row',
-  flexWrap: 'wrap',
-  marginVertical: 6,
-  gap: 6,
-},
+  itemChip: {
+    backgroundColor: '#1E592B', // or whatever green you want
+    borderRadius: 5,
+    height: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    marginRight: 6,
+    marginBottom: 6,
+  },
 
-itemChip: {
-  backgroundColor: '#1E592B', // or whatever green you want
-  borderRadius: 5,
-  height: 30,
-  justifyContent: 'center',
-  alignItems: 'center',
-  paddingHorizontal: 10,
-  marginRight: 6,
-  marginBottom: 6,
-},
-
-itemChipText: {
-  color: '#fff',
-  fontWeight: 'thin',
-  fontSize: 10,
-  textTransform: 'uppercase',
-},
-
-
-actionsRow: {
-  flexDirection: 'row',
-  alignItems: 'center',
-  marginTop: 12,
-  gap: 8,
-},
-
-actionButton: {
-  flex: 1,
-  flexDirection: 'row',
-  alignItems: 'center',
-  backgroundColor: '#2C5735',
-  borderRadius: 6,
-  paddingVertical: 10,
-  justifyContent: 'center',
-},
-
-actionIconImage: {
-  width: 20,
-  height: 20,
-  marginRight: 6,
-  resizeMode: 'contain',
-  tintColor: '#00FF66', // matches your green color
-},
+  itemChipText: {
+    color: '#fff',
+    fontWeight: 'thin',
+    fontSize: 10,
+    textTransform: 'uppercase',
+  },
 
 
-actionText: {
-  color: '#FFFFFF',
-  fontWeight: 'bold',
-  fontSize: 12,
-},
+  actionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    gap: 8,
+  },
 
-actionMenu: {
-  backgroundColor: '#2C5735',
-  borderRadius: 8,
-  width: 40,           
-  height: 40, 
-  justifyContent: 'center',
-  alignItems: 'center',
-},
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2C5735',
+    borderRadius: 6,
+    paddingVertical: 10,
+    justifyContent: 'center',
+  },
 
-dots: {
-  fontSize: 20,
-  fontWeight: 'bold',
-  color: '#fff',
-},
-
-  
-
-
-
+  actionIconImage: {
+    width: 20,
+    height: 20,
+    marginRight: 6,
+    resizeMode: 'contain',
+    tintColor: '#00FF66', // matches your green color
+  },
 
 
+  actionText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: 12,
+  },
+
+  actionMenu: {
+    backgroundColor: '#2C5735',
+    borderRadius: 8,
+    width: 40,           
+    height: 40, 
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  dots: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
 
   categoryWrapper: {
     flexDirection: 'row',
@@ -576,8 +577,6 @@ dots: {
     fontWeight: 'bold',
   },
   
-  
-
   headerWrapper: {
     backgroundColor: '#235F30', // overall screen background
     padding: 16,
@@ -612,8 +611,6 @@ dots: {
     justifyContent: 'center',
     alignItems: 'center',
   },
-
-
 
   categories: {
     flexDirection: 'row',
@@ -655,6 +652,9 @@ dots: {
   postImage: {
     marginVertical: 8,
     borderRadius: 8,
+    width: 80,  
+    height: 80, 
+    marginTop: 8,
   },
   actions: {
     flexDirection: 'row',

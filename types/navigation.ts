@@ -10,6 +10,7 @@ export type RootStackParamList = {
   MakeOffer: {post: Post };
   EditOffer: { offer: Offer };
   ScheduleOffer: { offer: Offer; post: Post };
+  CollectionSchedule: { offerID: string }; 
 };
 
 export type BottomTabParamList = {
@@ -30,6 +31,7 @@ export interface Post {
   status: string;
   created_at: string;
   photos?: string[];
+  location?: string;
   user?: {
     email: string;
     name: string;

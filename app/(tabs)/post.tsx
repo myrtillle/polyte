@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Dimensions, Alert, Platform } from 'react-native';
 import { TextInput, Button, Title, Text, IconButton, SegmentedButtons, Chip } from 'react-native-paper';
 import { router } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { postsService, CreatePostData } from '../../services/postsService';
+import * as ImagePicker from 'expo-image-picker';
+import MapView, { Marker } from 'react-native-maps';
+import * as Location from 'expo-location';
 import { supabase } from '../../services/supabase';
 
 import { LinearGradient } from 'expo-linear-gradient';
@@ -24,6 +27,8 @@ const COLLECTION_MODES = [
   { id: 'pickup', title: 'PICK UP FROM DROP OFF', icon: 'map-marker' },
   { id: 'location', title: 'MEET IN MY LOCATION', icon: 'home' },
 ];
+
+const { width, height } = Dimensions.get('window');
 
 // Define interfaces for the data types
 interface Category {
@@ -49,7 +54,14 @@ interface FormData {
   kilograms: string;
   collection_mode_id: number | null;
   status: string;
+  photos: string[];
+  location: {
+    latitude: number;
+    longitude: number;
+    address?: string;
+  };
 }
+
 
 export default function PostScreen() {
   const [loading, setLoading] = useState(false);
@@ -57,20 +69,108 @@ export default function PostScreen() {
   const [itemTypes, setItemTypes] = useState<ItemType[]>([]);
   const [collectionModes, setCollectionModes] = useState<CollectionMode[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   
+  //location
+  const [location, setLocation] = useState({ latitude: 0, longitude: 0 });
+  const [address, setAddress] = useState('');
+  // const [loading, setLoading] = useState(true);
+
   // Separate state for UI-only data
   const [selectedMode, setSelectedMode] = useState('');
 
-  // Form data that matches our database schema
+  // Form data matching db schema
   const [formData, setFormData] = useState<FormData>({
     category_id: null,
     item_type_ids: [],
     description: '',
     kilograms: '',
     collection_mode_id: null,
-    status: 'active'
+    status: 'active',
+    photos: [],
+    location: {
+      latitude: 0,
+      longitude: 0,
+      address: '',
+    },
   });
 
+  function formDataFromImagePicker(result: ImagePicker.ImagePickerSuccessResult) {
+    const formData = new FormData();
+  
+    for (const index in result.assets) {
+      const asset = result.assets[index];
+  
+      formData.append(`photo.${index}`, {
+        uri: asset.uri,
+        name: asset.fileName ?? asset.uri.split("/").pop(),
+        type: asset.type ?? 'image/jpeg', // Default to JPEG if type is not available
+      });
+    }
+  
+    return formData;
+  }
+
+  const pickImages = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Sorry, we need camera roll permissions to make this work!');
+        return;
+      }
+  
+      setUploading(true);
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsMultipleSelection: true,
+        quality: 1,
+      });
+  
+      if (!result.canceled) {
+        const assets = result.assets || [];
+  
+        const uploadedImages = await Promise.all(
+          assets.map(async (asset) => {
+            try {
+              console.log("Picked asset (Android):", asset);
+  
+              // Use the uploadImage function from postsService
+              const url = await postsService.uploadImage(asset.uri);
+              if (!url) {
+                throw new Error("Image upload returned null or undefined");
+              }
+              return url;
+            } catch (uploadError: unknown) {
+              if (uploadError instanceof Error) {
+                console.error("Error uploading image:", uploadError.message);
+                Alert.alert("Image upload failed", uploadError.message);
+              } else {
+                console.error("Unknown upload error:", uploadError);
+                Alert.alert("Image upload failed", "An unexpected error occurred");
+              }
+              return null;
+            }
+          })
+        );
+  
+        setFormData((prev) => ({
+          ...prev,
+          photos: uploadedImages.filter((url) => url !== null),
+        }));
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        console.error("Error picking images:", error.message);
+        Alert.alert("Error", error.message);
+      } else {
+        console.error("Unknown error while picking images:", error);
+        Alert.alert("Error", "An unexpected error occurred while picking images.");
+      }
+    } finally {
+      setUploading(false);
+    }
+  };
+  
   // Get current user session
   useEffect(() => {
     const getSession = async () => {
@@ -99,30 +199,66 @@ export default function PostScreen() {
     loadData();
   }, []);
 
+  const formatLocationToWKT = (lat: number, lon: number): string => {
+    return `POINT(${lon} ${lat})`;
+  };
+
   const handleSubmit = async () => {
     if (!userId || !formData.category_id || !formData.collection_mode_id) {
       console.error('Missing required fields');
       return;
     }
-
+  
     try {
       setLoading(true);
+      
+      const { latitude, longitude } = formData.location;
+      // Format location for database submission
+      const formattedLocation = formatLocationToWKT(latitude, longitude);
+  
       const postData: CreatePostData = {
         ...formData,
         kilograms: parseFloat(formData.kilograms),
         user_id: userId,
         category_id: formData.category_id,
         collection_mode_id: formData.collection_mode_id,
-        status: 'active'
+        status: 'active',
+        photos: Array.isArray(formData.photos) ? formData.photos : [formData.photos],
+        location: formattedLocation, 
       };
+  
+      console.log("Submitting post data:", JSON.stringify(postData, null, 2));
+  
       await postsService.createPost(postData);
       router.back();
+  
+      // Reset form after submission
+      setFormData({
+        category_id: null,
+        item_type_ids: [],
+        description: '',
+        kilograms: '',
+        collection_mode_id: null,
+        status: 'active',
+        photos: [],
+        location: {
+          latitude: 0,
+          longitude: 0,
+          address: '',
+        },
+      });
+      setAddress('');
+      setLocation({ latitude: 0, longitude: 0 });
+      Alert.alert("Success", "Post created successfully!");
     } catch (error) {
       console.error('Error creating post:', error);
+      Alert.alert("Error", "Failed to create post.");
     } finally {
       setLoading(false);
     }
   };
+  
+  
 
   // toggle item type selection
   const toggleItemType = (typeId: number) => {
@@ -133,6 +269,77 @@ export default function PostScreen() {
         : [...prev.item_type_ids, typeId]
     }));
   };
+
+  const fetchAddress = async (lat: number, lon: number) => {
+    try {
+      const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`;
+      console.log("Fetching address from URL:", url);
+  
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'MyApp/1.0 (your-email@example.com)',  // Customize this line
+        },
+      });
+  
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status} - ${response.statusText}`);
+      }
+  
+      const data = await response.json();
+      setAddress(data.display_name);
+      setFormData((prev) => ({
+        ...prev,
+        location: { latitude: lat, longitude: lon, address: data.display_name },
+      }));
+      console.log("Fetched Address:", data.display_name);
+    } catch (error) {
+      console.error("Error fetching address:", error);
+      Alert.alert("Error", "Failed to fetch address. Please try again.");
+    }
+  };
+  
+  
+  
+
+  const onDragEnd = (e: { nativeEvent: { coordinate: { latitude: number, longitude: number } } }) => {
+    const { latitude, longitude } = e.nativeEvent.coordinate;
+    console.log("Dragged to:", latitude, longitude);
+    
+    // Update both location and form data states
+    setLocation({ latitude, longitude });
+    setFormData((prev) => ({
+      ...prev,
+      location: { latitude, longitude, address: '' },
+    }));
+    
+    // Fetch the address after updating the location
+    fetchAddress(latitude, longitude);
+  };
+  
+
+  useEffect(() => {
+    (async () => {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission to access location was denied');
+        return;
+      }
+  
+      let loc = await Location.getCurrentPositionAsync({});
+      setLocation({
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
+      });
+      setFormData((prev) => ({
+        ...prev,
+        location: { latitude: loc.coords.latitude, longitude: loc.coords.longitude, address: '' },
+      }));
+      fetchAddress(loc.coords.latitude, loc.coords.longitude);
+      setLoading(false);
+    })();
+  }, []);
+  
 
   return (
     <ScrollView style={styles.container}>
@@ -145,149 +352,182 @@ export default function PostScreen() {
 
       {/* Category Selection */}
       <View style={styles.categoryContainer}>
-  <Text style={styles.sectionTitle}>CATEGORY</Text>
+        <Text style={styles.sectionTitle}>CATEGORY</Text>
 
-  {/* Selling Category Button */}
-  <TouchableOpacity onPress={() => setFormData(prev => ({ ...prev, category_id: categories[0]?.id }))}>
-    <LinearGradient
-      colors={formData.category_id === categories[0]?.id ? ['#023F0F', '#00FF57'] : ['#103D20', '#103D20']}
-      style={styles.categoryButton}
-    >
-      <Text style={styles.categoryText}>SELLING</Text>
-      <Image source={require('../../assets/images/selling.png')} style={styles.categoryImage} />
-    </LinearGradient>
-  </TouchableOpacity>
+        {/* Selling Category Button */}
+        <TouchableOpacity onPress={() => setFormData(prev => ({ ...prev, category_id: categories[0]?.id }))}>
+          <LinearGradient
+            colors={formData.category_id === categories[0]?.id ? ['#023F0F', '#00FF57'] : ['#103D20', '#103D20']}
+            style={styles.categoryButton}
+          >
+            <Text style={styles.categoryText}>SELLING</Text>
+            <Image source={require('../../assets/images/selling.png')} style={styles.categoryImage} />
+          </LinearGradient>
+        </TouchableOpacity>
 
-  {/* Seeking Category Button */}
-  <TouchableOpacity onPress={() => setFormData(prev => ({ ...prev, category_id: categories[1]?.id }))}>
-    <LinearGradient
-      colors={formData.category_id === categories[1]?.id ? ['#023F0F', '#00FF57'] : ['#103D20', '#103D20']}
-      style={styles.categoryButton}
-    >
-      <Text style={styles.categoryText}>SEEKING</Text>
-      <Image source={require('../../assets/images/seeking.png')} style={styles.categoryImage} />
-    </LinearGradient>
-  </TouchableOpacity>
-</View>
+        {/* Seeking Category Button */}
+        <TouchableOpacity onPress={() => setFormData(prev => ({ ...prev, category_id: categories[1]?.id }))}>
+          <LinearGradient
+            colors={formData.category_id === categories[1]?.id ? ['#023F0F', '#00FF57'] : ['#103D20', '#103D20']}
+            style={styles.categoryButton}
+          >
+            <Text style={styles.categoryText}>SEEKING</Text>
+            <Image source={require('../../assets/images/seeking.png')} style={styles.categoryImage} />
+          </LinearGradient>
+        </TouchableOpacity>
+      </View>
 
-<Text style={styles.sectionTitle}>WASTER INFORMATION</Text>
-      {/* Item Types Section */}
-      <View style={styles.itemTypesContainer}>
-  <View style={styles.itemTypesHeader}>
-    <Text style={styles.itemTypesTitle}>TYPE OF PLASTICS</Text>
-    <Text style={styles.itemTypesInfo}>SELECT AT LEAST 2</Text>
-    <MaterialCommunityIcons name="information-outline" size={18} color="limegreen" />
-  </View>
+      <Text style={styles.sectionTitle}>WASTER INFORMATION</Text>
+            {/* Item Types Section */}
+            <View style={styles.itemTypesContainer}>
+        <View style={styles.itemTypesHeader}>
+          <Text style={styles.itemTypesTitle}>TYPE OF PLASTICS</Text>
+          <Text style={styles.itemTypesInfo}>SELECT AT LEAST 2</Text>
+          <MaterialCommunityIcons name="information-outline" size={18} color="limegreen" />
+        </View>
 
-  <View style={styles.itemTypesGrid}>
-    {itemTypes.map(type => (
-      <TouchableOpacity
-        key={type.id}
-        style={[styles.itemTypeButton, formData.item_type_ids.includes(type.id) && styles.selectedItemType]}
-        onPress={() => toggleItemType(type.id)}
-      >
-        <Text style={styles.itemTypeText}>{type.name}</Text>
-      </TouchableOpacity>
-    ))}
-  </View>
-</View>
+        <View style={styles.itemTypesGrid}>
+          {itemTypes.map(type => (
+            <TouchableOpacity
+              key={type.id}
+              style={[styles.itemTypeButton, formData.item_type_ids.includes(type.id) && styles.selectedItemType]}
+              onPress={() => toggleItemType(type.id)}
+            >
+              <Text style={styles.itemTypeText}>{type.name}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
 
       {/* Description */}
       <View style={styles.descriptionContainer}>
-  <Text style={styles.sectionTitle}>DESCRIPTION</Text>
-  <View style={styles.descriptionBox}>
-    <TextInput
-      label=""
-      value={formData.description}
-      onChangeText={text => setFormData(prev => ({ ...prev, description: text }))}
-      multiline
-      style={styles.input}
-      underlineColor="transparent"
+        <Text style={styles.sectionTitle}>DESCRIPTION</Text>
+        <View style={styles.descriptionBox}>
+          <TextInput
+            label=""
+            value={formData.description}
+            onChangeText={text => setFormData(prev => ({ ...prev, description: text }))}
+            multiline
+            style={styles.input}
+            underlineColor="transparent"
 
-    />
-  </View>
-</View>
+          />
+        </View>
+      </View>
 
       {/* Weight */}
       <View style={styles.kilogramsContainer}>
-  <View style={styles.kilogramsHeader}>
-    <Image source={require('../../assets/images/trashbag.png')} style={styles.kilogramsIcon} />
-    <Text style={styles.kilogramsTitle}>TOTAL KILOGRAMS</Text>
-  </View>
+        <View style={styles.kilogramsHeader}>
+          <Image source={require('../../assets/images/trashbag.png')} style={styles.kilogramsIcon} />
+          <Text style={styles.kilogramsTitle}>TOTAL KILOGRAMS</Text>
+        </View>
 
-  <View style={styles.kilogramsInputContainer}>
-    <TextInput
-      value={formData.kilograms}
-      onChangeText={text => setFormData(prev => ({ ...prev, kilograms: text }))}
-      keyboardType="numeric"
-      underlineColor="transparent"
-      style={styles.kilogramsInput}
-    />
-  </View>
-  
-</View>
-<View style={styles.galleryContainer}>
-  <Text style={styles.sectionTitle}>GALLERY</Text>
-  
-  <View style={styles.imageUploadWrapper}>
-    <TouchableOpacity style={styles.imageUploadBox}>
-      <MaterialCommunityIcons 
-        name={'image-plus' as IconName} 
-        size={50} 
-        color="#aaa" 
-      />
-      <Text style={styles.uploadText}>ADD IMAGE OF YOUR WASTE</Text>
-    </TouchableOpacity>
-  </View>
-</View>
+          <TextInput
+            value={formData.kilograms}
+            onChangeText={text => setFormData(prev => ({ ...prev, kilograms: text }))}
+            keyboardType="numeric"
+            underlineColor="transparent"
+            style={styles.kilogramsInput}
+          />
+        
+      </View>
 
-{/* Collection Mode */}
-<View>
-<View style={{ marginTop: 20 }}>
-  <Text style={styles.sectionTitle}>MODE OF COLLECTION:</Text>
+      <View style={styles.galleryContainer}>
+        <Text style={styles.sectionTitle}>GALLERY</Text>
+        
+        <View style={styles.imageUploadWrapper}>
+          <TouchableOpacity style={styles.imageUploadBox} onPress={pickImages}>
+            <MaterialCommunityIcons 
+              name={'image-plus' as IconName} 
+              size={50} 
+              color="#aaa" 
+            />
+            <Text style={styles.uploadText}>ADD IMAGE OF YOUR WASTE</Text>
+          </TouchableOpacity>
+        </View>
 
-  {collectionModes.map((mode) => {
-  const modeName = mode.name.toLowerCase();
+        <View style={styles.imageContainer}>
+          {formData.photos?.map((uri: string, index: number) => (
+            <Image key={index} source={{ uri }} style={styles.uploadedImage} />
+          ))}
+          {uploading && <ActivityIndicator size="large" color="#00FF57" />}
+        </View>
+      </View>
 
-  let iconSource;
-  if (modeName.includes('pickup')) {
-    iconSource = require('../../assets/images/NEW/CAR.png');
-  } else if (modeName.includes('drop')) {
-    iconSource = require('../../assets/images/NEW/ORANGE.png');
-  } else if (modeName.includes('meet')) {
-    iconSource = require('../../assets/images/NEW/HOUSE.png');
-  } else {
-    iconSource = require('../../assets/images/NEW/HOUSE.png'); // fallback
-  }
+      <View style={styles.mapContainer}>
+        {loading ? (
+          <ActivityIndicator size="large" color="#00FF57" />
+        ) : (
+          <>
+            <MapView
+              style={styles.map}
+              initialRegion={{
+                latitude: location.latitude || 7.1907,  // Default to Davao City if not set
+                longitude: location.longitude || 125.4553,
+                latitudeDelta: 0.0922,
+                longitudeDelta: 0.0421,
+              }}
+            >
+              <Marker
+                coordinate={{ latitude: location.latitude, longitude: location.longitude }}
+                draggable
+                onDragEnd={onDragEnd}
+              />
+            </MapView>
+            <View style={styles.addressContainer}>
+              <Text style={styles.addressText}>Address: {address}</Text>
+            </View>
+            <Button mode="contained" onPress={() => Alert.alert('Location Selected!')}>Confirm Location</Button>
+          </>
+        )}
+      </View>
 
-  return (
-    <TouchableOpacity
-      key={mode.id}
-      style={[
-        styles.collectionCard,
-        formData.collection_mode_id === mode.id && styles.collectionCardSelected,
-      ]}
-      onPress={() =>
-        setFormData((prev) => ({ ...prev, collection_mode_id: mode.id }))
-      }
-    >
-      <Image source={iconSource} style={styles.collectionIcon} />
-      <Text
-        style={[
-          styles.collectionText,
-          formData.collection_mode_id === mode.id && styles.collectionTextSelected,
-        ]}
-      >
-        {mode.name.toUpperCase()}
-      </Text>
-    </TouchableOpacity>
-  );
-})}
+      {/* Collection Mode */}
+      <View>
+        <View style={{ marginTop: 20 }}>
+          <Text style={styles.sectionTitle}>MODE OF COLLECTION:</Text>
 
-</View>
+          {collectionModes.map((mode) => {
+          const modeName = mode.name.toLowerCase();
 
+          let iconSource;
+          if (modeName.includes('pickup')) {
+            iconSource = require('../../assets/images/NEW/CAR.png');
+          } else if (modeName.includes('drop')) {
+            iconSource = require('../../assets/images/NEW/ORANGE.png');
+          } else if (modeName.includes('meet')) {
+            iconSource = require('../../assets/images/NEW/HOUSE.png');
+          } else {
+            iconSource = require('../../assets/images/NEW/HOUSE.png'); // fallback
+          }
 
-</View>
+          return (
+            <TouchableOpacity
+              key={mode.id}
+              style={[
+                styles.collectionCard,
+                formData.collection_mode_id === mode.id && styles.collectionCardSelected,
+              ]}
+              onPress={() =>
+                setFormData((prev) => ({ ...prev, collection_mode_id: mode.id }))
+              }
+            >
+              <Image source={iconSource} style={styles.collectionIcon} />
+              <Text
+                style={[
+                  styles.collectionText,
+                  formData.collection_mode_id === mode.id && styles.collectionTextSelected,
+                ]}
+              >
+                {mode.name.toUpperCase()}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+
+        </View>
+      </View>
+      
       <Button 
         mode="contained" 
         onPress={handleSubmit}
@@ -390,6 +630,17 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   
+  imageContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+
+  uploadedImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 5,
+  },
 
   itemTypesContainer: {
     backgroundColor: '#1A3620', // Dark green background
@@ -514,7 +765,7 @@ const styles = StyleSheet.create({
   kilogramsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     backgroundColor: '#1A3620', // Background box
     borderRadius: 12,
     paddingHorizontal: 15,
@@ -543,12 +794,12 @@ const styles = StyleSheet.create({
   
   kilogramsInputContainer: {
     backgroundColor: '#234A2D', // Dark Green input box
-    
     borderRadius: 5,
-    paddingHorizontal: 2,
-    paddingVertical: 10,
-    minWidth: 80, // Adjust based on design
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    minWidth: 100, 
     alignItems: 'center',
+    justifyContent: 'center'
   },
   
   kilogramsInput: {
@@ -556,12 +807,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     backgroundColor: 'transparent',
-    height:20,
-    
+    height: 30,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
   },
   
-
-
   tagContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -600,5 +850,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#00FF00',
     paddingVertical: 8,
   },
- 
+  mapContainer:{
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  map: {
+    width: width,
+    height: height * 0.6,
+  },
+  addressContainer: {
+    padding: 10,
+    backgroundColor: '#fff',
+    marginVertical: 10,
+    borderRadius: 5,
+    width: '90%',
+  },
+  addressText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
 }); 

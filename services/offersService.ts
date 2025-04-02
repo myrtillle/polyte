@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { postsService } from './postsService';
 
 export interface Offer {
   id: string;
@@ -107,4 +108,55 @@ export const updateOffer = async (offer: Offer) => {
     return false;
   }
 };
+
+export const offersService = {
+  async getOfferSchedule(offerId: string) {
+    try {
+        const { data, error } = await supabase
+            .from('offer_schedules')
+            .select('status, scheduled_time, scheduled_date, post_id, user_id, offer_id')
+            .eq('offer_id', offerId)
+            .single();
+  
+        if (error) throw error;
+  
+        // Fetch related user data (collector and offerer)
+        const postDetails = await postsService.getPostById(data.post_id);
+        const collectorName = postDetails.user?.name ?? 'Unknown';
+        const photoUrl = postDetails.photos?.[0] ?? '';
+  
+        return {
+            status: data.status,
+            scheduled_time: data.scheduled_time,
+            scheduled_date: data.scheduled_date,
+            collectorName,
+            offererName: postDetails.user?.name ?? 'Unknown',
+            photoUrl,
+            purok: postDetails.user?.purok ?? 'Unknown',
+            barangay: postDetails.user?.barangay ?? 'Unknown',
+            user_id: data.user_id,
+        };
+    } catch (error) {
+        console.error("Error fetching offer schedule:", error);
+        throw error;
+    }
+  },
+
+  async cancelSchedule(offerId: string) {
+    try {
+        const { error } = await supabase
+            .from('offer_schedules')
+            .update({ status: 'cancelled' })
+            .eq('offer_id', offerId);
+
+        if (error) throw error;
+
+        console.log("Schedule successfully cancelled.");
+        return true;
+    } catch (error) {
+        console.error("Error cancelling schedule:", error);
+        throw error;
+    }
+  }
+}
 

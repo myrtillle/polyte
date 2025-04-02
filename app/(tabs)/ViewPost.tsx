@@ -1,7 +1,7 @@
 // ViewPostScreen.tsx
 import React,  { useState, useEffect }  from 'react';
 import { View, Text, StyleSheet, Image, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert  } from 'react-native';
-import { RouteProp } from '@react-navigation/native';
+import { RouteProp, useFocusEffect } from '@react-navigation/native';
 import { RootStackParamList } from '../../types/navigation';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -60,20 +60,7 @@ const ViewPost = () => {
       console.error("❌ Error fetching post and offers:", error);
     }
   };
-  
-  
-  // ✅ Ensure both post & offers are fetched on mount
-  useEffect(() => {
-    fetchPostAndOffers();
-  }, []);
-  
 
-  useEffect(() => {
-    fetchPostAndOffers();
-  }, []);
-
-
-  // Fetch comments
   const fetchComments = async (postId: string) => {
     try {
       console.log('🔄 Fetching comments for post ID:', postId);
@@ -176,7 +163,6 @@ const ViewPost = () => {
     navigation.navigate("ScheduleOffer", { offer, post });
   };
   
-  
   const handleChatWithUser = (userId: string) => {
     console.log("Chatting with user ID:", userId);
     // Navigate to chat screen
@@ -193,10 +179,18 @@ const ViewPost = () => {
     return post?.user_id === currentUser?.id;
   };
 
-  // const onRefresh = () => {
-  //   setRefreshing(true);
-  //   fetchPost();
-  // };
+  // ✅ Ensure both post & offers are fetched on mount
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log("🔄 Resetting post and offers on focus...");
+      setPost(route.params?.post || null);  // Reset post to the passed post data
+      fetchPostAndOffers();  // Fetch the updated data
+      return () => {
+        setPost(null);  // Clean up when unfocused
+        setOffers([]);  // Clear previous offers
+      };
+    }, [route.params?.post])
+  );
 
   // Fetch comments only when a new post is received
   useEffect(() => {
@@ -204,17 +198,6 @@ const ViewPost = () => {
       fetchComments(route.params.post.id);
     }
   }, [route.params?.post]);
-
-  if (!post) {
-    console.log("post is NULL before rendering!");
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <Text>Post not found</Text>
-      </View>
-    );
-  } else {
-    console.log("Rendering ViewPost with post data:", post);  
-  }
 
   // Logged in user
   useEffect(() => {
@@ -281,6 +264,17 @@ const ViewPost = () => {
   }, []);  
 
   // console.log('ViewPost  Post Object:', post);
+  // Move this block AFTER all hooks
+  if (!post) {
+    console.log("post is NULL before rendering!");
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text>Post not found</Text>
+      </View>
+    );
+  } else {
+    console.log("Rendering ViewPost with post data:", post);  
+  }
 
   return (
     <View style={styles.container}> 

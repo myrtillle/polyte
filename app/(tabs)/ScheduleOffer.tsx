@@ -5,14 +5,15 @@ import { scheduleService } from '../../services/scheduleService';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../types/navigation';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 const ScheduleOffer = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'ScheduleOffer'>>();
   const { offer, post } = route.params;
 
   const [date, setDate] = useState(new Date());
-  const [time, setTime] = useState(new Date());
+  const [time, setTime] = useState(new Date()); 
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
 
@@ -31,8 +32,12 @@ const ScheduleOffer = () => {
   
     try {
       await scheduleService.createSchedule(offer.id, post.id, post.user_id, formattedDate, formattedTime);
+
+      console.log("Offer ID before navigation:", offer?.id);
+      console.log("Post ID before navigation:", post?.id);
+
       Alert.alert('Success', 'Schedule saved successfully!');
-      navigation.goBack();
+      navigation.navigate("CollectionSchedule", { offerID: offer.id });
     } catch (error) {
       Alert.alert('Error', 'Failed to save schedule.');
       console.error('Error saving schedule:', error);
