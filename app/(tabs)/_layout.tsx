@@ -45,7 +45,7 @@ export default function TabsLayout() {
         name="messages"
         options={{
           title: 'Messages',
-          tabBarIcon: ({ color, size }) => (
+          tabBarIcon: ({ color, size }) => (  
             <Ionicons name="chatbubbles" size={size} color={color} />
           ),
         }}

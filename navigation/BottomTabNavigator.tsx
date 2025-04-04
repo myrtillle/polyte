@@ -3,8 +3,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import HomeScreen from '../app/(tabs)/home';
 import LeaderboardScreen from '../app/screens/LeaderboardScreen';
 import PostScreen from '../app/(tabs)/post';
-import MessagesScreen from '../app/(tabs)/messages';
 import ProfileScreen from '../app/(tabs)/profile';
+import MessagesScreen from '@/app/(tabs)/messages';
 import { BottomTabParamList } from '../types/navigation';
 
 const Tab = createBottomTabNavigator<BottomTabParamList>();
@@ -44,7 +44,7 @@ export function BottomTabNavigator() {
           ),
         }}
       />
-      <Tab.Screen
+       <Tab.Screen
         name="Messages"
         component={MessagesScreen}
         options={{

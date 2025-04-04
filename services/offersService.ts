@@ -78,23 +78,27 @@ export const getUserOffers = async (userId: string) => {
   return data;
 };
 
-export const updateOffer = async (offer: Offer) => { 
+export const updateOffer = async (offer: Partial<Offer>) => { 
   if (!offer.id) {
     console.error("❌ Error: Offer ID is required for updating.");
     return false;
   }
 
   try {
+    // const { error } = await supabase
+    //   .from('offers')
+    //   .update({
+    //     offered_items: offer.offered_items,
+    //     price: offer.price,
+    //     offered_weight: offer.offered_weight,
+    //     message: offer.message,       
+    //     images: offer.images,
+    //   })
+    //   .eq('id', offer.id);
     const { error } = await supabase
-      .from('offers')
-      .update({
-        offered_items: offer.offered_items,
-        price: offer.price,
-        offered_weight: offer.offered_weight,
-        message: offer.message,       
-        images: offer.images,
-      })
-      .eq('id', offer.id);
+    .from('offers')
+    .update(offer)
+    .eq('id', offer.id);
 
     if (error) {
       console.error("❌ Error updating offer:", error.message);

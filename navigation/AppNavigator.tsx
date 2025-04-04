@@ -9,6 +9,7 @@ import { RootStackParamList } from '../types/navigation';
 import EditOffer from '../app/(tabs)/EditOffer';
 import ScheduleOffer from '../app/(tabs)/ScheduleOffer'
 import CollectionSchedule from '../app/(tabs)/CollectionSchedule';
+import ChatScreen from '@/app/(tabs)/ChatScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -47,9 +48,13 @@ export function AppNavigator() {
         name="ScheduleOffer"
         component={ScheduleOffer}
       />
-       <Stack.Screen
+      <Stack.Screen
         name="CollectionSchedule"
         component={CollectionSchedule}
+      />
+      <Stack.Screen
+        name="ChatScreen"
+        component={ChatScreen}
       />
     </Stack.Navigator>
   );

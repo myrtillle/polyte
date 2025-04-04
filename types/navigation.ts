@@ -1,6 +1,7 @@
 // import { Post } from "@/app/(tabs)/home";
 import { Offer } from '../services/offersService'
-
+import { Schedule } from '../app/(tabs)/CollectionSchedule'
+ 
 export type RootStackParamList = {
   Login: undefined;
   Signup: undefined;
@@ -11,6 +12,7 @@ export type RootStackParamList = {
   EditOffer: { offer: Offer };
   ScheduleOffer: { offer: Offer; post: Post };
   CollectionSchedule: { offerID: string }; 
+  ChatScreen: { chatId: string; userId?: string; post?: Post; schedule?: Schedule };
 };
 
 export type BottomTabParamList = {

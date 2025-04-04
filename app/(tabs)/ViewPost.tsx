@@ -179,6 +179,14 @@ const ViewPost = () => {
     return post?.user_id === currentUser?.id;
   };
 
+  const handleSeeDetails = (offer: Offer) => {
+    navigation.navigate("CollectionSchedule", { offerID: offer.id });
+  };
+
+  const isOfferAccepted = (offer: Offer) => {
+    return offer.status === 'accepted';
+  };
+
   // ✅ Ensure both post & offers are fetched on mount
   useFocusEffect(
     React.useCallback(() => {
@@ -385,7 +393,8 @@ const ViewPost = () => {
               offers.map((offer, index) => {
                 const isUserOfferOwner = isOfferOwner(offer);
                 const isUserPostOwner = isPostOwner();
-        
+                const isAccepted = isOfferAccepted(offer);
+
                 return (
                   <View key={index} style={styles.offerCard}>
                     <Text style={styles.offerUser}>👤 User ID: {offer.user_id}</Text>
@@ -407,7 +416,16 @@ const ViewPost = () => {
         
                     {/* Conditional Buttons */}
                     <View style={styles.actionButton}>
-                      {isUserOfferOwner ? (
+                      {isAccepted ? (
+                        <View style={styles.actionButtonContainer}>
+                        <TouchableOpacity 
+                          style={styles.moreOptions} 
+                          onPress={() => handleSeeDetails(offer)}
+                        >
+                          <Text style={styles.buttonText}>See Details</Text>
+                        </TouchableOpacity>                      
+                      </View>
+                      ) : isUserOfferOwner ? (
                         <View style={styles.actionButtonContainer}>
                           <TouchableOpacity 
                             style={styles.deleteButton} 
@@ -443,7 +461,8 @@ const ViewPost = () => {
                             <Text style={styles.moreOptionsText}>⋮</Text>
                           </TouchableOpacity>
                         </View>
-                      ) : null}
+                      ) : null
+                    }
                     </View>
                   </View>
                 );

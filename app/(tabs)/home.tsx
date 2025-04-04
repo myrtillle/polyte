@@ -123,6 +123,10 @@ export default function HomeScreen() {
     }
   };
   
+  const handleSendMessage = (post: Post) => {
+    navigation.navigate('ChatScreen', { chatId: post.id, post });
+  };
+
   const navigateToViewPost = async (post: Post) => {
     try {
       console.log("🚀 Navigating to ViewPost with post:", post);
@@ -171,6 +175,7 @@ export default function HomeScreen() {
       </View>
     );
   }
+
   const getModeData = (modeName: string) => {
     const lower = modeName.toLowerCase();
     if (lower.includes('pickup')) {
@@ -213,7 +218,6 @@ export default function HomeScreen() {
       </View>
     </View>
   );
-  
 
   const renderCategories = () => (
     <View style={styles.categoryWrapper}>
@@ -269,9 +273,6 @@ export default function HomeScreen() {
     ? posts.filter(post => post.category_id === selectedCategory)
     : posts;
 
-  // const navigateToViewPost = (post: Post) => {
-  //   navigation.navigate('ViewPost', { post });
-  // };
 
   const renderPost = ({ item }: { item: Post }) => (
     <Card style={[
@@ -335,7 +336,7 @@ export default function HomeScreen() {
 
         {/* Actions */}
         <View style={styles.actionsRow}>
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity style={styles.actionButton} onPress={() => handleSendMessage(item)}>
           <Image source={paperplaneIcon} style={styles.actionIconImage} />
 
             <Text style={styles.actionText}>SEND MESSAGE</Text>

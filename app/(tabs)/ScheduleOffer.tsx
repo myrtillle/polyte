@@ -6,6 +6,7 @@ import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../types/navigation';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { offersService, updateOffer } from '@/services/offersService';
 
 const ScheduleOffer = () => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
@@ -32,6 +33,10 @@ const ScheduleOffer = () => {
   
     try {
       await scheduleService.createSchedule(offer.id, post.id, post.user_id, formattedDate, formattedTime);
+      await updateOffer({ 
+        id: offer.id, 
+        status: 'accepted' 
+      });
 
       console.log("Offer ID before navigation:", offer?.id);
       console.log("Post ID before navigation:", post?.id);
