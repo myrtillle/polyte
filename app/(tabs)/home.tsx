@@ -284,13 +284,15 @@ export default function HomeScreen() {
           <View style={styles.infoWrapper}>
             {/* Name and time */}
             <View style={styles.userInfo}>
-              <Text style={styles.userName}>
-                {item.user?.name ?? item.user?.email ?? 'Unknown User'}
-              </Text>
-              <Text style={styles.timePosted}>
-                {formatTimeAgo(item.created_at)}
-              </Text>
-            </View>
+  <Text style={styles.userName}>
+    {item.user?.name ?? item.user?.email ?? 'Unknown User'}
+  </Text>
+  <Text style={styles.timePosted}>
+    {formatTimeAgo(item.created_at)}
+  </Text>
+</View>
+
+
       
             {/* Mode label (yellow icon + text) */}
             <View style={styles.labelRow}>
@@ -327,11 +329,13 @@ export default function HomeScreen() {
 
           {/* Image from database */}
           {item.photos && item.photos.length > 0 && (
+            <View style={styles.imageContainer}>
             <Image
-              source={{ uri: item.photos[0] }} 
+              source={{ uri: item.photos[0] }}
               style={styles.postImage}
             />
-          )}
+          </View>
+        )}
         </View>
 
         {/* Actions */}
@@ -421,6 +425,12 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
 
+  imageContainer: {
+    alignItems: 'flex-end',
+    marginTop: 1,
+  },
+  
+  
   container: {
     flex: 1,
   },
@@ -467,7 +477,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     marginVertical: 6,
-    gap: 6,
+    gap: 2,
+    
   },
 
   itemChip: {
@@ -476,7 +487,7 @@ const styles = StyleSheet.create({
     height: 30,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 10,
+    paddingHorizontal: 2,
     marginRight: 6,
     marginBottom: 6,
   },
@@ -603,7 +614,7 @@ const styles = StyleSheet.create({
   searchBar: {
     backgroundColor: '#1A3620',
     borderRadius: 16,
-    height: 55,
+    height: 40,
     justifyContent: 'center',
   },
 
@@ -615,7 +626,7 @@ const styles = StyleSheet.create({
 
   categories: {
     flexDirection: 'row',
-    padding: 16,
+    padding: 12,
     backgroundColor: '#023F0F',
     color: '#fff',
   },
@@ -626,20 +637,24 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     borderRadius: 8,
     backgroundColor: '#1A3620',
+
   },
   userInfo: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    alignItems: 'center',
+    marginBottom: 6,
   },
+  
   userName: {
     fontWeight: 'bold',
     color: '#fff',
   },
   timePosted: {
-    color: '#888',
-    fontSize:10,
-  },
+    color: '#BFBFBF',
+    fontSize: 10,
+    marginHorizontal:8,
+  },  
   collectionType: {
     fontWeight: 'bold',
     marginBottom: 4,
@@ -655,7 +670,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     width: 80,  
     height: 80, 
-    marginTop: 8,
+    marginTop: 2,
   },
   actions: {
     flexDirection: 'row',
