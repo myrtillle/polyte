@@ -15,6 +15,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { postsService } from '../../services/postsService';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Offer } from '../../services/offersService';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+
+
 
 
 type ViewPostRouteProp = RouteProp<RootStackParamList, 'ViewPost'>;
@@ -25,6 +28,7 @@ const ViewPost = () => {
   const navigation = useNavigation<viewPostNavigationProp>();
 
   // Only ONE state for post
+  const greenMark = require('../../assets/images/greenmark.png');
   const [post, setPost] = useState<Post | null>(route.params?.post);
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentText, setCommentText] = useState('');
@@ -35,6 +39,35 @@ const ViewPost = () => {
   const [activeTab, setActiveTab] = useState('post');
   const [offers, setOffers] = useState<Offer[]>([]);
 
+  function formatTimeAgo(dateString: string) {
+    const now = new Date();
+    const postDate = new Date(dateString);
+    const diffInSeconds = Math.floor((now.getTime() - postDate.getTime()) / 1000);
+  
+    if (diffInSeconds < 60) return 'just now';
+    const diffInMinutes = Math.floor(diffInSeconds / 60);
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) return `${diffInHours}h ago`;
+    const diffInDays = Math.floor(diffInHours / 24);
+    return `${diffInDays}d ago`;
+  }
+
+
+
+
+
+
+  const getModeData = (modeName: string) => {
+    const lower = modeName.toLowerCase();
+    if (lower.includes('pickup')) {
+      return { icon: require('../../assets/images/pickup.png'), color: '#FFD700' }; // Yellow
+    } else if (lower.includes('drop')) {
+      return { icon: require('../../assets/images/dropoff.png'), color: '#FF8515' }; // Orange
+    } else {
+      return { icon: require('../../assets/images/meetup.png'), color: '#00FF57' }; // Green
+    }
+  };
   
   const fetchPostAndOffers = async () => {
     try {
@@ -287,42 +320,107 @@ const ViewPost = () => {
   return (
     <View style={styles.container}> 
       {/* Back Button */}
-      <IconButton
-        icon="arrow-left"
-        size={24}
-        onPress={() => navigation.goBack()}
-        style={styles.backButton}
-      />
+      <View style={styles.headerContainer}>
+  <IconButton
+    icon="arrow-left"
+    size={24}
+    iconColor="white"
+    onPress={() => navigation.goBack()}
+    style={{ position: 'absolute', left: 0 }}
+  />
+<Text style={styles.headerTitle}>See Post</Text>
+</View>
 
       {/* Header Tabs */}
       <View style={styles.tabContainer}>
-        <TouchableOpacity onPress={() => setActiveTab('post')} style={[styles.tab, activeTab === 'post' && styles.activeTab]}>
-          <Text style={styles.tabText}>POST</Text>
+      <TouchableOpacity
+    onPress={() => setActiveTab('post')}
+    style={[
+      styles.tabButton,
+      activeTab === 'post' && styles.activeTabButton,
+    ]}
+  >
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'post' && styles.activeTabText,
+            ]}
+          >
+            POST
+          </Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => setActiveTab('offers')} style={[styles.tab, activeTab === 'offers' && styles.activeTab]}>
-          <Text style={styles.tabText}>OFFERS</Text>
+
+        <TouchableOpacity
+          onPress={() => setActiveTab('offers')}
+          style={[
+            styles.tabButton,
+            activeTab === 'offers' && styles.activeTabButton,
+          ]}
+        >
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'offers' && styles.activeTabText,
+            ]}
+          >
+            OFFERS
+          </Text>
         </TouchableOpacity>
-      </View>
+            </View>
 
       {activeTab === 'post' ? (
         <ScrollView style={styles.content}>
           {/* User Info */}
           <View style={styles.userInfo}>
-            {/* <Image source={{ uri: 'https://via.placeholder.com/40' }} style={styles.avatar} /> */}
-            <Image source={{ uri: 'https://i.pravatar.cc/40' }} style={styles.avatar} />
+          <Image source={{ uri: 'https://i.pravatar.cc/40' }} style={styles.avatar} />
 
-            <View>
-              <Text style={styles.userName}>{post.user?.name}</Text>
-              <Text style={styles.userLocation}>📍 {post.user?.barangay}, Purok {post.user?.purok}</Text>
-            </View>
-            <Text style={styles.timeAgo}>⏳ {post.created_at}</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.userName}>{post.user?.name}</Text>
+            <View style={styles.userLocationRow}>
+            <Image source={greenMark} style={styles.greenMarkIcon} />
+            <Text style={styles.userLocationText}>{post.user?.barangay}, Purok {post.user?.purok}</Text>
           </View>
+
+          </View>
+
+          <View style={styles.timeContainer}>
+            <Text style={styles.timeText}> {formatTimeAgo(post.created_at)}</Text>
+          </View>
+        </View>
+          
+        {post.collection_mode?.name && (
+  <View style={styles.modeContainer}>
+    {(() => {
+      const mode = getModeData(post.collection_mode.name);
+      return (
+        <>
+          <Image
+            source={mode.icon}
+            style={[styles.modeIcon, { tintColor: mode.color }]}
+            resizeMode="contain"
+          />
+          <Text style={[styles.modeText, { color: mode.color }]}>
+            {post.collection_mode.name}
+          </Text>
+        </>
+      );
+    })()}
+  </View>
+)}
+
 
           {/* Post Description */}
           <Text style={styles.description}>{post.description}</Text>
 
           {/* Item Types */}
-          <Text style={styles.itemTypes}>🛍 Items: {post.post_item_types?.map(item => item.item_types.name).join(', ')}</Text>
+          <View style={styles.itemList}>
+          {post.post_item_types?.map((item, index) => (
+            <TouchableOpacity key={index} style={styles.itemChip}>
+              <Text style={styles.itemChipText}>{item.item_types.name}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
 
           {/* Post Image */}
           {post.photos && post.photos.length > 0 && (
@@ -330,28 +428,38 @@ const ViewPost = () => {
           )}
 
           {/* Action Buttons */}
-          <View style={styles.actions}>
-            <Button mode="contained" style={styles.actionButton}>Send Message</Button>
-            {/* <Button mode="contained" style={styles.actionButton}>Send Offer</Button> */}
-            <TouchableOpacity 
-              style={styles.actionButton} 
-              onPress={() => {
-                console.log("🚀 Navigating to MakeOffer with:", JSON.stringify(post, null, 2));
+                <View style={styles.actionRow}>
+        <TouchableOpacity style={styles.fullButton}>
+          <Image
+            source={require('../../assets/images/messagebubble.png')}
+            style={styles.buttonIcon}
+          />
+          <Text style={styles.fullButtonText}>SEND MESSAGE</Text>
+        </TouchableOpacity>
 
-                if (!post.post_item_types || post.post_item_types.length === 0) {
-                  console.error("❌ Missing post_item_types before navigating to MakeOffer!");
-                  Alert.alert("Error", "Plastic item types are missing. Please refresh and try again.");
-                  return;
-                }
-                navigation.navigate('MakeOffer', { post: { ...post } });
-              }}>
-              <Text>Send Offer</Text>
-            </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.fullButton}
+          onPress={() => {
+            if (!post?.post_item_types?.length) {
+              Alert.alert("Error", "Plastic item types are missing.");
+              return;
+            }
+            navigation.navigate('MakeOffer', { post });
+          }}
+        >
+          <Image
+            source={require('../../assets/images/trashbag.png')}
+            style={styles.buttonIcon}
+          />
+          <Text style={styles.fullButtonText}>SEND OFFER</Text>
+        </TouchableOpacity>
 
-            <TouchableOpacity style={styles.moreOptions}>
-              <Text style={styles.moreOptionsText}>⋮</Text>
-            </TouchableOpacity>
-          </View>
+        <TouchableOpacity style={styles.iconOnlyButton}>
+          <Text style={styles.dots}>⋮</Text>
+        </TouchableOpacity>
+      </View>
+
+
 
           {/* Comments Section */}
           <Divider style={styles.divider} />
@@ -361,28 +469,42 @@ const ViewPost = () => {
           ) : (
             comments.map((comment, index) => (
               <View key={index} style={styles.comment}>
-                <Text style={styles.commentUser}>{comment.user_name}:</Text>
+              <Image source={{ uri: 'https://i.pravatar.cc/30' }} style={styles.commentAvatar} />
+              <View style={styles.commentBody}>
+                <View style={styles.commentHeader}>
+                  <Text style={styles.commentUser}>{comment.user_name}</Text>
+                  <Text style={styles.commentTime}>{formatTimeAgo(comment.created_at)}</Text>
+                </View>
                 <Text style={styles.commentText}>{comment.comment_text}</Text>
               </View>
+            </View>
+
             ))
           )}
 
           {/* Comment Input */}
           <View style={styles.commentInputContainer}>
-            <TextInput
-              style={styles.commentInput}
-              placeholder="Add a comment..."
-              value={commentText}
-              onChangeText={setCommentText}
-            />
-            <TouchableOpacity onPress={() => {
-              console.log("📝 Comment button clicked!"); // Check if button is registering clicks
+          <TextInput
+            style={styles.commentInput}
+            placeholder="Write a comment..."
+            placeholderTextColor="#A0A0A0"
+            value={commentText}
+            onChangeText={setCommentText}
+          />
+          <TouchableOpacity
+            onPress={() => {
+              console.log("📝 Comment button clicked!"); // ✅ Your original debug log
               handleSendComment();
-            }} style={styles.sendButton}>
-              <Text style={styles.sendButtonText}>📩</Text>
-            </TouchableOpacity>
-
+            }}
+            style={styles.sendButton}
+          >
+            <Image
+              source={require('../../assets/images/paperplane.png')}
+              style={styles.sendIcon}
+            />
+          </TouchableOpacity>
           </View>
+
         </ScrollView>
       ) : (
         activeTab === 'offers' ? (
@@ -476,6 +598,257 @@ const ViewPost = () => {
 };
 
 const styles = StyleSheet.create({
+
+  sendButton: {
+    padding: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  
+  sendIcon: {
+    width: 28,
+    height: 28,
+    // tintColor: '#00FF57', // optional if you want to recolor the icon
+  },  
+  
+  comment: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 10,
+  },
+  
+  commentAvatar: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    marginRight: 8,
+  },
+  
+  commentBody: {
+    flex: 1,
+    backgroundColor: '#1E3D28',
+    borderRadius: 8,
+    padding: 8,
+    paddingHorizontal: 10,
+  },
+  
+  commentHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  
+  commentUser: {
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginRight: 8,
+  },
+  
+  commentTime: {
+    color: '#A9A9A9',
+    fontSize: 12,
+  },
+  
+  commentText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    marginTop: 2,
+  },
+  
+
+    actionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginVertical: 10,
+    gap: 8,
+  },
+
+  fullButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#1E3D28',
+    paddingVertical: 14,
+    borderRadius: 5,
+    gap: 8,
+  },
+
+  buttonIcon: {
+    width: 18,
+    height: 18,
+    resizeMode: 'contain',
+  },
+
+  fullButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 'regular',
+    textTransform: 'uppercase',
+  },
+
+  iconOnlyButton: {
+    width: 48,
+    height: 46,
+    backgroundColor: '#1E3D28',
+    borderRadius: 5,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  dots: {
+    color: '#FFFFFF',
+    fontSize: 25,
+  },
+
+  userLocationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  
+  greenMarkIcon: {
+    width: 14,
+    height: 14,
+    marginRight: 6,
+    resizeMode: 'contain',
+  },
+  
+  userLocationText: {
+    fontSize: 13,
+    color: '#A0A0A0',
+  },
+  
+  itemList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 10,
+  },
+  
+  itemChip: {
+    backgroundColor: '#1E592B',
+    borderRadius:5,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 6,
+    marginBottom: 2,
+  },
+  
+  itemChipText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+  },  
+  modeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 10,
+    marginLeft: 2,
+  },
+  
+  modeIcon: {
+    width: 18,
+    height: 18,
+  },
+  
+  modeText: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+  },
+  
+  userInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+    gap: 10,
+  },
+  avatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    marginRight: 10,
+  },
+  
+  userName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  
+  userAddress: {
+    fontSize: 13,
+    color: '#A0A0A0',
+  },
+  
+  timeContainer: {
+    alignItems: 'flex-end',
+  },
+  
+  timeText: {
+    fontSize: 12,
+    color: '#8F8F8F',
+    fontStyle: 'normal',
+  },
+  
+
+  tabContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-evenly',
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    backgroundColor: '#122C0F',
+  },
+  
+  tabButton: {
+    flex: 1,
+    marginHorizontal: 5,
+    paddingVertical: 10,
+    backgroundColor: '#1E3D28',
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  
+  activeTabButton: {
+    backgroundColor: '#0FC246',
+  },
+  
+  tabText: {
+    color: '#A0A0A0',
+    fontSize: 13,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+  },
+  
+  activeTabText: {
+    color: '#FFFFFF',
+  },
+  
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+    paddingHorizontal: 10,
+    backgroundColor: '#1A3620',
+    position: 'relative',
+  },
+  
+  headerTitle: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'regular',
+    textTransform: 'uppercase',
+  },
+  
   container: { 
     flex: 1, 
     backgroundColor: '#122C0F' 
@@ -483,12 +856,6 @@ const styles = StyleSheet.create({
   backButton: {
     marginLeft: 10,
     marginBottom: 10,
-  },
-  tabContainer: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-around', 
-    padding: 10, 
-    backgroundColor: '#1E5128' 
   },
   tab: { 
     padding: 10, 
@@ -498,40 +865,21 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2, 
     borderBottomColor: 'white' 
   },
-  tabText: { 
-    color: 'white', 
-    fontSize: 16 
-  },
+
   content: { 
     padding: 15 
   },
-  userInfo: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    marginBottom: 10 
-  },
-  avatar: { 
-    width: 40, 
-    height: 40, 
-    borderRadius: 20, 
-    marginRight: 10 
-  },
-  userName: { 
-    fontSize: 16, 
-    fontWeight: 'bold', 
-    color: 'white' 
-  },
+
   userLocation: { 
     fontSize: 14, 
     color: 'gray' 
   },
   timeAgo: { 
-    marginLeft: 'auto', 
     fontSize: 12, 
     color: 'gray' 
   },
   description: { 
-    fontSize: 16, 
+    fontSize: 12, 
     color: 'white', 
     marginBottom: 5 
   },
@@ -571,25 +919,15 @@ const styles = StyleSheet.create({
     color: 'gray', 
     textAlign: 'center' 
   },
-  comment: { 
-    flexDirection: 'row', 
-    marginBottom: 5 
-  },
-  commentUser: { 
-    fontWeight: 'bold', 
-    color: 'white', 
-    marginRight: 5 
-  },
-  commentText: { 
-    color: 'white' 
-  },
   commentInputContainer: { 
     flexDirection: 'row', 
     alignItems: 'center', 
     padding: 10, 
-    backgroundColor: '#1E5128', 
-    borderRadius: 20 
+    backgroundColor: '#234A2D', 
+    borderRadius: 5,
+    marginVertical: 5,
   },
+  
   commentInput: { 
     flex: 1, 
     color: 'white', 
@@ -697,9 +1035,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#B22222', // Dark Red
     padding: 10,
     borderRadius: 5,
-  },
-  sendButton: { 
-    padding: 10 
   },
   chatButton: {
     backgroundColor: '#007bff', // Blue

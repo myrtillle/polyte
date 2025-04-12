@@ -11,6 +11,7 @@ import { supabase } from '../../services/supabase';
 
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'react-native';
+import { rgbaColor } from 'react-native-reanimated/lib/typescript/Colors';
 
 type IconName = 'account-multiple' | 'map-marker' | 'home' | 'image-plus';
 
@@ -342,39 +343,58 @@ export default function PostScreen() {
   
 
   return (
-    <ScrollView style={styles.container}>
-      <IconButton
-        icon="arrow-left"
-        size={24}
-        onPress={() => router.back()}
-        style={styles.backButton}
-      />
+    <View style={{ flex: 1, backgroundColor: '#023F0F' }}>
 
+            {/* Sticky Header */}
+            <View style={styles.headerContainer}>
+              <IconButton
+                icon="arrow-left"
+                size={24}
+                iconColor="white"
+                onPress={() => router.back()}
+                style={styles.backIcon}
+              />
+          <Text style={styles.headerTitle}>Create Post</Text>
+        </View>
+        {/* Scrollable Content */}
+
+        <ScrollView style={{ padding: 16, backgroundColor: '#023F0F' }}>
+
+        <Text style={styles.headerTitle}>Create Post</Text>
       {/* Category Selection */}
       <View style={styles.categoryContainer}>
         <Text style={styles.sectionTitle}>CATEGORY</Text>
 
-        {/* Selling Category Button */}
-        <TouchableOpacity onPress={() => setFormData(prev => ({ ...prev, category_id: categories[0]?.id }))}>
-          <LinearGradient
-            colors={formData.category_id === categories[0]?.id ? ['#023F0F', '#00FF57'] : ['#103D20', '#103D20']}
-            style={styles.categoryButton}
-          >
-            <Text style={styles.categoryText}>SELLING</Text>
-            <Image source={require('../../assets/images/selling.png')} style={styles.categoryImage} />
-          </LinearGradient>
-        </TouchableOpacity>
+        {/* SELLING Button */}
+<TouchableOpacity onPress={() => setFormData(prev => ({ ...prev, category_id: categories[0]?.id }))}>
+  <LinearGradient
+    colors={
+      formData.category_id === categories[0]?.id
+        ? ['#023F0F', '#00FF57']  // selected = gradient
+        : ['#2C5735', '#2C5735']  // not selected = solid color
+    }
+    style={styles.categoryButton}
+  >
+    <Text style={styles.categoryText}>SELLING</Text>
+    <Image source={require('../../assets/images/selling.png')} style={styles.categoryImage} />
+  </LinearGradient>
+</TouchableOpacity>
 
-        {/* Seeking Category Button */}
-        <TouchableOpacity onPress={() => setFormData(prev => ({ ...prev, category_id: categories[1]?.id }))}>
-          <LinearGradient
-            colors={formData.category_id === categories[1]?.id ? ['#023F0F', '#00FF57'] : ['#103D20', '#103D20']}
-            style={styles.categoryButton}
-          >
-            <Text style={styles.categoryText}>SEEKING</Text>
-            <Image source={require('../../assets/images/seeking.png')} style={styles.categoryImage} />
-          </LinearGradient>
-        </TouchableOpacity>
+{/* SEEKING Button */}
+<TouchableOpacity onPress={() => setFormData(prev => ({ ...prev, category_id: categories[1]?.id }))}>
+  <LinearGradient
+    colors={
+      formData.category_id === categories[1]?.id
+        ? ['#023F0F', '#00FF57']
+        : ['#2C5735', '#2C5735']
+    }
+    style={styles.categoryButton}
+  >
+    <Text style={styles.categoryText}>SEEKING</Text>
+    <Image source={require('../../assets/images/seeking.png')} style={styles.categoryImage} />
+  </LinearGradient>
+</TouchableOpacity>
+
       </View>
 
       <Text style={styles.sectionTitle}>WASTER INFORMATION</Text>
@@ -410,6 +430,10 @@ export default function PostScreen() {
             multiline
             style={styles.input}
             underlineColor="transparent"
+             textColor="#FFFFFF"
+            activeUnderlineColor="transparent"
+          
+      
 
           />
         </View>
@@ -417,20 +441,25 @@ export default function PostScreen() {
 
       {/* Weight */}
       <View style={styles.kilogramsContainer}>
-        <View style={styles.kilogramsHeader}>
-          <Image source={require('../../assets/images/trashbag.png')} style={styles.kilogramsIcon} />
-          <Text style={styles.kilogramsTitle}>TOTAL KILOGRAMS</Text>
-        </View>
+  <View style={styles.kilogramsLabel}>
+    <Image source={require('../../assets/images/trashbag.png')} style={styles.kilogramsIcon} />
+    <Text style={styles.kilogramsTitle}>TOTAL KILOGRAMS</Text>
+  </View>
 
-          <TextInput
-            value={formData.kilograms}
-            onChangeText={text => setFormData(prev => ({ ...prev, kilograms: text }))}
-            keyboardType="numeric"
-            underlineColor="transparent"
-            style={styles.kilogramsInput}
-          />
-        
-      </View>
+  <View style={styles.kilogramsInputWrapper}>
+    <TextInput
+      underlineColor="transparent"
+      activeUnderlineColor="transparent"
+      value={formData.kilograms}
+      onChangeText={text => setFormData(prev => ({ ...prev, kilograms: text }))}
+      keyboardType="numeric"
+     
+     style={[styles.kilogramsInput, { color: '#FFFFFF' }]}
+       textColor="#FFFFFF"
+    />
+  </View>
+</View>
+
 
       <View style={styles.galleryContainer}>
         <Text style={styles.sectionTitle}>GALLERY</Text>
@@ -455,32 +484,38 @@ export default function PostScreen() {
       </View>
 
       <View style={styles.mapContainer}>
-        {loading ? (
-          <ActivityIndicator size="large" color="#00FF57" />
-        ) : (
-          <>
-            <MapView
-              style={styles.map}
-              initialRegion={{
-                latitude: location.latitude || 7.1907,  // Default to Davao City if not set
-                longitude: location.longitude || 125.4553,
-                latitudeDelta: 0.0922,
-                longitudeDelta: 0.0421,
-              }}
-            >
-              <Marker
-                coordinate={{ latitude: location.latitude, longitude: location.longitude }}
-                draggable
-                onDragEnd={onDragEnd}
-              />
-            </MapView>
-            <View style={styles.addressContainer}>
-              <Text style={styles.addressText}>Address: {address}</Text>
-            </View>
-            <Button mode="contained" onPress={() => Alert.alert('Location Selected!')}>Confirm Location</Button>
-          </>
-        )}
+  {loading ? (
+    <ActivityIndicator size="large" color="#00FF57" />
+  ) : (
+    <>
+      <MapView
+        style={styles.map}
+        initialRegion={{
+          latitude: location.latitude || 7.1907,
+          longitude: location.longitude || 125.4553,
+          latitudeDelta: 0.0922,
+          longitudeDelta: 0.0421,
+        }}
+      >
+        <Marker
+          coordinate={{ latitude: location.latitude, longitude: location.longitude }}
+          draggable
+          onDragEnd={onDragEnd}
+        />
+      </MapView>
+
+      <View style={styles.addressContainer}>
+        <Text style={styles.addressText}>Address: {address}</Text>
       </View>
+
+      <Button mode="contained" onPress={() => Alert.alert('Location Selected!')} style={styles.button} 
+      labelStyle={{ fontSize:14, color: '#132718', fontWeight: 'regular' }}>
+        
+        CONFIRM LOCATION
+      </Button>
+    </>
+  )}
+</View>
 
       {/* Collection Mode */}
       <View>
@@ -533,14 +568,96 @@ export default function PostScreen() {
         onPress={handleSubmit}
         loading={loading}
         style={styles.button}
+        labelStyle={{ fontSize:16, color: '#132718', fontWeight: 'bold' }}
       >
         CREATE POST
       </Button>
-    </ScrollView>
+      </ScrollView>
+      
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+    paddingHorizontal: 10,
+    backgroundColor: '#1A3620',
+    position: 'absolute',  // ✅ sticky
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    elevation: 5, // ✅ Android shadow
+  },
+  
+  kilogramsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#1A3620',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 15,
+    marginBottom: 5,
+  },
+  
+  kilogramsLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  
+  kilogramsIcon: {
+    width: 20,
+    height: 20,
+    resizeMode: 'contain',
+    marginRight: 10,
+  },
+  
+  kilogramsTitle: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  
+  kilogramsInputWrapper: {
+    backgroundColor: '#1A3A20',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    borderWidth: 1.5,
+    borderColor: '#949B84',
+    minWidth: 100,
+    height: 40, // ✅ Set fixed height
+  },
+  
+  kilogramsInput: {
+    color: '#fff',
+    fontSize: 14,
+    textAlign: 'center',
+    backgroundColor: 'transparent',
+    height: 30,         // ✅ Constrain text height
+  },
+  
+  
+  headerTitle: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'regular',
+    textTransform: 'uppercase',
+  },
+  
+
+  
+  backIcon: {
+    position: 'absolute',
+    left: 0,
+  },
+  
+
+  
   collectionCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -574,7 +691,7 @@ const styles = StyleSheet.create({
   
 
   categoryContainer: {
-    marginBottom: 20,
+    marginTop: 40,
   },
   categoryButton: {
     flexDirection: 'row', // Align text & image in a row
@@ -603,7 +720,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 20,
     paddingHorizontal: 25,
-    marginBottom: 20,
+    marginBottom: 5,
   },
   
   imageUploadWrapper: {
@@ -710,7 +827,6 @@ const styles = StyleSheet.create({
   
   container: {
     flex: 1,
-    padding: 16,
     backgroundColor: '#023F0F',
   },
   backButton: {
@@ -756,62 +872,11 @@ const styles = StyleSheet.create({
     borderWidth: 0, // Remove default border
     fontSize: 14,
     color: '#FFFFFF',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingVertical: 2,
+    paddingHorizontal: 2,
     marginBottom:10,
   },
 
-
-  kilogramsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    backgroundColor: '#1A3620', // Background box
-    borderRadius: 12,
-    paddingHorizontal: 15,
-    paddingVertical: 15,
-    marginBottom: 5,
-    gap:10
-  },
-  
-  kilogramsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  
-  kilogramsIcon: {
-    width: 20, // Adjust icon size
-    height: 20,
-    resizeMode: 'contain',
-    marginRight: 10,
-  },
-  
-  kilogramsTitle: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  
-  kilogramsInputContainer: {
-    backgroundColor: '#234A2D', // Dark Green input box
-    borderRadius: 5,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    minWidth: 100, 
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  
-  kilogramsInput: {
-    color: '#fff',
-    fontSize: 14,
-    textAlign: 'center',
-    backgroundColor: 'transparent',
-    height: 30,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  
   tagContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -847,27 +912,36 @@ const styles = StyleSheet.create({
   },
   button: {
     marginVertical: 24,
-    backgroundColor: '#00FF00',
+    backgroundColor: '#00FF57',
     paddingVertical: 8,
+    width: '100%',
+     
   },
-  mapContainer:{
-    flex: 1,
-    justifyContent: 'center',
+  mapContainer: {
+    backgroundColor: '#1A3620',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 30,
+    marginTop: 16,
     alignItems: 'center',
   },
   map: {
-    width: width,
-    height: height * 0.6,
+    width: '100%',
+    height: 250, // 🟢 Reduced from screen height
+    borderRadius: 10,
   },
   addressContainer: {
-    padding: 10,
-    backgroundColor: '#fff',
-    marginVertical: 10,
-    borderRadius: 5,
-    width: '90%',
+    marginTop: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    padding: 12,
+    width: '100%',
   },
   addressText: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 14,
+    color: '#333',
   },
+  
 }); 
