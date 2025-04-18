@@ -12,14 +12,29 @@ export type RootStackParamList = {
   EditOffer: { offer: Offer };
   ScheduleOffer: { offer: Offer; post: Post };
   CollectionSchedule: { offerID: string }; 
-  ChatScreen: { chatId: string; userId?: string; post?: Post; schedule?: Schedule };
+  ChatScreen: { 
+    chatId: string; 
+    userId?: string; post?: 
+    Post; schedule?: Schedule 
+  };
+  TransacHist: undefined;
+  ViewTransaction: { offerId: string };
+  ConfirmDelivery: {
+    offerId: string;
+    offererName: string;
+    collectorName: string;
+    photoUrl: string;
+  };
+  MyPosts: undefined;
+  Review: undefined;
+  Notifications: { onViewed?: () => void } | undefined;
 };
 
 export type BottomTabParamList = {
   Home: undefined;
   Leaderboard: undefined;
   Post: undefined;
-  Messages: undefined;
+  Messages: { userId: string }; 
   Profile: undefined;
 };
 
@@ -98,3 +113,10 @@ export type PostType = {
     };
   }>;
 }
+
+export type ConfirmDeliveryParams = {
+  offerId: string;
+  offererName: string;
+  collectorName: string;
+  photoUrl: string;
+};

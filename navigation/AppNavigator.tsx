@@ -10,6 +10,12 @@ import EditOffer from '../app/(tabs)/EditOffer';
 import ScheduleOffer from '../app/(tabs)/ScheduleOffer'
 import CollectionSchedule from '../app/(tabs)/CollectionSchedule';
 import ChatScreen from '@/app/(tabs)/ChatScreen';
+import TransacHist from '@/app/(tabs)/TransacHist';
+import ViewTransaction from '@/app/(tabs)/ViewTransaction';
+import ConfirmDelivery from '@/app/(tabs)/ConfirmDelivery';
+import MyPosts from '@/app/(tabs)/MyPosts';
+import Review from '@/app/(tabs)/review';
+import Notifications from '@/app/(tabs)/Notifications';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -55,6 +61,30 @@ export function AppNavigator() {
       <Stack.Screen
         name="ChatScreen"
         component={ChatScreen}
+      />
+      <Stack.Screen
+        name="TransacHist"
+        component={TransacHist}
+      />
+      <Stack.Screen
+        name="ViewTransaction"
+        component={ViewTransaction}
+      />
+      <Stack.Screen
+        name="ConfirmDelivery"
+        component={ConfirmDelivery}
+      />
+      <Stack.Screen
+        name="MyPosts"
+        component={MyPosts}
+      />
+      <Stack.Screen
+        name="Review"
+        component={Review}
+      />
+      <Stack.Screen
+        name="Notifications"
+        component={Notifications}
       />
     </Stack.Navigator>
   );

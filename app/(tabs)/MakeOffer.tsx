@@ -9,6 +9,8 @@ import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../types/navigation';
 import { createOffer } from '../../services/offersService'; 
 import { supabase } from '../../services/supabase'; 
+import { notificationService } from '@/services/notificationService';
+import { offersService } from '../../services/offersService';
 
 type MakeOfferRouteProp = RouteProp<RootStackParamList, 'MakeOffer'>;
 
@@ -26,6 +28,9 @@ const MakeOffer = () => {
   const [price, setPrice] = useState('');
   const [message, setMessage] = useState('');
   const [images, setImages] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [offerSent, setOfferSent] = useState(false);
+
 
   if (!post) {
     return (
@@ -45,71 +50,108 @@ const MakeOffer = () => {
       }
     });
   };
-
+  // setImages(uploadedImages.filter(url => url !== null));
   const pickImages = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsMultipleSelection: true,
-      aspect: [4, 3],
-      quality: 1,
-    });
-
-    if (!result.canceled) {
-      // ✅ Upload images to Supabase instead of storing base64
-      const uploadedImages = await Promise.all(
-        result.assets.map(async (asset) => await uploadImage(asset.uri))
-      );
-
-      // ✅ Store only valid image URLs
-      setImages(uploadedImages.filter(url => url !== null));
-    }
-  };
-
-  const uploadImage = async (uri: string) => {
     try {
-      const fileName = `${Date.now()}.jpg`;
-      const response = await fetch(uri);
-      const blob = await response.blob();
-  
-      // Generate a signed URL for upload
-      const { data, error } = await supabase.storage
-        .from('offers')
-        .upload(fileName, blob, { contentType: "image/jpeg" });
-  
-      if (error) {
-        console.error("Error uploading image:", error.message);
-        return null;
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Sorry, we need camera roll permissions to make this work!');
+        return;
       }
   
-      // Retrieve the public URL
-      const { publicUrl } = supabase.storage.from('offers').getPublicUrl(fileName).data;
-      console.log("Image uploaded:", publicUrl);
-      return publicUrl; 
+      setUploading(true);
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsMultipleSelection: true,
+        quality: 1,
+      });
+  
+      if (!result.canceled) {
+        const assets = result.assets || [];
+  
+        const uploadedImages = await Promise.all(
+          assets.map(async (asset) => {
+            try {
+              console.log("Picked asset (Android):", asset);
+  
+              // Use the uploadImage function from postsService
+              const url = await offersService.uploadImage(asset.uri);
+              if (!url) {
+                throw new Error("Image upload returned null or undefined");
+              }
+              return url;
+            } catch (uploadError: unknown) {
+              if (uploadError instanceof Error) {
+                console.error("Error uploading image:", uploadError.message);
+                Alert.alert("Image upload failed", uploadError.message);
+              } else {
+                console.error("Unknown upload error:", uploadError);
+                Alert.alert("Image upload failed", "An unexpected error occurred");
+              }
+              return null;
+            }
+          })
+        );
+  
+        setImages(uploadedImages.filter(url => url !== null));
+      }
     } catch (error) {
-      console.error("Image upload failed:", error);
-      return null;
+      if (error instanceof Error) {
+        console.error("Error picking images:", error.message);
+        Alert.alert("Error", error.message);
+      } else {
+        console.error("Unknown error while picking images:", error);
+        Alert.alert("Error", "An unexpected error occurred while picking images.");
+      }
+    } finally {
+      setUploading(false);
     }
   };
+  // const uploadImage = async (uri: string) => {
+  //   try {
+  //     const fileName = `${Date.now()}.jpg`;
+  //     const response = await fetch(uri);
+  //     const blob = await response.blob();
+  
+  //     // Generate a signed URL for upload
+  //     const { data, error } = await supabase.storage
+  //       .from('offers')
+  //       .upload(fileName, blob, { contentType: "image/jpeg" });
+  
+  //     if (error) {
+  //       console.error("Error uploading image:", error.message);
+  //       return null;
+  //     }
+  
+  //     // Retrieve the public URL
+  //     const { publicUrl } = supabase.storage.from('offers').getPublicUrl(fileName).data;
+  //     console.log("Image uploaded:", publicUrl);
+  //     return publicUrl; 
+  //   } catch (error) {
+  //     console.error("Image upload failed:", error);
+  //     return null;
+  //   }
+  // };
   
   const handleSendOffer = async () => {
     if (!currentUser?.id) {
       console.error("Cannot send offer: No authenticated user!");
       return;
     }
-    if (!price || !offeredWeight || selectedItems.length === 0 || images.length === 0) {
+    if (!price || !offeredWeight || selectedItems.length === 0) {
       Alert.alert("Missing Fields", "Please fill in all required fields before sending your offer.");
       return;
     }
   
     const offerData = {
-      post_id: post.id,             
-      user_id: currentUser.id,       
+      post_id: post.id,
+      user_id: currentUser.id,
       offered_items: selectedItems.map(item => item.name),
       offered_weight: offeredWeight,
       requested_weight: post.kilograms,
       price,
       message,
-      images,         
+      images,
       status: "pending",
     };
   
@@ -121,7 +163,17 @@ const MakeOffer = () => {
       console.error("Error posting offer:", error.message);
     } else {
       console.log("Offer posted successfully:", data);
-      navigation.goBack();
+      setOfferSent(true);
+  
+      await notificationService.sendNotification(
+        post.user_id,
+        'New Offer Received',
+        `Someone submitted an offer on your post: "${post.description}"`
+      );
+  
+      setTimeout(() => {
+        navigation.goBack();
+      }, 2500);
     }
   };
 
@@ -150,6 +202,16 @@ const MakeOffer = () => {
       setSelectedItems([]); // Prevent lingering state
     }
   }, [post]); // Runs whenever post changes  
+
+  if (offerSent) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0B4B1C' }}>
+        <Image source={require('../../assets/images/bell.png')} style={{ width: 90, height: 90, marginBottom: 20 }} />
+        <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 16 }}>ACTION WAS SENT,</Text>
+        <Text style={{ color: '#ccc', marginTop: 4, fontSize: 12 }}>CHECK NOTIFICATIONS FOR UPDATES</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>

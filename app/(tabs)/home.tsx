@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Image, StyleSheet, FlatList, RefreshControl, Modal, TouchableOpacity } from 'react-native';
 import { Text, Card, Button, Chip, Searchbar, IconButton, ActivityIndicator } from 'react-native-paper';
 import { postsService } from '../../services/postsService';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { RootStackParamList } from '../../types/navigation';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -12,6 +12,8 @@ import dropoffIcon from '../../assets/images/dropoff.png';
 import paperplaneIcon from '../../assets/images/paperplane.png';
 import messagebubbleIcon from '../../assets/images/messagebubble.png';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabase } from '@/services/supabase';
+import { notificationService } from '@/services/notificationService';
 
 export interface Post {
   id: string;
@@ -94,6 +96,9 @@ export default function HomeScreen() {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const navigation = useNavigation<HomeScreenNavigationProp>();
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showBadge, setShowBadge] = useState(true);
+
   const getModeIcon = (modeName: string) => {
     switch (modeName.toLowerCase()) {
       case 'meetup':
@@ -155,6 +160,19 @@ export default function HomeScreen() {
     loadCategories();
   }, []);
 
+  useEffect(() => {
+    const fetchUnread = async () => {
+      const session = await supabase.auth.getSession();
+      const userId = session?.data?.session?.user?.id;
+      if (userId) {
+        const count = await notificationService.getUnreadCount(userId);
+        setUnreadCount(count);
+      }
+    };
+  
+    fetchUnread();
+  }, []);
+
   const onRefresh = () => {
     setRefreshing(true);
     fetchPosts();
@@ -212,9 +230,22 @@ export default function HomeScreen() {
         />
         </View>
   
-        <View style={styles.notificationWrapper}>
-          <IconButton icon="bell" iconColor="white" size={24} onPress={() => {}} />
-        </View>
+        <TouchableOpacity style={styles.notificationWrapper}>
+          <IconButton icon="bell" iconColor="white" size={24} onPress={() => navigation.navigate('Notifications', { onViewed: () => setShowBadge(false) })} />
+          {unreadCount > 0 && showBadge && (
+            <View style={{
+              position: 'absolute',
+              top: -5,
+              right: -5,
+              backgroundColor: 'red',
+              borderRadius: 10,
+              paddingHorizontal: 6,
+              paddingVertical: 1,
+            }}>
+              <Text style={{ color: 'white', fontSize: 12 }}>{unreadCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -269,9 +300,19 @@ export default function HomeScreen() {
   );
   
 
-  const filteredPosts = selectedCategory 
-    ? posts.filter(post => post.category_id === selectedCategory)
-    : posts;
+  const filteredPosts = posts.filter(post => {
+    const matchesCategory = selectedCategory ? post.category_id === selectedCategory : true;
+    const matchesSearch = searchQuery
+      ? post.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        post.user?.barangay?.toString().includes(searchQuery) ||
+        post.user?.purok?.toString().includes(searchQuery) ||
+        post.post_item_types?.some(item =>
+          item.item_types?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      : true;
+    return matchesCategory && matchesSearch;
+  });
+  
 
 
   const renderPost = ({ item }: { item: Post }) => (

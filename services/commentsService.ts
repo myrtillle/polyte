@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { notificationService } from './notificationService';
 
 export const commentsService = {
   /**
@@ -66,13 +67,19 @@ export const commentsService = {
       .from('comments')
       .insert([{ post_id: postId, user_id: userId, comment_text: commentText }])
       .select()
-      .single(); // 🔥 Also ensure we return a single comment object
-  
+      .single(); 
+    
+      await notificationService.sendNotification(
+        data.user_id,
+        'New Comment on Your Post',
+        `Someone commented on your post: "${data.comment_text}"`
+      );
+      
     if (error) {
       console.error('❌ Error adding comment:', error.message);
       return null;
     }
-  
+    
     return {
       ...data,
       user_name: userName, // Attach user details immediately

@@ -1,14 +1,36 @@
-import React from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView  } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, ActivityIndicator  } from 'react-native';
 import { Card } from 'react-native-paper';
 import { supabase } from '../../services/supabase';
 import { useNavigation } from '@react-navigation/native';
 import type { NavigationProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../types/navigation';
 import { LinearGradient } from 'expo-linear-gradient';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { profileService } from '@/services/profileService';
+
+type viewPostNavigationProp = StackNavigationProp<RootStackParamList>;
 
 const ProfileScreen = () => {
-  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const data = await profileService.fetchCurrentUserDetails();
+        setProfile(data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadProfile();
+  }, []);
+
+  if (loading) return <ActivityIndicator color="#00D964" size="large" style={{ flex: 1 }} />;
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -24,112 +46,118 @@ const ProfileScreen = () => {
   };
 
   return (
-          <LinearGradient
-        colors={['#023F0F', '#05A527']}
-        style={styles.container}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-      >
+    <LinearGradient
+      colors={['#023F0F', '#05A527']}
+      style={styles.container}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+    >
       <ScrollView contentContainerStyle={styles.listContent}>
       {/* Header image background with circular profile image overlay */}
-      <View style={styles.headerBackground}>
-        <Image
-          source={{ uri: 'https://i.pravatar.cc/100' }}
-          style={styles.overlayProfileImage}
-        />
-      </View>
+        <View style={styles.headerBackground}>
+          <Image
+            source={{ uri: 'https://i.pravatar.cc/100' }}
+            style={styles.overlayProfileImage}
+          />
+        </View>
 
-      {/* User Details Card */}
-      <Card style={styles.userCard}>
-        <Card.Content>
-          <Text style={styles.profileName}>Minji Kim</Text>
-          <Text style={styles.profileLocation}>📍 Lambingan Street, Milan, Buhangin, Davao City</Text>
-          <Text style={styles.memberSince}>Member Since: July 1, 2023</Text>
-        </Card.Content>
-      </Card>
-
-      <Card style={styles.userCard}>
-        <Card.Content>
-          <TouchableOpacity>
-            <Text style={styles.profileName}>My Posts</Text>
-          </TouchableOpacity>
-        </Card.Content>
-      </Card>
-
-      {/* Stats Section */}
-      <Text style={styles.sectionTitle}>ALL TIME STATS</Text>
-
-      <Card style={styles.statCard}>
-        <Card.Content>
-          <Text style={styles.statLabel}>CARBON EMISSION SAVED</Text>
-          <View style={styles.statValueRow}>
-            <Text style={styles.statValue}>1140 kg CO2</Text>
-            <Text style={styles.statIcon}>🌫️</Text>
-          </View>
-        </Card.Content>
-      </Card>
-
-      <View style={styles.doubleCardRow}>
-        <Card style={styles.smallCard}>
+        {/* User Details Card */}
+        <Card style={styles.userCard}>
           <Card.Content>
-            <Text style={styles.statLabel}>SACK OF TRASH COLLECTED</Text>
+            <Text style={styles.profileName}>{profile.first_name} {profile.last_name}</Text>
+            <Text style={styles.profileLocation}>Purok {profile.purok}, {profile.barangay}</Text>
+            <Text style={styles.memberSince}>Member since: {new Date(profile.created_at).toDateString()}</Text>
+          </Card.Content>
+        </Card>
+
+        <View style={styles.doubleCardRow}>
+          <Card style={styles.smallCard}>
+            <TouchableOpacity onPress={() => navigation.navigate('MyPosts')}>
+              <Card.Content>
+                  <Text style={styles.profileName}>My Posts</Text>
+              </Card.Content>
+            </TouchableOpacity>
+          </Card>
+
+          <Card style={styles.smallCard}>
+            <TouchableOpacity style={styles.statCard} onPress={() => navigation.navigate('TransacHist')}>
+              <Card.Content>
+                <Text style={styles.transactionText}>Transaction History</Text>
+              </Card.Content>
+            </TouchableOpacity>
+          </Card>
+        </View>
+
+        {/* Stats Section */}
+        <Text style={styles.sectionTitle}>ALL TIME STATS</Text>
+
+        <Card style={styles.statCard}>
+          <Card.Content>
+            <Text style={styles.statLabel}>CARBON EMISSION SAVED</Text>
             <View style={styles.statValueRow}>
-              <Text style={styles.statValue}>20</Text>
-              <Text style={styles.statIcon}>🟢</Text>
+              <Text style={styles.statValue}>1140 kg CO2</Text>
+              <Text style={styles.statIcon}>🌫️</Text>
             </View>
           </Card.Content>
         </Card>
 
-        <Card style={styles.smallCard}>
+        <View style={styles.doubleCardRow}>
+          <Card style={styles.smallCard}>
+            <Card.Content>
+              <Text style={styles.statLabel}>SACK OF TRASH COLLECTED</Text>
+              <View style={styles.statValueRow}>
+                <Text style={styles.statValue}>20</Text>
+                <Text style={styles.statIcon}>🟢</Text>
+              </View>
+            </Card.Content>
+          </Card>
+
+          <Card style={styles.smallCard}>
+            <Card.Content>
+              <Text style={styles.statLabel}>SACK OF TRASH DONATED</Text>
+              <View style={styles.statValueRow}>
+                <Text style={styles.statValue}>38</Text>
+                <Text style={styles.statIcon}>⚫</Text>
+              </View>
+            </Card.Content>
+          </Card>
+        </View>
+
+        <Card style={styles.statCard}>
           <Card.Content>
-            <Text style={styles.statLabel}>SACK OF TRASH DONATED</Text>
-            <View style={styles.statValueRow}>
-              <Text style={styles.statValue}>38</Text>
-              <Text style={styles.statIcon}>⚫</Text>
+            <View style={styles.statRowSpaceBetween}>
+              <Text style={styles.statLabel}>AVERAGE MONTHLY CONTRIBUTION</Text>
+              <Text style={styles.suffix}>SACKS PER MONTH</Text>
             </View>
+            <Text style={styles.statValue}>15</Text>
           </Card.Content>
         </Card>
-      </View>
 
-      <Card style={styles.statCard}>
-        <Card.Content>
-          <View style={styles.statRowSpaceBetween}>
-            <Text style={styles.statLabel}>AVERAGE MONTHLY CONTRIBUTION</Text>
-            <Text style={styles.suffix}>SACKS PER MONTH</Text>
-          </View>
-          <Text style={styles.statValue}>15</Text>
-        </Card.Content>
-      </Card>
+        <Card style={styles.statCard}>
+          <Card.Content>
+            <View style={styles.statRowSpaceBetween}>
+              <Text style={styles.statLabel}>TOTAL POLYS COLLECTED</Text>
+              <Text style={styles.statIcon}>🟩</Text>
+            </View>
+            <Text style={styles.statValue}>{profile.totalPoints}</Text>
+          </Card.Content>
+        </Card>
 
-      <Card style={styles.statCard}>
-        <Card.Content>
-          <View style={styles.statRowSpaceBetween}>
-            <Text style={styles.statLabel}>TOTAL POLYS COLLECTED</Text>
-            <Text style={styles.statIcon}>🟩</Text>
-          </View>
-          <Text style={styles.statValue}>135</Text>
-        </Card.Content>
-      </Card>
-
-      <Card style={styles.statCard}>
-        <Card.Content>
-          <View style={styles.statRowSpaceBetween}>
-            <Text style={styles.statLabel}>USER RATING</Text>
-            <Text style={styles.suffix}>AS OF THIS MONTH</Text>
-          </View>
-          <Text style={styles.statValue}>⭐⭐⭐⭐⭐</Text>
-        </Card.Content>
-      </Card>
-
-      <Card style={styles.statCard}>
-        <Card.Content>
-          <Text style={styles.transactionText}>TRANSACTION HISTORY</Text>
-        </Card.Content>
-      </Card>
-
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-        <Text style={styles.logoutButtonText}>Logout</Text>
-      </TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.navigate('Review')}>
+          <Card style={styles.statCard}>
+            <Card.Content>
+              <View style={styles.statRowSpaceBetween}>
+                <Text style={styles.statLabel}>USER RATING</Text>
+                <Text style={styles.suffix}>AS OF THIS MONTH</Text>
+              </View>
+              <Text style={styles.statValue}>⭐⭐⭐⭐⭐</Text>
+            </Card.Content>
+          </Card>
+        </TouchableOpacity>
+       
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={styles.logoutButtonText}>Logout</Text>
+        </TouchableOpacity>
       </ScrollView>
     </LinearGradient>
   );

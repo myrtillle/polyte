@@ -67,6 +67,13 @@ export default function TabsLayout() {
       <Tabs.Screen name="EditOffer" options={{ href: null }} />
       <Tabs.Screen name="ScheduleOffer" options={{ href: null }} />
       <Tabs.Screen name="CollectionSchedule" options={{ href: null }} />
+      <Tabs.Screen name="ChatScreen" options={{ href: null }} />
+      <Tabs.Screen name="TransacHist" options={{ href: null }} />
+      <Tabs.Screen name="ConfirmDelivery" options={{ href: null }} />
+      <Tabs.Screen name="ViewTransaction" options={{ href: null }} />
+      <Tabs.Screen name="MyPosts" options={{ href: null }} />
+      <Tabs.Screen name="review" options={{ href: null }} />
+      <Tabs.Screen name="Notifications" options={{ href: null }} />
     </Tabs>
   );
 }

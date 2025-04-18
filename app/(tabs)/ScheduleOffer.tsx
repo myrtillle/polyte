@@ -7,6 +7,7 @@ import { RootStackParamList } from '../../types/navigation';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { offersService, updateOffer } from '@/services/offersService';
+import { notificationService } from '@/services/notificationService';
 
 const ScheduleOffer = () => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
@@ -42,7 +43,14 @@ const ScheduleOffer = () => {
       console.log("Post ID before navigation:", post?.id);
 
       Alert.alert('Success', 'Schedule saved successfully!');
-      navigation.navigate("CollectionSchedule", { offerID: offer.id });
+
+      await notificationService.sendNotification(
+        offer.user_id, // OF's user_id from the offer
+        'Schedule Created',
+        `A schedule has been set for your offer. Please review and confirm it.`
+      );
+      
+      navigation.navigate("ViewTransaction", { offerId: offer.id });
     } catch (error) {
       Alert.alert('Error', 'Failed to save schedule.');
       console.error('Error saving schedule:', error);

@@ -1,5 +1,8 @@
 import { supabase } from './supabase';
 import { postsService } from './postsService';
+import * as FileSystem from 'expo-file-system';
+import { Platform } from 'react-native';
+
 
 export interface Offer {
   id: string;
@@ -20,9 +23,6 @@ export interface Offer {
   }>;
 }
 
-/**
- * Create a new offer
- */
 export const createOffer = async (offerData: Offer) => {
   const { error } = await supabase.from('offers').insert([offerData]);
 
@@ -34,9 +34,6 @@ export const createOffer = async (offerData: Offer) => {
   return { success: true, message: "Offer submitted successfully!" };
 };
 
-/**
- * Fetch offers for a specific post
- */
 export const getOffersByPost = async (postId: string) => {
   const { data, error } = await supabase
     .from('offers')
@@ -60,9 +57,6 @@ export const getOffersByPost = async (postId: string) => {
   return data;
 };
 
-/**
- * Fetch offers made by a specific user
- */
 export const getUserOffers = async (userId: string) => {
   const { data, error } = await supabase
     .from('offers')
@@ -114,6 +108,60 @@ export const updateOffer = async (offer: Partial<Offer>) => {
 };
 
 export const offersService = {
+  async uploadImage(fileUri: string, bucketName: string = 'offers') {
+    try {
+      const fileType = fileUri.split('.').pop();
+      const fileName = `image_${Date.now()}.${fileType}`;
+
+      console.log("📷 filename:", fileName);
+
+      let fileData: any;
+      if (Platform.OS === 'web') {
+        // Web-specific handling
+        const response = await fetch(fileUri);
+        const blob = await response.blob();
+        fileData = blob;
+      } else {
+        // Android and iOS handling
+        fileData = {
+          uri: fileUri,
+          name: fileName,
+          type: `image/${fileType}`,
+        };
+      }
+
+      const { data, error } = await supabase.storage
+        .from(bucketName)
+        .upload(fileName, fileData);
+
+        console.log("📷 data:", data);
+      if (error) {
+        console.error("Error uploading image to Supabase:", error.message);
+        throw new Error(`Upload failed: ${error.message}`);
+      }
+
+      // Generate public URL for the uploaded image
+      const { data: urlData } = supabase.storage
+        .from(bucketName)
+        .getPublicUrl(fileName);
+
+        console.log("📷 publicURL:", fileName);
+
+      if (!urlData?.publicUrl) {
+        throw new Error("Failed to generate the public URL.");
+      }
+
+      console.log("Image uploaded successfully:", urlData.publicUrl);
+
+      console.log("📷 URL:", urlData.publicUrl);
+
+      return urlData.publicUrl;
+    } catch (error: any) {
+      console.error("Image upload failed:", error.message || "Unknown error");
+      throw new Error(error.message || "Unknown error");
+    }
+  },
+
   async getOfferSchedule(offerId: string) {
     try {
         const { data, error } = await supabase
@@ -161,6 +209,21 @@ export const offersService = {
         console.error("Error cancelling schedule:", error);
         throw error;
     }
+  },
+
+  async getOffererId (offerId: string) {
+    const { data, error } = await supabase
+      .from('offers')
+      .select('user_id')
+      .eq('id', offerId)
+      .maybeSingle();
+  
+    if (error || !data) {
+      throw new Error("Could not get offerer ID");
+    }
+  
+    return data.user_id;
   }
+  
 }
 

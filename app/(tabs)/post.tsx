@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Dimensions, Alert, Platform } from 'react-native';
 import { TextInput, Button, Title, Text, IconButton, SegmentedButtons, Chip } from 'react-native-paper';
 import { router } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { postsService, CreatePostData } from '../../services/postsService';
 import * as ImagePicker from 'expo-image-picker';
-import MapView, { Marker } from 'react-native-maps';
+import MapView, { Marker, PROVIDER_DEFAULT, PROVIDER_GOOGLE, Region, MapViewProps  } from 'react-native-maps';
+// import { WebView } from 'react-native-webview';
 import * as Location from 'expo-location';
 import { supabase } from '../../services/supabase';
 
@@ -63,18 +64,26 @@ interface FormData {
   };
 }
 
-
 export default function PostScreen() {
+  const DAVAO_COORDS = {
+    latitude: 7.1907,
+    longitude: 125.4553,
+    latitudeDelta: 0.01,
+    longitudeDelta: 0.01,
+  };
+    
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [itemTypes, setItemTypes] = useState<ItemType[]>([]);
   const [collectionModes, setCollectionModes] = useState<CollectionMode[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-  
+
   //location
-  const [location, setLocation] = useState({ latitude: 0, longitude: 0 });
+  const [region, setRegion] = useState<Region>(DAVAO_COORDS);
+  const [marker, setMarker] = useState({ latitude: DAVAO_COORDS.latitude, longitude: DAVAO_COORDS.longitude });
   const [address, setAddress] = useState('');
+  const mapRef = useRef<MapView>(null);
   // const [loading, setLoading] = useState(true);
 
   // Separate state for UI-only data
@@ -90,27 +99,11 @@ export default function PostScreen() {
     status: 'active',
     photos: [],
     location: {
-      latitude: 0,
-      longitude: 0,
+      latitude: 7.1907,
+      longitude: 125.4553,
       address: '',
     },
   });
-
-  function formDataFromImagePicker(result: ImagePicker.ImagePickerSuccessResult) {
-    const formData = new FormData();
-  
-    for (const index in result.assets) {
-      const asset = result.assets[index];
-  
-      formData.append(`photo.${index}`, {
-        uri: asset.uri,
-        name: asset.fileName ?? asset.uri.split("/").pop(),
-        type: asset.type ?? 'image/jpeg', // Default to JPEG if type is not available
-      });
-    }
-  
-    return formData;
-  }
 
   const pickImages = async () => {
     try {
@@ -200,6 +193,7 @@ export default function PostScreen() {
     loadData();
   }, []);
 
+
   const formatLocationToWKT = (lat: number, lon: number): string => {
     return `POINT(${lon} ${lat})`;
   };
@@ -249,7 +243,7 @@ export default function PostScreen() {
         },
       });
       setAddress('');
-      setLocation({ latitude: 0, longitude: 0 });
+      setMarker({ latitude: 0, longitude: 0 });
       Alert.alert("Success", "Post created successfully!");
     } catch (error) {
       console.error('Error creating post:', error);
@@ -259,8 +253,6 @@ export default function PostScreen() {
     }
   };
   
-  
-
   // toggle item type selection
   const toggleItemType = (typeId: number) => {
     setFormData(prev => ({
@@ -273,46 +265,30 @@ export default function PostScreen() {
 
   const fetchAddress = async (lat: number, lon: number) => {
     try {
-      const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`;
-      console.log("Fetching address from URL:", url);
-  
-      const response = await fetch(url, {
-        method: 'GET',
+      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`, {
         headers: {
-          'User-Agent': 'MyApp/1.0 (your-email@example.com)',  // Customize this line
+          'User-Agent': 'Polyte/1.0',
+          'Accept-Language': 'en',
         },
       });
-  
-      if (!response.ok) {
-        throw new Error(`Error: ${response.status} - ${response.statusText}`);
-      }
-  
+      if (!response.ok) throw new Error('Failed to fetch address');
       const data = await response.json();
       setAddress(data.display_name);
-      setFormData((prev) => ({
-        ...prev,
-        location: { latitude: lat, longitude: lon, address: data.display_name },
-      }));
-      console.log("Fetched Address:", data.display_name);
-    } catch (error) {
-      console.error("Error fetching address:", error);
-      Alert.alert("Error", "Failed to fetch address. Please try again.");
+    } catch (err) {
+      console.error('Reverse geocoding failed:', err);
     }
   };
   
-  
-  
-
   const onDragEnd = (e: { nativeEvent: { coordinate: { latitude: number, longitude: number } } }) => {
     const { latitude, longitude } = e.nativeEvent.coordinate;
     console.log("Dragged to:", latitude, longitude);
     
     // Update both location and form data states
-    setLocation({ latitude, longitude });
-    setFormData((prev) => ({
-      ...prev,
-      location: { latitude, longitude, address: '' },
-    }));
+    setMarker({ latitude, longitude });
+    // setFormData((prev) => ({
+    //   ...prev,
+    //   location: { latitude, longitude, address: '' },
+    // }));
     
     // Fetch the address after updating the location
     fetchAddress(latitude, longitude);
@@ -321,145 +297,146 @@ export default function PostScreen() {
 
   useEffect(() => {
     (async () => {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission to access location was denied');
-        return;
-      }
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') return;
   
-      let loc = await Location.getCurrentPositionAsync({});
-      setLocation({
-        latitude: loc.coords.latitude,
-        longitude: loc.coords.longitude,
-      });
-      setFormData((prev) => ({
-        ...prev,
-        location: { latitude: loc.coords.latitude, longitude: loc.coords.longitude, address: '' },
-      }));
-      fetchAddress(loc.coords.latitude, loc.coords.longitude);
-      setLoading(false);
+        const { coords } = await Location.getCurrentPositionAsync({});
+        setMarker({ latitude: coords.latitude, longitude: coords.longitude });
+  
+        // animate to user's location
+        mapRef.current?.animateToRegion({
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        }, 1000);
+  
+        fetchAddress(coords.latitude, coords.longitude);  
+      } catch (err) {
+        console.warn('Location fallback to Davao');
+      }
     })();
   }, []);
+  
+
   
 
   return (
     <View style={{ flex: 1, backgroundColor: '#023F0F' }}>
 
-            {/* Sticky Header */}
-            <View style={styles.headerContainer}>
-              <IconButton
-                icon="arrow-left"
-                size={24}
-                iconColor="white"
-                onPress={() => router.back()}
-                style={styles.backIcon}
-              />
-          <Text style={styles.headerTitle}>Create Post</Text>
-        </View>
-        {/* Scrollable Content */}
+      {/* Sticky Header */}
+      <View style={styles.headerContainer}>
+        <IconButton
+          icon="arrow-left"
+          size={24}
+          iconColor="white"
+          onPress={() => router.back()}
+          style={styles.backIcon}
+        />
+        <Text style={styles.headerTitle}>Create Post</Text>
+      </View>
 
-        <ScrollView style={{ padding: 16, backgroundColor: '#023F0F' }}>
+      {/* Scrollable Content */}
+      <ScrollView style={{ padding: 16, backgroundColor: '#023F0F' }}>
 
         <Text style={styles.headerTitle}>Create Post</Text>
-      {/* Category Selection */}
-      <View style={styles.categoryContainer}>
-        <Text style={styles.sectionTitle}>CATEGORY</Text>
+        
+        {/* Category Selection */}
+        <View style={styles.categoryContainer}>
+          <Text style={styles.sectionTitle}>CATEGORY</Text>
 
-        {/* SELLING Button */}
-<TouchableOpacity onPress={() => setFormData(prev => ({ ...prev, category_id: categories[0]?.id }))}>
-  <LinearGradient
-    colors={
-      formData.category_id === categories[0]?.id
-        ? ['#023F0F', '#00FF57']  // selected = gradient
-        : ['#2C5735', '#2C5735']  // not selected = solid color
-    }
-    style={styles.categoryButton}
-  >
-    <Text style={styles.categoryText}>SELLING</Text>
-    <Image source={require('../../assets/images/selling.png')} style={styles.categoryImage} />
-  </LinearGradient>
-</TouchableOpacity>
-
-{/* SEEKING Button */}
-<TouchableOpacity onPress={() => setFormData(prev => ({ ...prev, category_id: categories[1]?.id }))}>
-  <LinearGradient
-    colors={
-      formData.category_id === categories[1]?.id
-        ? ['#023F0F', '#00FF57']
-        : ['#2C5735', '#2C5735']
-    }
-    style={styles.categoryButton}
-  >
-    <Text style={styles.categoryText}>SEEKING</Text>
-    <Image source={require('../../assets/images/seeking.png')} style={styles.categoryImage} />
-  </LinearGradient>
-</TouchableOpacity>
-
-      </View>
-
-      <Text style={styles.sectionTitle}>WASTER INFORMATION</Text>
-            {/* Item Types Section */}
-            <View style={styles.itemTypesContainer}>
-        <View style={styles.itemTypesHeader}>
-          <Text style={styles.itemTypesTitle}>TYPE OF PLASTICS</Text>
-          <Text style={styles.itemTypesInfo}>SELECT AT LEAST 2</Text>
-          <MaterialCommunityIcons name="information-outline" size={18} color="limegreen" />
-        </View>
-
-        <View style={styles.itemTypesGrid}>
-          {itemTypes.map(type => (
-            <TouchableOpacity
-              key={type.id}
-              style={[styles.itemTypeButton, formData.item_type_ids.includes(type.id) && styles.selectedItemType]}
-              onPress={() => toggleItemType(type.id)}
+          {/* SELLING Button */}
+          <TouchableOpacity onPress={() => setFormData(prev => ({ ...prev, category_id: categories[0]?.id }))}>
+            <LinearGradient
+              colors={
+                formData.category_id === categories[0]?.id
+                  ? ['#023F0F', '#00FF57']  // selected = gradient
+                  : ['#2C5735', '#2C5735']  // not selected = solid color
+              }
+              style={styles.categoryButton}
             >
-              <Text style={styles.itemTypeText}>{type.name}</Text>
-            </TouchableOpacity>
-          ))}
+              <Text style={styles.categoryText}>SELLING</Text>
+              <Image source={require('../../assets/images/selling.png')} style={styles.categoryImage} />
+            </LinearGradient>
+          </TouchableOpacity>
+
+          {/* SEEKING Button */}
+          <TouchableOpacity onPress={() => setFormData(prev => ({ ...prev, category_id: categories[1]?.id }))}>
+            <LinearGradient
+              colors={
+                formData.category_id === categories[1]?.id
+                  ? ['#023F0F', '#00FF57']
+                  : ['#2C5735', '#2C5735']
+              }
+              style={styles.categoryButton}
+            >
+              <Text style={styles.categoryText}>SEEKING</Text>
+              <Image source={require('../../assets/images/seeking.png')} style={styles.categoryImage} />
+            </LinearGradient>
+          </TouchableOpacity>
+
         </View>
-      </View>
 
-      {/* Description */}
-      <View style={styles.descriptionContainer}>
-        <Text style={styles.sectionTitle}>DESCRIPTION</Text>
-        <View style={styles.descriptionBox}>
+        <Text style={styles.sectionTitle}>WASTER INFORMATION</Text>
+        {/* Item Types Section */}
+        <View style={styles.itemTypesContainer}>
+          <View style={styles.itemTypesHeader}>
+            <Text style={styles.itemTypesTitle}>TYPE OF PLASTICS</Text>
+            <Text style={styles.itemTypesInfo}>SELECT AT LEAST 2</Text>
+            <MaterialCommunityIcons name="information-outline" size={18} color="limegreen" />
+          </View>
+
+          <View style={styles.itemTypesGrid}>
+            {itemTypes.map(type => (
+              <TouchableOpacity
+                key={type.id}
+                style={[styles.itemTypeButton, formData.item_type_ids.includes(type.id) && styles.selectedItemType]}
+                onPress={() => toggleItemType(type.id)}
+              >
+                <Text style={styles.itemTypeText}>{type.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Description */}
+        <View style={styles.descriptionContainer}>
+          <Text style={styles.sectionTitle}>DESCRIPTION</Text>
+          <View style={styles.descriptionBox}>
+            <TextInput
+              label=""
+              value={formData.description}
+              onChangeText={text => setFormData(prev => ({ ...prev, description: text }))}
+              multiline
+              style={styles.input}
+              underlineColor="transparent"
+              textColor="#FFFFFF"
+              activeUnderlineColor="transparent"
+            />
+          </View>
+        </View>
+
+        {/* Weight */}
+        <View style={styles.kilogramsContainer}>
+        <View style={styles.kilogramsLabel}>
+          <Image source={require('../../assets/images/trashbag.png')} style={styles.kilogramsIcon} />
+          <Text style={styles.kilogramsTitle}>TOTAL KILOGRAMS</Text>
+        </View>
+
+        <View style={styles.kilogramsInputWrapper}>
           <TextInput
-            label=""
-            value={formData.description}
-            onChangeText={text => setFormData(prev => ({ ...prev, description: text }))}
-            multiline
-            style={styles.input}
             underlineColor="transparent"
-             textColor="#FFFFFF"
             activeUnderlineColor="transparent"
+            value={formData.kilograms}
+            onChangeText={text => setFormData(prev => ({ ...prev, kilograms: text }))}
+            keyboardType="numeric"
           
-      
-
+          style={[styles.kilogramsInput, { color: '#FFFFFF' }]}
+            textColor="#FFFFFF"
           />
         </View>
       </View>
-
-      {/* Weight */}
-      <View style={styles.kilogramsContainer}>
-  <View style={styles.kilogramsLabel}>
-    <Image source={require('../../assets/images/trashbag.png')} style={styles.kilogramsIcon} />
-    <Text style={styles.kilogramsTitle}>TOTAL KILOGRAMS</Text>
-  </View>
-
-  <View style={styles.kilogramsInputWrapper}>
-    <TextInput
-      underlineColor="transparent"
-      activeUnderlineColor="transparent"
-      value={formData.kilograms}
-      onChangeText={text => setFormData(prev => ({ ...prev, kilograms: text }))}
-      keyboardType="numeric"
-     
-     style={[styles.kilogramsInput, { color: '#FFFFFF' }]}
-       textColor="#FFFFFF"
-    />
-  </View>
-</View>
-
 
       <View style={styles.galleryContainer}>
         <Text style={styles.sectionTitle}>GALLERY</Text>
@@ -484,38 +461,45 @@ export default function PostScreen() {
       </View>
 
       <View style={styles.mapContainer}>
-  {loading ? (
-    <ActivityIndicator size="large" color="#00FF57" />
-  ) : (
-    <>
-      <MapView
-        style={styles.map}
-        initialRegion={{
-          latitude: location.latitude || 7.1907,
-          longitude: location.longitude || 125.4553,
-          latitudeDelta: 0.0922,
-          longitudeDelta: 0.0421,
-        }}
-      >
-        <Marker
-          coordinate={{ latitude: location.latitude, longitude: location.longitude }}
-          draggable
-          onDragEnd={onDragEnd}
-        />
-      </MapView>
+        {loading ? (
+          <ActivityIndicator size="large" color="#00FF57" />
+        ) : (
+          <>
+            <MapView
+              ref={ mapRef }
+              provider={Platform.OS === 'android' ? (null as any) : undefined}
+              style={styles.map}
+              initialRegion={DAVAO_COORDS}
+              onPress={(e) => {
+                const { latitude, longitude } = e.nativeEvent.coordinate;
+                console.log('Tapped:', latitude, longitude);
+                setMarker({ latitude, longitude });
+                fetchAddress(latitude, longitude);
+              }}
+            >
+              <Marker
+                coordinate={marker}
+                draggable
+                onDragEnd={(e) => {
+                  const { latitude, longitude } = e.nativeEvent.coordinate;
+                  setMarker({ latitude, longitude });
+                  fetchAddress(latitude, longitude);
+                }}
+              />
+            </MapView>
 
-      <View style={styles.addressContainer}>
-        <Text style={styles.addressText}>Address: {address}</Text>
+            <View style={styles.addressContainer}>
+              <Text style={styles.addressText}>Address: {address || 'Tap the map to set location.'}</Text>
+            </View>
+
+            <Button mode="contained" onPress={() => Alert.alert('Location Selected!')} style={styles.button} 
+            labelStyle={{ fontSize:14, color: '#132718', fontWeight: 'regular' }}>
+              
+              CONFIRM LOCATION
+            </Button>
+          </>
+        )}
       </View>
-
-      <Button mode="contained" onPress={() => Alert.alert('Location Selected!')} style={styles.button} 
-      labelStyle={{ fontSize:14, color: '#132718', fontWeight: 'regular' }}>
-        
-        CONFIRM LOCATION
-      </Button>
-    </>
-  )}
-</View>
 
       {/* Collection Mode */}
       <View>

@@ -16,7 +16,7 @@ import { postsService } from '../../services/postsService';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Offer } from '../../services/offersService';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
-
+import { notificationService } from '@/services/notificationService';
 
 
 
@@ -52,11 +52,6 @@ const ViewPost = () => {
     const diffInDays = Math.floor(diffInHours / 24);
     return `${diffInDays}d ago`;
   }
-
-
-
-
-
 
   const getModeData = (modeName: string) => {
     const lower = modeName.toLowerCase();
@@ -121,6 +116,7 @@ const ViewPost = () => {
   
       if (newComment) {
         console.log("Comment Posted:", JSON.stringify(newComment, null, 2));
+        
         fetchComments(post.id);
         setCommentText('');
       }

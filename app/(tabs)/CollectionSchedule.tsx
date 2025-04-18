@@ -8,6 +8,7 @@ import { Button } from 'react-native-paper';
 import { offersService } from '../../services/offersService';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { scheduleService } from '@/services/scheduleService';
+import { supabase } from '@/services/supabase';
 
 
 // type CollectionScheduleRouteProp = RouteProp<RootStackParamList, 'CollectionSchedule'>;
@@ -51,9 +52,25 @@ const CollectionSchedule = () => {
         fetchSchedule();
     }, [offerId]);
 
-    const handleGoToChat = () => {
+    const handleGoToChat = async () => {
+        const {
+            data: { user },
+            error,
+        } = await supabase.auth.getUser();
+
+        if (error || !user) {
+            console.error("Failed to get user:", error?.message || "User not found");
+            return;
+        }
+    
+        const userId = user.id;
+    
         if (schedule) {
-            navigation.navigate('ChatScreen', { chatId: offerId, schedule });
+            navigation.navigate('ChatScreen', {
+                chatId: offerId,
+                userId, // ✅ pass this to ChatScreen
+                schedule,
+            });
         }
     };
 
@@ -93,28 +110,6 @@ const CollectionSchedule = () => {
                 <Button mode="contained" onPress={handleGoToChat} style={styles.button}>Go to Chat</Button>
                 <Button mode="contained" onPress={handleCancelSchedule} style={styles.button}>Cancel Schedule</Button>
             </View>
-
-            <Modal visible={modalVisible} transparent={true}>
-                <View style={styles.modalContainer}>
-                    <View style={styles.modalContent}>
-                        <Text>Edit Schedule</Text>
-                        <TextInput
-                            placeholder="New Time"
-                            value={newTime}
-                            onChangeText={setNewTime}
-                            style={styles.input}
-                        />
-                        <TextInput
-                            placeholder="New Date"
-                            value={newDate}
-                            onChangeText={setNewDate}
-                            style={styles.input}
-                        />
-                        <Button mode="contained" onPress={handleEditSchedule}>Save</Button>
-                        <Button mode="outlined" onPress={() => setModalVisible(false)}>Cancel</Button>
-                    </View>
-                </View>
-            </Modal>
         </View>
     );
 };

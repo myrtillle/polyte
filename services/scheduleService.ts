@@ -1,9 +1,10 @@
 import { supabase } from './supabase';
+import { notificationService } from './notificationService';
 
 export const scheduleService = {
     // ✅ Create schedule when post owner accepts an offer
     async createSchedule(offerId: string, postId: string, userId: string, date: string, time: string) {
-      const { error } = await supabase.from('offer_schedules').insert([
+      const { data: offer, error: offerError } = await supabase.from('offer_schedules').insert([
         {
           offer_id: offerId,
           post_id: postId,
@@ -13,7 +14,10 @@ export const scheduleService = {
           status: 'pending'
         }
       ]);
-      if (error) throw error;
+
+      if (offerError) throw offerError;
+
+      
       return { success: true, message: 'Schedule created successfully!' };
     },
   
@@ -65,5 +69,20 @@ export const scheduleService = {
           console.error('Error cancelling schedule:', error);
           throw error;
       }
-  }
+    },
+
+    async agreeToSchedule(offerId: string): Promise<boolean> {
+      const { error } = await supabase
+        .from('offer_schedules')
+        .update({ status: 'for_collection' })
+        .eq('offer_id', offerId);
+    
+      if (error) {
+        console.error("❌ Failed to agree to schedule:", error.message);
+        return false;
+      }
+    
+      return true;
+    }
+    
 }

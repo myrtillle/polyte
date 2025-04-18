@@ -155,6 +155,8 @@ export const postsService = {
       const fileType = fileUri.split('.').pop();
       const fileName = `image_${Date.now()}.${fileType}`;
 
+      console.log("📷 filename:", fileName);
+
       let fileData: any;
       if (Platform.OS === 'web') {
         // Web-specific handling
@@ -174,6 +176,7 @@ export const postsService = {
         .from(bucketName)
         .upload(fileName, fileData);
 
+        console.log("📷 data:", data);
       if (error) {
         console.error("Error uploading image to Supabase:", error.message);
         throw new Error(`Upload failed: ${error.message}`);
@@ -184,11 +187,16 @@ export const postsService = {
         .from(bucketName)
         .getPublicUrl(fileName);
 
+        console.log("📷 publicURL:", fileName);
+
       if (!urlData?.publicUrl) {
         throw new Error("Failed to generate the public URL.");
       }
 
       console.log("Image uploaded successfully:", urlData.publicUrl);
+
+      console.log("📷 URL:", urlData.publicUrl);
+
       return urlData.publicUrl;
     } catch (error: any) {
       console.error("Image upload failed:", error.message || "Unknown error");
