@@ -153,16 +153,18 @@ const MakeOffer = () => {
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.content}>
-
-      {/* Back Button */}
+    <View style={styles.headerContainer}>
       <IconButton
         icon="arrow-left"
         size={24}
+        iconColor="white"
         onPress={() => navigation.goBack()}
-        style={styles.backButton}
+        style={{ position: 'absolute', left: 0 }}
       />
+      <Text style={styles.headerTitle}>Make Offer</Text>
+    </View>
 
+    <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Plastic Types Selection */}
         <Text style={styles.label}>TYPE OF PLASTICS</Text>
         <Text style={styles.subLabel}>Deselect items you are not going to offer.</Text>
@@ -182,14 +184,21 @@ const MakeOffer = () => {
         </View>
 
         {/* Weight Input */}
-        <Text style={styles.label}>KILOGRAMS</Text>
-        <Text style={styles.subLabel}>{offeredWeight} of {post.kilograms} kg</Text>
-        <TextInput
-          style={styles.input}
-          value={offeredWeight.toString()}
-          onChangeText={text => setOfferedWeight(Number(text))}
-          keyboardType="numeric"
-        />
+        <View style={styles.kilogramsContainer}>
+  <View style={styles.kilogramsHeader}>
+    <Image source={require('../../assets/images/trashbag.png')} style={styles.kilogramsIcon} />
+    <Text style={styles.kilogramsTitle}>TOTAL KILOGRAMS</Text>
+  </View>
+
+  <TextInput
+    value={offeredWeight.toString()}
+    onChangeText={text => setOfferedWeight(Number(text))}
+    keyboardType="numeric"
+    style={styles.kilogramsInput}
+  
+  />
+</View>
+
 
         {/* Image Upload */}
         <Text style={styles.label}>Gallery</Text>
@@ -210,6 +219,7 @@ const MakeOffer = () => {
           onChangeText={setPrice}
           keyboardType="numeric"
           placeholder="00.00"
+          placeholderTextColor="#888" // ← your desired color here
         />
 
         {/* Optional Message */}
@@ -219,76 +229,181 @@ const MakeOffer = () => {
           value={message}
           onChangeText={setMessage}
           placeholder="Say something"
+          placeholderTextColor="#888" // ← your desired color here
         />
 
+
         {/* Send Offer Button */}
-        <Button mode="contained" onPress={handleSendOffer} style={styles.sendButton}>
+        <Button mode="contained" onPress={handleSendOffer} style={styles.sendButton} labelStyle={{ fontSize:16, color: '#132718', fontWeight: 'bold' }}>
           SEND OFFER
         </Button>
 
-      </ScrollView>
-    </View>
+        </ScrollView>
+      </View>
+  
+  
   );
 };
 
 const styles = StyleSheet.create({
+  scrollContent: {
+  paddingHorizontal: 20,
+  paddingBottom: 30,
+  paddingTop: 10,
+},
+
+label: {
+  color: 'white',
+  marginTop: 20, // 🆕 gives breathing room between sections
+  marginBottom: 6,
+  fontWeight: '700',
+  fontSize: 16,
+  textTransform: 'uppercase',
+},
+
+subLabel: {
+  color: '#B0B0B0',
+  fontSize: 12,
+  marginBottom: 10,
+  marginTop: -6, // aligns tightly under label
+},
+
+imageUploadBox: {
+  borderWidth: 2,
+  borderColor: '#666',
+  borderStyle: 'dashed',
+  borderRadius: 8,
+  height: 100,
+  justifyContent: 'center',
+  alignItems: 'center',
+  marginTop: 10,
+  marginBottom: 12, // consistent with other fields
+},
+
+imageContainer: {
+  flexDirection: 'row',
+  flexWrap: 'wrap',
+  gap: 10,
+  marginBottom: 20,
+},
+
+input: {
+  backgroundColor: '#1A3A20',
+  borderRadius: 8,
+  paddingHorizontal: 12,
+  paddingVertical: 10,
+  borderWidth: 1.5,
+  borderColor: '#949B84',
+  color: '#FFFFFF',
+  fontSize: 14,
+  marginBottom: 15,
+},
+
+sendButton: {
+  marginTop: 30,
+  backgroundColor: '#00FF57',
+  paddingVertical: 12,
+  borderRadius: 20,
+  marginBottom: 40,
+},
+
+  kilogramsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#1A3620',
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    paddingVertical: 15,
+    marginBottom: 10,
+  },
+  
+  kilogramsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  
+  kilogramsIcon: {
+    width: 20,
+    height: 20,
+    resizeMode: 'contain',
+  },
+  
+  kilogramsTitle: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  
+  kilogramsInput: {
+    backgroundColor: '#1A3A20',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1.5,
+    borderColor: '#949B84',
+    color: '#fff',
+    fontSize: 14,
+    minWidth: 80,
+    textAlign: 'center',
+  },
+  
+
+  inputWrapper: {
+    backgroundColor: '#1A3A20',
+    borderRadius: 8,
+    padding: 10,
+    borderWidth: 1.5,
+    borderColor: '#949B84',
+    marginBottom: 10,
+  },
+  
+  
+
   container: { 
     flex: 1, 
     backgroundColor: '#122C0F',
-    padding: 15,
   },
-  content: { 
+  innerContent: {
+    paddingHorizontal: 16, // 👈 consistent with ViewPost styling
     paddingBottom: 20,
   },
-  label: {
+  
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+    backgroundColor: '#1A3620',
+    position: 'relative',
+  },
+  
+  content: { 
+    paddingHorizontal: 16, // ✅ now works only for inner content
+    paddingBottom: 20,
+  },
+  
+  
+  headerTitle: {
     color: 'white',
-    marginBottom: 3,
-    fontWeight: '700',
     fontSize: 16,
+    fontWeight: 'bold',
     textTransform: 'uppercase',
   },
-  subLabel: {
-    color: '#B0B0B0',
-    fontSize: 12,
-    marginBottom: 10,
-  },
-  input: {
-    backgroundColor: '#333',
-    color: 'white',
-    padding: 10,
-    borderRadius: 8,
-    marginBottom: 10,
-    fontSize: 16,
-  },
-  imageUploadBox: {
-    borderWidth: 2,
-    borderColor: '#666',
-    borderStyle: 'dashed',
-    borderRadius: 8,
-    height: 100,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
+  
+
+  
   uploadText: {
     color: '#666',
   },
-  imageContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
+ 
   uploadedImage: {
     width: 80,
     height: 80,
     borderRadius: 5,
   },
-  sendButton: {
-    marginTop: 20,
-    backgroundColor: '#00FF57',
-    borderRadius: 20,
-    color: '#132718',
-  },
+
   tagContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -298,7 +413,7 @@ const styles = StyleSheet.create({
   tag: {
     paddingVertical: 6,
     paddingHorizontal: 14,
-    borderRadius: 20, 
+    borderRadius:5, 
   },
   tagSelected: {
     backgroundColor: '#00FF57', 
