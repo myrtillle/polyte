@@ -14,7 +14,7 @@ import TransacHist from '@/app/(tabs)/TransacHist';
 import ViewTransaction from '@/app/(tabs)/ViewTransaction';
 import ConfirmDelivery from '@/app/(tabs)/ConfirmDelivery';
 import MyPosts from '@/app/(tabs)/MyPosts';
-import Review from '@/app/(tabs)/review';
+import Review from '@/app/(tabs)/Review';
 import Notifications from '@/app/(tabs)/Notifications';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();

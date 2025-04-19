@@ -72,7 +72,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="ConfirmDelivery" options={{ href: null }} />
       <Tabs.Screen name="ViewTransaction" options={{ href: null }} />
       <Tabs.Screen name="MyPosts" options={{ href: null }} />
-      <Tabs.Screen name="review" options={{ href: null }} />
+      <Tabs.Screen name="Review" options={{ href: null }} />
       <Tabs.Screen name="Notifications" options={{ href: null }} />
     </Tabs>
   );

@@ -9,7 +9,7 @@ export const profileService = {
 
     const { data: userDetails, error: userError } = await supabase
       .from('personal_users')
-      .select('first_name, last_name, purok, barangay, created_at')
+      .select('id, first_name, last_name, purok, barangay, created_at')
       .eq('id', userId)
       .single();
     if (userError) throw new Error(userError.message);
@@ -74,5 +74,34 @@ export const profileService = {
     }));
 
     return formattedPosts;
+  }, 
+
+  async fetchUserCollection (userId: string) {
+    try {
+      const { data: collected, error: err1 } = await supabase
+        .from('posts')
+        .select('kilograms')
+        .eq('user_id', userId)
+        .eq('category_id', 1); // Seeking For → Collected
+
+      const { data: donated, error: err2 } = await supabase
+        .from('posts')
+        .select('kilograms')
+        .eq('user_id', userId)
+        .eq('category_id', 2); // For Collection → Donated
+
+      if (err1 || err2) throw err1 || err2;
+
+      const collectedTotal = collected.reduce((sum, row) => sum + (row.kilograms || 0), 0);
+      const donatedTotal = donated.reduce((sum, row) => sum + (row.kilograms || 0), 0);
+
+      return {
+        collected: collectedTotal,
+        donated: donatedTotal,
+      };
+    } catch (error) {
+      console.error("❌ Failed to fetch collection stats:", error);
+      return { collected: 0, donated: 0 };
+    }
   }
 };
