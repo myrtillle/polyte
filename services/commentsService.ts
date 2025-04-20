@@ -72,7 +72,12 @@ export const commentsService = {
       await notificationService.sendNotification(
         data.user_id,
         'New Comment on Your Post',
-        `Someone commented on your post: "${data.comment_text}"`
+        `Someone commented on your post: "${data.comment_text}"`,
+        'new_comment',
+        {
+          type: 'transaction',
+          id: postId
+        },
       );
       
     if (error) {

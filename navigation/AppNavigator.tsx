@@ -16,6 +16,7 @@ import ConfirmDelivery from '@/app/(tabs)/ConfirmDelivery';
 import MyPosts from '@/app/(tabs)/MyPosts';
 import Review from '@/app/(tabs)/Review';
 import Notifications from '@/app/(tabs)/Notifications';
+import EditPost from '@/app/(tabs)/EditPost'
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -85,6 +86,10 @@ export function AppNavigator() {
       <Stack.Screen
         name="Notifications"
         component={Notifications}
+      />
+      <Stack.Screen
+        name="EditPost"
+        component={EditPost}
       />
     </Stack.Navigator>
   );

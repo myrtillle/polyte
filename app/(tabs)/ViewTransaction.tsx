@@ -28,7 +28,8 @@ export default function ViewTransaction() {
     photo: ''
   });
   // console.log('🔍 Navigated with offerId:', offerId);
-  
+  console.log('📦 ViewTransaction received offerId:', offerId);
+
   const paid = transaction?.status === 'awaiting_payment' || transaction?.status === 'for_completion' || transaction?.status === 'completed';
 
   useEffect(() => {
@@ -36,7 +37,8 @@ export default function ViewTransaction() {
       setLoading(true);
       setTransaction(null); 
       const data = await transactionService.fetchTransactionDetails(offerId);
-      console.log('Fetched transacData:', data); 
+      console.log('📄 Data returned from transactionService:', data);
+
       setTransaction(data);
       setLoading(false);
     };
@@ -77,6 +79,28 @@ export default function ViewTransaction() {
       const updated = await transactionService.fetchTransactionDetails(offerId);
       setTransaction(updated);
       
+      await notificationService.sendNotification(
+        transaction.collector_id,
+        'Transaction Completed',
+        'The offerer has marked the transaction as completed.',
+        'transaction_completed',
+        {
+          type: 'offer',
+          id: offerId
+        }
+      );
+
+      await notificationService.sendNotification(
+        transaction.offerer_id,
+        'Transaction Completed',
+        'Your transaction has been successfully completed by the post owner.',
+        'transaction_completed',
+        {
+          type: 'offer',
+          id: offerId
+        }
+      );
+
       setConfirmVisible(false);
       navigation.goBack();
     } else {
@@ -94,7 +118,12 @@ export default function ViewTransaction() {
         await notificationService.sendNotification(
           transaction.offerer_id,
           'Payment Sent',
-          'The post owner has sent payment. Please confirm to complete the transaction.'
+          'The post owner has sent payment. Please confirm to complete the transaction.',
+          'payment_send',
+          {
+            type: 'offer',
+            id: offerId
+          },
         );
 
         // ✅ Update the transaction state to reflect the new status
@@ -160,7 +189,17 @@ export default function ViewTransaction() {
       if (success) {
         Alert.alert('Success', 'Proof photo uploaded and transaction updated.');
         const updated = await transactionService.fetchTransactionDetails(offerId);
+
+        await notificationService.sendNotification(
+          transaction.collector_id,
+          'Proof of Collection Uploaded',
+          'The offerer has uploaded a photo as proof of collection. Please review it before sending payment.',
+          'proof_uploaded',
+          { type: 'offer', id: offerId}
+        )
+
         setTransaction(updated);
+
       } else {
         Alert.alert('Error', 'Failed to update the transaction status.');
       }
@@ -184,7 +223,14 @@ export default function ViewTransaction() {
 
     if (success) {
       Alert.alert("Schedule Agreed", "You have agreed to the schedule.");
-
+      
+      await notificationService.sendNotification(
+        transaction.collector_id,
+        'Schedule finalized',
+        'Offerer has agreed to the schedule. Please proceed to collection via chosen collection mode.',
+        'schedule_agreed',
+        { type: 'offer', id: offerId}
+      )
       const updated = await transactionService.fetchTransactionDetails(offerId);
       setTransaction(updated);
   

@@ -7,7 +7,8 @@ export type RootStackParamList = {
   Signup: undefined;
   Main: undefined;
   Leaderboard: undefined;
-  ViewPost: { post: Post };
+  ViewPost: { postId?: string; post?: Post };
+  EditPost: { post: Post };
   MakeOffer: {post: Post };
   EditOffer: { offer: Offer };
   ScheduleOffer: { offer: Offer; post: Post };

@@ -47,7 +47,12 @@ const ScheduleOffer = () => {
       await notificationService.sendNotification(
         offer.user_id, // OF's user_id from the offer
         'Schedule Created',
-        `A schedule has been set for your offer. Please review and confirm it.`
+        `A schedule has been set for your offer. Please review and confirm it.`,
+        'schedule_set',
+        {
+          type: 'offer',
+          id: offer.id
+        }
       );
       
       navigation.navigate("ViewTransaction", { offerId: offer.id });

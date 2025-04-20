@@ -98,6 +98,7 @@ export default function HomeScreen() {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const [unreadCount, setUnreadCount] = useState(0);
   const [showBadge, setShowBadge] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const getModeIcon = (modeName: string) => {
     switch (modeName.toLowerCase()) {
@@ -143,6 +144,17 @@ export default function HomeScreen() {
     }
   };  
 
+  //get current user
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      const { data, error } = await supabase.auth.getUser();
+      if (data?.user) {
+        setCurrentUserId(data.user.id);
+      }
+    };
+    getCurrentUser();
+  }, []);
+  //fetch post
   useEffect(() => {
     fetchPosts();
   }, []);
@@ -301,6 +313,7 @@ export default function HomeScreen() {
   
 
   const filteredPosts = posts.filter(post => {
+    const isNotMyPost = post.user_id !== currentUserId;
     const matchesCategory = selectedCategory ? post.category_id === selectedCategory : true;
     const matchesSearch = searchQuery
       ? post.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -310,7 +323,7 @@ export default function HomeScreen() {
           item.item_types?.name?.toLowerCase().includes(searchQuery.toLowerCase())
         )
       : true;
-    return matchesCategory && matchesSearch;
+    return isNotMyPost && matchesCategory && matchesSearch;
   });
   
 

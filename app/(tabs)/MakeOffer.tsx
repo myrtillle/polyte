@@ -10,7 +10,7 @@ import { RootStackParamList } from '../../types/navigation';
 import { createOffer } from '../../services/offersService'; 
 import { supabase } from '../../services/supabase'; 
 import { notificationService } from '@/services/notificationService';
-import { offersService } from '../../services/offersService';
+import { Offer, offersService } from '../../services/offersService';
 
 type MakeOfferRouteProp = RouteProp<RootStackParamList, 'MakeOffer'>;
 
@@ -157,18 +157,40 @@ const MakeOffer = () => {
   
     console.log("📌 Offer being sent:", JSON.stringify(offerData, null, 2));
   
-    const { data, error } = await supabase.from('offers').insert([offerData]);
-  
+    const { data, error } = await supabase
+      .from('offers')
+      .insert([offerData])
+      .select()
+    
     if (error) {
       console.error("Error posting offer:", error.message);
     } else {
+      const offerId = data?.[0]?.id;
+
+      if (!offerId) {
+        console.warn('No offerId returned — notification skipped.');
+        return;
+      }
+
       console.log("Offer posted successfully:", data);
+     
+
+      if (!offerId) {
+        console.warn('No offerId returned — notification skipped.');
+        return;
+      }
+      
       setOfferSent(true);
   
       await notificationService.sendNotification(
         post.user_id,
         'New Offer Received',
-        `Someone submitted an offer on your post: "${post.description}"`
+        `Someone submitted an offer on your post: "${post.description}"`,
+        'new_offer',
+        {
+          type: 'offer',
+          id: post.id
+        }
       );
   
       setTimeout(() => {
