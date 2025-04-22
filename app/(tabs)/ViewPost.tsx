@@ -29,6 +29,7 @@ const ViewPost = () => {
 
   // Only ONE state for post
   const greenMark = require('../../assets/images/greenmark.png');
+  const cashIcon = require('../../assets/images/cash.png');
   const [post, setPost] = useState<Post | null>(route.params?.post ?? null)
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentText, setCommentText] = useState('');
@@ -597,75 +598,93 @@ const ViewPost = () => {
 
                 return (
                   <View key={index} style={styles.offerCard}>
-                    <Text style={styles.offerUser}>👤 User ID: {offer.user_id}</Text>
-                    <Text style={styles.offerDetails}>📦 Items: {offer.offered_items.join(', ')}</Text>
-                    <Text style={styles.offerDetails}>⚖️ Weight: {offer.offered_weight} of {offer.requested_weight} kg</Text>
-                    <Text style={styles.offerDetails}>💰 Price: ₱{offer.price.toFixed(2)}</Text>
-                    <Text style={styles.offerMessage}>📩 {offer.message || 'No message provided'}</Text>
-        
-                    {/* Offer Images */}
-                    {offer.images && offer.images.length > 0 ? (
-                      <ScrollView horizontal style={styles.imageScroll}>
-                        {offer.images.map((image, i) => (
-                          <Image key={i} source={{ uri: image }} style={styles.offerImage} />
-                        ))}
-                      </ScrollView>
-                    ) : (
-                      <Text style={styles.noImage}>No images available</Text>
-                    )}
-        
-                    {/* Conditional Buttons */}
-                    <View style={styles.actionButton}>
-                      {isAccepted ? (
-                        <View style={styles.actionButtonContainer}>
-                        <TouchableOpacity 
-                          style={styles.moreOptions} 
-                          onPress={() => handleSeeDetails(offer)}
-                        >
-                          <Text style={styles.buttonText}>See Details</Text>
-                        </TouchableOpacity>                      
+                    {/* 🧑 Avatar + Title + Time + Image */}
+                    <View style={styles.headerRow}>
+                    <View style={styles.leftInfo}>
+                      <Image source={{ uri: 'https://i.pravatar.cc/36' }} style={styles.offerAvatar} />
+                      <View>
+                        <Text style={styles.offerUserText}>
+                         NAMES
+                        </Text>
+                        <Text style={styles.offerTimeText}>{formatTimeAgo(offer.created_at)}</Text>
                       </View>
-                      ) : isUserOfferOwner ? (
-                        <View style={styles.actionButtonContainer}>
-                          <TouchableOpacity 
-                            style={styles.deleteButton} 
-                            onPress={() => handleDeleteOffer(offer.id)}
-                          >
-                            <Text style={styles.buttonText}>🗑 Delete My Offer</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity style={styles.editButton} onPress={() => handleEditOffer(offer)}>
-                            <MaterialIcons name="edit" size={20} color="white" />
-                          </TouchableOpacity>
+                    </View>
+
+                    {/* 📸 Thumbnail absolutely positioned */}
+                    {offer.images?.[0] && (
+                      <Image source={{ uri: offer.images[0] }} style={styles.offerImageThumbnail} />
+                    )}
+                  </View>
+                
+                    {/* 📄 Description */}
+                    <Text style={styles.offerDescription}>
+                    {offer.message || 'No description provided'}
+                  </Text>
+
+                
+                    {/* ⚖️ Weight */}
+                    <Text style={styles.offerWeight}>
+                      {offer.offered_weight} / {offer.requested_weight} KG
+                    </Text>
+                
+                    {/* 💰 Price */}
+                    <View style={styles.offerPriceRow}>
+                    <Image source={cashIcon} style={styles.offerPesoIcon} />
+                    <Text style={styles.offerPriceText}>₱ {offer.price.toFixed(2)}</Text>
+                  </View>
+
+                
+                    {/* 🟩 Plastic Labels */}
+                    <View style={styles.offerChips}>
+                    {offer.offered_items.map((item, idx) => (
+                        <View key={idx} style={styles.offerChip}>
+                          <Text style={styles.offerChipText}>{item}</Text>
                         </View>
-                      ) : isUserPostOwner ? (
-                        <View style={styles.actionButtonContainer}>
-                          <TouchableOpacity 
-                            style={styles.declineButton} 
-                            onPress={() => handleDeclineOffer(offer.id)}
-                          >
-                            <Text style={styles.buttonText}>❌ Decline</Text>
+                      ))}
+                    </View>
+                
+                    {/* 🎯 Action Buttons */}
+                    <View style={styles.offerActionRow}>
+                      {/* IF POST BY ME */}
+                      {isUserPostOwner && isUserOfferOwner && (
+                        <>
+                          <TouchableOpacity style={styles.deleteOfferButton} onPress={() => handleDeleteOffer(offer.id)}>
+                            <Text style={styles.deleteOfferText}>DELETE OFFER</Text>
                           </TouchableOpacity>
-                          <TouchableOpacity 
-                            style={styles.chatButton} 
-                            onPress={() => handleChatWithUser(offer.user_id)}
-                          >
-                            <Text style={styles.buttonText}>💬 Chat</Text>
+                          <TouchableOpacity style={styles.editOfferButton} onPress={() => handleEditOffer(offer)}>
+                            <MaterialIcons name="edit" size={22} color="white" />
                           </TouchableOpacity>
-                          <TouchableOpacity 
-                            style={styles.acceptButton} 
-                            onPress={() => handleAcceptOffer(offer)}
-                          >
-                            <Text style={styles.buttonText}>✅ Accept</Text>
+                        </>
+                      )}
+                
+                      {/* IF NOT POSTED BY ME */}
+                      {!isUserPostOwner && isUserOfferOwner && (
+                        <TouchableOpacity style={styles.fullGreenButton} onPress={() => handleSeeDetails(offer)}>
+                          <Text style={styles.fullButtonTextinoffers}>SEE DETAILS</Text>
+                        </TouchableOpacity>
+                      )}
+                
+                      {/* OFFER BY OTHER USER TO MY POST */}
+                      {isUserPostOwner && !isUserOfferOwner && (
+                        <>
+                          <TouchableOpacity style={styles.redButton} onPress={() => handleDeclineOffer(offer.id)}>
+                            <Text style={styles.buttonText}>DECLINE</Text>
                           </TouchableOpacity>
-                          <TouchableOpacity style={styles.moreOptions}>
+                          <TouchableOpacity style={styles.greenButton} onPress={() => handleAcceptOffer(offer)}>
+                            <Text style={styles.buttonText}>ACCEPT</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity style={styles.iconButton} onPress={() => handleChatWithUser(offer.user_id)}>
+                            <Image source={require('../../assets/images/paperplane.png')} style={styles.sendIcon} />
+                          </TouchableOpacity>
+                          <TouchableOpacity style={styles.iconButton}>
                             <Text style={styles.moreOptionsText}>⋮</Text>
                           </TouchableOpacity>
-                        </View>
-                      ) : null
-                    }
+                        </>
+                      )}
                     </View>
                   </View>
                 );
+                
               })
             )}
           </ScrollView>
@@ -676,11 +695,182 @@ const ViewPost = () => {
 };
 
 const styles = StyleSheet.create({
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    position: 'relative',
+  },
+  
+  leftInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingRight: 90, // leaves space for thumbnail
+  },
+  
+  offerAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+  },
+  
+  offerImageThumbnail: {
+    width: 80,
+    height: 80,
+    borderRadius: 10,
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+  
+  offerTimeText: {
+    fontSize: 11,
+    color: '#A0A0A0',
+
+  },
+  
+  offerPesoIcon: {
+    width: 30,
+    height: 30,
+    resizeMode: 'contain',
+    marginRight: 4,
+  },
+  
+  offerUserTextContainer: {
+    maxWidth: 160, // or adjust as needed based on your layout
+  },  
+  offerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  
+  offerUserInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1, // Make it take the remaining space inside offerHeader
+  },
+  
+  offerUserText: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  
+  
+  offerThumbnail: {
+    width: 80,  
+    height: 80, 
+    borderRadius: 8,
+  },
+  offerDescription: {
+    color: 'white',
+    marginVertical: 6,
+  },
+  offerWeight: {
+    color: 'white',
+    fontSize: 13,
+  },
+  offerPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginVertical: 4,
+  },
+
+  offerPriceText: {
+    color: '#00FF57',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  offerChips: {
+    flexDirection: 'row',
+    gap: 6,
+    flexWrap: 'wrap',
+    marginVertical: 10,
+  },
+  offerChip: {
+    backgroundColor: '#1E592B',
+    borderRadius: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  offerChipText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+  },
+  offerActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  deleteOfferButton: {
+    flex: 1,
+    backgroundColor: '#D84343',
+    padding: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+  
+  },
+  deleteOfferText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 12,
+    textTransform: 'uppercase',
+  },
+  editOfferButton: {
+    width:40,
+    height: 40,
+    backgroundColor: '#2C5735',
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    
+  },
+  fullGreenButton: {
+    flex: 1,
+    backgroundColor: '#2C5735',
+    padding: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  redButton: {
+    flex: 1,
+    backgroundColor: '#D84343',
+    padding: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+    height:40,
+  },
+  greenButton: {
+    flex: 1,
+    backgroundColor: '#00C853',
+    padding: 12,
+    borderRadius: 6,
+    alignItems: 'center',
+    height:40,
+  },
+  iconButton: {
+    width: 40,
+    height: 40,
+    backgroundColor: '#2C5735',
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+
+  },
+  
 
   sendButton: {
     padding: 10,
     justifyContent: 'center',
     alignItems: 'center',
+    height:40,
   },
   
   sendIcon: {
@@ -766,6 +956,13 @@ const styles = StyleSheet.create({
     fontWeight: 'regular',
     textTransform: 'uppercase',
   },
+  
+  fullButtonTextinoffers: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 'regular',
+    textTransform: 'uppercase',
+  },
 
   iconOnlyButton: {
     width: 48,
@@ -802,7 +999,7 @@ const styles = StyleSheet.create({
   itemList: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
+  
     marginBottom: 10,
   },
   
@@ -970,7 +1167,8 @@ const styles = StyleSheet.create({
     width: '100%', 
     height: 200, 
     borderRadius: 10, 
-    marginBottom: 10 
+    marginBottom: 10, 
+    
   },
   actions: { 
     flexDirection: 'row', 
@@ -1103,6 +1301,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'red',
     padding: 10,
     borderRadius: 5,
+    
   },
   editButton:{
     backgroundColor: '#2C5735', // Gray
