@@ -305,7 +305,12 @@ export const transactionService = {
       await notificationService.sendNotification(
         poUserId, 
         'Proof of Collection Uploaded',
-        'The offerer has uploaded a proof photo for your review.'
+        'The offerer has uploaded a proof photo for your review.',
+        'transaction_notif',
+        {
+          type: 'offer',
+          id: offerId
+        },
       );
         
       if (updateError) {
@@ -398,13 +403,23 @@ export const transactionService = {
       await notificationService.sendNotification(
         transaction.offerer_id,
         'Transaction Completed',
-        'Your transaction has been marked as completed. Thank you!'
+        'Your transaction has been marked as completed. Thank you for recycling with Polyte!',
+        'transaction_notif',
+        {
+          type: 'offer',
+          id: offerId
+        },
       );
       
       await notificationService.sendNotification(
         transaction.collector_id, // this is usually the post owner
         'Transaction Completed',
-        'You’ve successfully completed a transaction. Great job!'
+        'You’ve successfully completed a transaction. Thank you for recycling with Polyte!',
+        'transaction_notif',
+        {
+          type: 'offer',
+          id: offerId
+        },
       );
   
       return true;

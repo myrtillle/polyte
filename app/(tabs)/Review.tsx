@@ -17,13 +17,13 @@ const Review = () => {
 
   const reviews = [
     {
-      name: 'Martin Luather',
+      name: 'Zcel Aca',
       stars: 4,
       text: 'Lorem Ipsum is simply dummy text of the printing and typesetting industry.',
       date: '2 days ago',
     },
     {
-      name: 'Johan Smith Jeo',
+      name: 'Michaelangelo Berdin',
       stars: 3,
       text: 'Lorem Ipsum has been the industry’s standard dummy text ever since the 1500s.',
       date: '3 days ago',
@@ -69,17 +69,19 @@ const Review = () => {
 const styles = StyleSheet.create({
   container: {
     padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: '#023F0F',
   },
   header: {
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 10,
+    color: '#fff'
   },
   rating: {
     fontSize: 50,
     fontWeight: 'bold',
     textAlign: 'center',
+    color: '#fff',
   },
   stars: {
     textAlign: 'center',
@@ -101,6 +103,7 @@ const styles = StyleSheet.create({
   },
   label: {
     width: 70,
+    color: '#fff',
   },
   barTrack: {
     flex: 1,
@@ -137,15 +140,17 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   writeButton: {
-    backgroundColor: '#00b894',
+    backgroundColor: '#00FF57',
     padding: 14,
-    borderRadius: 10,
+    borderRadius: 40,
     marginTop: 10,
     alignItems: 'center',
+    
   },
   writeButtonText: {
-    color: '#fff',
+    // color: '#fff',
     fontWeight: 'bold',
+    color: '#132718',
   },
 });
 

@@ -10,7 +10,7 @@ import { commentsService } from '../../services/commentsService';
 import { supabase } from '../../services/supabase';
 import { Post } from '../../types/navigation'; 
 import { Comment } from '../../types/navigation'; 
-import { getOffersByPost } from '../../services/offersService'; 
+import { getOffersByPost, offersService } from '../../services/offersService'; 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { postsService } from '../../services/postsService';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -29,7 +29,7 @@ const ViewPost = () => {
 
   // Only ONE state for post
   const greenMark = require('../../assets/images/greenmark.png');
-  const [post, setPost] = useState<Post | null>(route.params?.post);
+  const [post, setPost] = useState<Post | null>(route.params?.post ?? null)
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentText, setCommentText] = useState('');
   const [error, setError] = useState('');
@@ -38,7 +38,6 @@ const ViewPost = () => {
   const [currentUser, setCurrentUser] = useState<{ id: string } | null>(null);
   const [activeTab, setActiveTab] = useState('post');
   const [offers, setOffers] = useState<Offer[]>([]);
-
   function formatTimeAgo(dateString: string) {
     const now = new Date();
     const postDate = new Date(dateString);
@@ -89,6 +88,21 @@ const ViewPost = () => {
     }
   };
 
+  console.log('RAW location:', post?.location);
+
+  const extractCoords = (pointStr: string) => {
+    const match = pointStr.match(/POINT\(([-\d.]+) ([-\d.]+)\)/);
+    if (!match) return null;
+    return {
+      longitude: parseFloat(match[1]),
+      latitude: parseFloat(match[2]),
+    };
+  };
+  
+  
+  const coords = typeof post?.location === 'string' ? extractCoords(post.location) : null;
+
+  console.log('coords: ', coords);
   const fetchComments = async (postId: string) => {
     try {
       console.log('🔄 Fetching comments for post ID:', postId);
@@ -112,11 +126,25 @@ const ViewPost = () => {
     
     try {
       console.log("Sending comment:", commentText);
-      const newComment = await commentsService.addComment(post.id, currentUser.id, commentText);
-  
+      const newComment = await commentsService.addComment(
+        post.id, 
+        currentUser.id, 
+        commentText
+      );
+
       if (newComment) {
         console.log("Comment Posted:", JSON.stringify(newComment, null, 2));
         
+        await notificationService.sendNotification(
+          post.user_id,
+          'New Comment',
+          `Someone commented on your post: "${newComment.text}"`,
+          'new_comment',
+          {
+            type: 'comment',
+            id: post.id
+          }
+        );
         fetchComments(post.id);
         setCommentText('');
       }
@@ -181,7 +209,7 @@ const ViewPost = () => {
     // logic 
   };
   
-  const handleAcceptOffer = (offer: Offer) => {
+  const handleAcceptOffer = async (offer: Offer) => {
     if (!post) {
       console.error("Cannot navigate to ScheduleOffer: post is null");
       return;
@@ -189,6 +217,17 @@ const ViewPost = () => {
 
     console.log("✅ Accepting offer, navigating to ScheduleOffer:", offer);
     
+    await notificationService.sendNotification(
+      post.user_id,
+      'New Offer Received',
+      `Someone submitted an offer on your post: "${post.description}"`,
+      'offer_accepted',
+      {
+        type: 'offer',
+        id: offer.id
+      }
+    );
+
     navigation.navigate("ScheduleOffer", { offer, post });
   };
   
@@ -216,7 +255,7 @@ const ViewPost = () => {
     return offer.status === 'accepted';
   };
 
-  // ✅ Ensure both post & offers are fetched on mount
+  // both post & offers are fetched on mount
   useFocusEffect(
     React.useCallback(() => {
       console.log("🔄 Resetting post and offers on focus...");
@@ -317,32 +356,32 @@ const ViewPost = () => {
     <View style={styles.container}> 
       {/* Back Button */}
       <View style={styles.headerContainer}>
-  <IconButton
-    icon="arrow-left"
-    size={24}
-    iconColor="white"
-    onPress={() => navigation.goBack()}
-    style={{ position: 'absolute', left: 0 }}
-  />
-<Text style={styles.headerTitle}>See Post</Text>
-</View>
+        <IconButton
+          icon="arrow-left"
+          size={24}
+          iconColor="white"
+          onPress={() => navigation.goBack()}
+          style={{ position: 'absolute', left: 0 }}
+        />
+        <Text style={styles.headerTitle}>See Post</Text>
+      </View>
 
       {/* Header Tabs */}
       <View style={styles.tabContainer}>
-      <TouchableOpacity
-    onPress={() => setActiveTab('post')}
-    style={[
-      styles.tabButton,
-      activeTab === 'post' && styles.activeTabButton,
-    ]}
-  >
+        <TouchableOpacity
+          onPress={() => setActiveTab('post')}
+          style={[
+            styles.tabButton,
+            activeTab === 'post' && styles.activeTabButton,
+          ]}
+        >
           <Text
             style={[
               styles.tabText,
               activeTab === 'post' && styles.activeTabText,
             ]}
           >
-            POST
+              POST
           </Text>
         </TouchableOpacity>
 
@@ -362,7 +401,7 @@ const ViewPost = () => {
             OFFERS
           </Text>
         </TouchableOpacity>
-            </View>
+      </View>
 
       {activeTab === 'post' ? (
         <ScrollView style={styles.content}>
@@ -385,31 +424,37 @@ const ViewPost = () => {
         </View>
           
         {post.collection_mode?.name && (
-  <View style={styles.modeContainer}>
-    {(() => {
-      const mode = getModeData(post.collection_mode.name);
-      return (
-        <>
-          <Image
-            source={mode.icon}
-            style={[styles.modeIcon, { tintColor: mode.color }]}
-            resizeMode="contain"
-          />
-          <Text style={[styles.modeText, { color: mode.color }]}>
-            {post.collection_mode.name}
+          <View style={styles.modeContainer}>
+            {(() => {
+              const mode = getModeData(post.collection_mode.name);
+              return (
+                <>
+                  <Image
+                    source={mode.icon}
+                    style={[styles.modeIcon, { tintColor: mode.color }]}
+                    resizeMode="contain"
+                  />
+                  <Text style={[styles.modeText, { color: mode.color }]}>
+                    {post.collection_mode.name}
+                  </Text>
+                </>
+              );
+            })()}
+          </View>
+        )}
+
+        {/* meetup locs */}
+        {coords && (
+          <Text style={styles.userAddress}>
+            📍 Location: {coords.latitude.toFixed(5)}, {coords.longitude.toFixed(5)}
           </Text>
-        </>
-      );
-    })()}
-  </View>
-)}
+        )}
 
+        {/* Post Description */}
+        <Text style={styles.description}>{post.description}</Text>
 
-          {/* Post Description */}
-          <Text style={styles.description}>{post.description}</Text>
-
-          {/* Item Types */}
-          <View style={styles.itemList}>
+        {/* Item Types */}
+        <View style={styles.itemList}>
           {post.post_item_types?.map((item, index) => (
             <TouchableOpacity key={index} style={styles.itemChip}>
               <Text style={styles.itemChipText}>{item.item_types.name}</Text>
@@ -418,42 +463,79 @@ const ViewPost = () => {
         </View>
 
 
-          {/* Post Image */}
-          {post.photos && post.photos.length > 0 && (
-            <Image source={{ uri: post.photos[0] }} style={styles.postImage} />
-          )}
+        {/* Post Image */}
+        {post.photos && post.photos.length > 0 && (
+          <Image source={{ uri: post.photos[0] }} style={styles.postImage} />
+        )}
 
-          {/* Action Buttons */}
-                <View style={styles.actionRow}>
-        <TouchableOpacity style={styles.fullButton}>
-          <Image
-            source={require('../../assets/images/messagebubble.png')}
-            style={styles.buttonIcon}
-          />
-          <Text style={styles.fullButtonText}>SEND MESSAGE</Text>
-        </TouchableOpacity>
+        {/* Action Buttons */}
+        {isPostOwner() ? (
+          <View style={styles.actionRow}>
+            <TouchableOpacity
+              style={styles.fullButton}
+              onPress={() => navigation.navigate('EditPost', { post })}
+            >
+              <MaterialIcons name="edit" size={20} color="white" />
+              <Text style={styles.fullButtonText}>EDIT POST</Text>
+            </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.fullButton}
-          onPress={() => {
-            if (!post?.post_item_types?.length) {
-              Alert.alert("Error", "Plastic item types are missing.");
-              return;
-            }
-            navigation.navigate('MakeOffer', { post });
-          }}
-        >
-          <Image
-            source={require('../../assets/images/trashbag.png')}
-            style={styles.buttonIcon}
-          />
-          <Text style={styles.fullButtonText}>SEND OFFER</Text>
-        </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.fullButton}
+              onPress={() => {
+                Alert.alert(
+                  "Delete Post",
+                  "Are you sure you want to delete this post?",
+                  [
+                    { text: "Cancel", style: "cancel" },
+                    {
+                      text: "Delete",
+                      style: "destructive",
+                      onPress: async () => {
+                        await postsService.deletePost(post.id);
+                        navigation.goBack();
+                      }
+                    }
+                  ]
+                );
+              }}
+            >
+              <MaterialIcons name="delete" size={20} color="white" />
+              <Text style={styles.fullButtonText}>DELETE POST</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.actionRow}>
+            <TouchableOpacity style={styles.fullButton}>
+              <Image
+                source={require('../../assets/images/messagebubble.png')}
+                style={styles.buttonIcon}
+              />
+              <Text style={styles.fullButtonText}>SEND MESSAGE</Text>
+            </TouchableOpacity>
+        
+            <TouchableOpacity
+              style={styles.fullButton}
+              onPress={() => {
+                if (!post?.post_item_types?.length) {
+                  Alert.alert("Error", "Plastic item types are missing.");
+                  return;
+                }
+                navigation.navigate('MakeOffer', { post });
+              }}
+            >
+              <Image
+                source={require('../../assets/images/trashbag.png')}
+                style={styles.buttonIcon}
+              />
+              <Text style={styles.fullButtonText}>SEND OFFER</Text>
+            </TouchableOpacity>
+        
+            <TouchableOpacity style={styles.iconOnlyButton}>
+              <Text style={styles.dots}>⋮</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
-        <TouchableOpacity style={styles.iconOnlyButton}>
-          <Text style={styles.dots}>⋮</Text>
-        </TouchableOpacity>
-      </View>
 
 
 

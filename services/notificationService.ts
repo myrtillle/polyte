@@ -1,13 +1,28 @@
 import { supabase } from './supabase';
 
 export const notificationService = {
-  async sendNotification(userId: string, title: string, message: string) {
-    const { error } = await supabase
-      .from('notifications')
-      .insert([{ user_id: userId, title, message }]);
-
+  async sendNotification(
+    userId: string,
+    title: string,
+    message: string,
+    type: string,
+    target: {
+      type: 'comment' | 'offer' | 'transaction';
+      id: string;
+    },
+  ) {
+    const payload = {
+      user_id: userId,
+      title,
+      message,
+      type: type ?? `${target.type}_notif`, // fallback if no type passed
+      target_type: target.type,
+      target_id: target.id,
+    };
+  
+    const { error } = await supabase.from('notifications').insert([payload]);
     if (error) throw error;
-  },
+  },  
 
   async getUserNotifications(userId: string) {
     const { data, error } = await supabase
@@ -20,6 +35,14 @@ export const notificationService = {
     return data;
   },
 
+  markAsRead: async (notifId: string) => {
+    const { error } = await supabase
+      .from('notifications')
+      .update({ is_read: true })
+      .eq('id', notifId);
+
+    if (error) throw error;
+  },
   async markAllAsRead(userId: string): Promise<void> {
     const { error } = await supabase
       .from('notifications')

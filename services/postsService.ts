@@ -203,24 +203,7 @@ export const postsService = {
       throw new Error(error.message || "Unknown error");
     }
   },
-  // async uploadPhoto(file: any) {
-  //   const fileExt = file.name.split('.').pop();
-  //   const fileName = `${Math.random()}.${fileExt}`;
-  //   const filePath = `${fileName}`;
-
-  //   const { error: uploadError } = await supabase.storage
-  //     .from('post-photos')
-  //     .upload(filePath, file);
-
-  //   if (uploadError) throw uploadError;
-
-  //   const { data } = supabase.storage
-  //     .from('post-photos')
-  //     .getPublicUrl(filePath);
-
-  //   return data.publicUrl;
-  // },
-
+ 
   async getUserPosts(userId: string) {
     const { data, error } = await supabase
       .from('posts')
@@ -315,5 +298,41 @@ export const postsService = {
         ? { email: post.personal_users.email, name: `${post.personal_users.first_name} ${post.personal_users.last_name}` }
         : null
     };
-  }
+  },
+
+  async updatePost (postId: string, postData: any) {
+    const { item_type_ids, ...postFields } = postData;
+
+    // Update main post
+    const { error: updateError } = await supabase
+      .from('posts')
+      .update(postFields)
+      .eq('id', postId);
+    if (updateError) throw updateError;
+  
+    // Remove existing item types
+    await supabase.from('post_item_types').delete().eq('post_id', postId);
+  
+    // Add new ones
+    const inserts = item_type_ids.map((id: number) => ({
+      post_id: postId,
+      item_type_id: id,
+    }));
+  
+    const { error: insertError } = await supabase
+      .from('post_item_types')
+      .insert(inserts);
+  
+    if (insertError) throw insertError;  
+  },
+
+  async deletePost (postId: string) {
+    const { error } = await supabase
+      .from('posts')
+      .delete()
+      .eq('id', postId);
+
+    if (error) throw error;
+  },
+
 }; 

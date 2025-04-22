@@ -9,39 +9,49 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { profileService } from '@/services/profileService';
 
-type viewPostNavigationProp = StackNavigationProp<RootStackParamList>;
-
 const ProfileScreen = () => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [collectionStats, setCollectionStats] = useState({ collected: 0, donated: 0 });
+
 
   useEffect(() => {
     const loadProfile = async () => {
       try {
         const data = await profileService.fetchCurrentUserDetails();
         setProfile(data);
+  
+        if (data?.id) {
+          const stats = await profileService.fetchUserCollection(data.id);
+          setCollectionStats(stats);
+        }
       } catch (err) {
         console.error(err);
       } finally {
         setLoading(false);
       }
     };
+  
     loadProfile();
   }, []);
+  
 
   if (loading) return <ActivityIndicator color="#00D964" size="large" style={{ flex: 1 }} />;
 
+  
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
       console.error("❌ Logout Failed:", error.message);
     } else {
       console.log("✅ Logged out successfully!");
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Login' as keyof RootStackParamList }],
-      });
+      // navigation.reset({
+      //   index: 0,
+      //   routes: [{ name: 'Login' as keyof RootStackParamList }],
+      // });
+      navigation.replace('Login');
+
     }
   };
 
@@ -93,7 +103,7 @@ const ProfileScreen = () => {
 
         <Card style={styles.statCard}>
           <Card.Content>
-            <Text style={styles.statLabel}>CARBON EMISSION SAVED</Text>
+            <Text style={styles.statLabel}>CARBON EMISSION SAVED [STATIC]</Text>
             <View style={styles.statValueRow}>
               <Text style={styles.statValue}>1140 kg CO2</Text>
               <Text style={styles.statIcon}>🌫️</Text>
@@ -104,9 +114,9 @@ const ProfileScreen = () => {
         <View style={styles.doubleCardRow}>
           <Card style={styles.smallCard}>
             <Card.Content>
-              <Text style={styles.statLabel}>SACK OF TRASH COLLECTED</Text>
+              <Text style={styles.statLabel}>TRASH COLLECTED (KG)</Text>
               <View style={styles.statValueRow}>
-                <Text style={styles.statValue}>20</Text>
+                <Text style={styles.statValue}>{collectionStats.collected}</Text>
                 <Text style={styles.statIcon}>🟢</Text>
               </View>
             </Card.Content>
@@ -114,9 +124,9 @@ const ProfileScreen = () => {
 
           <Card style={styles.smallCard}>
             <Card.Content>
-              <Text style={styles.statLabel}>SACK OF TRASH DONATED</Text>
+              <Text style={styles.statLabel}>SACK OF TRASH DONATED (KG)</Text>
               <View style={styles.statValueRow}>
-                <Text style={styles.statValue}>38</Text>
+                <Text style={styles.statValue}>{collectionStats.donated}</Text>
                 <Text style={styles.statIcon}>⚫</Text>
               </View>
             </Card.Content>
@@ -126,7 +136,7 @@ const ProfileScreen = () => {
         <Card style={styles.statCard}>
           <Card.Content>
             <View style={styles.statRowSpaceBetween}>
-              <Text style={styles.statLabel}>AVERAGE MONTHLY CONTRIBUTION</Text>
+              <Text style={styles.statLabel}>AVERAGE MONTHLY CONTRIBUTION [STATIC]</Text>
               <Text style={styles.suffix}>SACKS PER MONTH</Text>
             </View>
             <Text style={styles.statValue}>15</Text>
@@ -147,7 +157,7 @@ const ProfileScreen = () => {
           <Card style={styles.statCard}>
             <Card.Content>
               <View style={styles.statRowSpaceBetween}>
-                <Text style={styles.statLabel}>USER RATING</Text>
+                <Text style={styles.statLabel}>USER RATING [STATIC]</Text>
                 <Text style={styles.suffix}>AS OF THIS MONTH</Text>
               </View>
               <Text style={styles.statValue}>⭐⭐⭐⭐⭐</Text>
