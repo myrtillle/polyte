@@ -316,25 +316,27 @@ export default function HomeScreen() {
 
 
   const renderPost = ({ item }: { item: Post }) => (
-    <Card style={[
-      styles.card,
-      item.category_id === 2 && { backgroundColor: '#172B1F' } // Darker for SEEKING
-    ]}>
-      <Card.Content>
-        <View style={styles.cardWrapper}>
-          <View style={styles.infoWrapper}>
-            {/* Name and time */}
-            <View style={styles.userInfo}>
-  <Text style={styles.userName}>
-    {item.user?.name ?? item.user?.email ?? 'Unknown User'}
-  </Text>
-  <Text style={styles.timePosted}>
-    {formatTimeAgo(item.created_at)}
-  </Text>
-</View>
+              <Card style={[
+                styles.card,
+                item.category_id === 2 && { backgroundColor: '#172B1F' } // Darker for SEEKING
+              ]}>
+                <Card.Content>
+                  <View style={styles.cardWrapper}>
+                    <View style={styles.infoWrapper}>
+                      {/* Name and time */}
+                      <View style={styles.userInfo}>
+            <Text style={styles.userName}>
+              {item.user?.name ?? item.user?.email ?? 'Unknown User'}
+            </Text>
+            <Text style={styles.timePosted}>
+              {formatTimeAgo(item.created_at)}
+            </Text>
+            </View>
 
-
-      
+                    <Text style={styles.description}>
+            {item.description || 'No description provided.'}
+            </Text>
+            
             {/* Mode label (yellow icon + text) */}
             <View style={styles.labelRow}>
               {(() => {
