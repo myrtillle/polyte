@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, ActivityIndicator  } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { Card } from 'react-native-paper';
 import { supabase } from '../../services/supabase';
 import { useNavigation } from '@react-navigation/native';
-import type { NavigationProp } from '@react-navigation/native';
-import { RootStackParamList } from '../../types/navigation';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '../../types/navigation';
 import { profileService } from '@/services/profileService';
 
 const ProfileScreen = () => {
@@ -15,13 +14,12 @@ const ProfileScreen = () => {
   const [loading, setLoading] = useState(true);
   const [collectionStats, setCollectionStats] = useState({ collected: 0, donated: 0 });
 
-
   useEffect(() => {
     const loadProfile = async () => {
       try {
         const data = await profileService.fetchCurrentUserDetails();
         setProfile(data);
-  
+
         if (data?.id) {
           const stats = await profileService.fetchUserCollection(data.id);
           setCollectionStats(stats);
@@ -32,28 +30,20 @@ const ProfileScreen = () => {
         setLoading(false);
       }
     };
-  
+
     loadProfile();
   }, []);
-  
 
-  if (loading) return <ActivityIndicator color="#00D964" size="large" style={{ flex: 1 }} />;
-
-  
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
       console.error("❌ Logout Failed:", error.message);
     } else {
-      console.log("✅ Logged out successfully!");
-      // navigation.reset({
-      //   index: 0,
-      //   routes: [{ name: 'Login' as keyof RootStackParamList }],
-      // });
       navigation.replace('Login');
-
     }
   };
+
+  if (loading) return <ActivityIndicator color="#00D964" size="large" style={{ flex: 1 }} />;
 
   return (
     <LinearGradient
@@ -62,111 +52,77 @@ const ProfileScreen = () => {
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
     >
-      <ScrollView contentContainerStyle={styles.listContent}>
-      {/* Header image background with circular profile image overlay */}
-        <View style={styles.headerBackground}>
+      <View style={styles.headerBar}>
+        <Text style={styles.headerTitle}>PROFILE</Text>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <View style={styles.headerWrapper}>
           <Image
             source={{ uri: 'https://i.pravatar.cc/100' }}
-            style={styles.overlayProfileImage}
+            style={styles.profileImage}
           />
-        </View>
-
-        {/* User Details Card */}
-        <Card style={styles.userCard}>
-          <Card.Content>
+          <View style={styles.headerTextContainer}>
             <Text style={styles.profileName}>{profile.first_name} {profile.last_name}</Text>
             <Text style={styles.profileLocation}>Purok {profile.purok}, {profile.barangay}</Text>
-            <Text style={styles.memberSince}>Member since: {new Date(profile.created_at).toDateString()}</Text>
-          </Card.Content>
-        </Card>
-
-        <View style={styles.doubleCardRow}>
-          <Card style={styles.smallCard}>
-            <TouchableOpacity onPress={() => navigation.navigate('MyPosts')}>
-              <Card.Content>
-                  <Text style={styles.profileName}>My Posts</Text>
-              </Card.Content>
-            </TouchableOpacity>
-          </Card>
-
-          <Card style={styles.smallCard}>
-            <TouchableOpacity style={styles.statCard} onPress={() => navigation.navigate('TransacHist')}>
-              <Card.Content>
-                <Text style={styles.transactionText}>Transaction History</Text>
-              </Card.Content>
-            </TouchableOpacity>
-          </Card>
+            <Text style={styles.memberSince}>Member Since: {new Date(profile.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</Text>
+          </View>
         </View>
 
-        {/* Stats Section */}
-        <Text style={styles.sectionTitle}>ALL TIME STATS</Text>
-
-        <Card style={styles.statCard}>
-          <Card.Content>
-            <Text style={styles.statLabel}>CARBON EMISSION SAVED [STATIC]</Text>
-            <View style={styles.statValueRow}>
-              <Text style={styles.statValue}>1140 kg CO2</Text>
-              <Text style={styles.statIcon}>🌫️</Text>
-            </View>
-          </Card.Content>
-        </Card>
-
-        <View style={styles.doubleCardRow}>
-          <Card style={styles.smallCard}>
-            <Card.Content>
-              <Text style={styles.statLabel}>TRASH COLLECTED (KG)</Text>
-              <View style={styles.statValueRow}>
-                <Text style={styles.statValue}>{collectionStats.collected}</Text>
-                <Text style={styles.statIcon}>🟢</Text>
-              </View>
-            </Card.Content>
-          </Card>
-
-          <Card style={styles.smallCard}>
-            <Card.Content>
-              <Text style={styles.statLabel}>SACK OF TRASH DONATED (KG)</Text>
-              <View style={styles.statValueRow}>
-                <Text style={styles.statValue}>{collectionStats.donated}</Text>
-                <Text style={styles.statIcon}>⚫</Text>
-              </View>
-            </Card.Content>
-          </Card>
+        <TouchableOpacity style={styles.ratingRow} onPress={() => navigation.navigate('Review')}>
+        <View style={styles.ratingSection}>
+          <Text style={styles.rating}>⭐️⭐️⭐️⭐️</Text>
+          <Text style={styles.ratingLabel}>USER RATING AS OF THIS MONTH</Text>
         </View>
 
-        <Card style={styles.statCard}>
-          <Card.Content>
-            <View style={styles.statRowSpaceBetween}>
-              <Text style={styles.statLabel}>AVERAGE MONTHLY CONTRIBUTION [STATIC]</Text>
-              <Text style={styles.suffix}>SACKS PER MONTH</Text>
-            </View>
-            <Text style={styles.statValue}>15</Text>
-          </Card.Content>
-        </Card>
+        <View style={styles.polyWrapper}>
+          <Text style={styles.polyCount}>{profile.totalPoints}</Text>
+          <Text style={styles.polyLabel}>POLY COLLECTED</Text>
+        </View>
+      </TouchableOpacity>
 
-        <Card style={styles.statCard}>
-          <Card.Content>
-            <View style={styles.statRowSpaceBetween}>
-              <Text style={styles.statLabel}>TOTAL POLYS COLLECTED</Text>
-              <Text style={styles.statIcon}>🟩</Text>
-            </View>
-            <Text style={styles.statValue}>{profile.totalPoints}</Text>
-          </Card.Content>
-        </Card>
 
-        <TouchableOpacity onPress={() => navigation.navigate('Review')}>
-          <Card style={styles.statCard}>
-            <Card.Content>
-              <View style={styles.statRowSpaceBetween}>
-                <Text style={styles.statLabel}>USER RATING [STATIC]</Text>
-                <Text style={styles.suffix}>AS OF THIS MONTH</Text>
-              </View>
-              <Text style={styles.statValue}>⭐⭐⭐⭐⭐</Text>
-            </Card.Content>
-          </Card>
+        <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('MyPosts')}>
+          <Text style={styles.actionButtonTextMP}>MY POST</Text>
         </TouchableOpacity>
-       
+
+        <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('TransacHist')}>
+          <Text style={styles.actionButtonTextTH}>VIEW TRANSACTION HISTORY</Text>
+        </TouchableOpacity>
+
+        <View style={styles.allTimeStatsContainer}>
+          <Text style={styles.sectionTitle}>ALL TIME STATS</Text>
+
+          <View style={styles.statBox}>
+          <View style={styles.statLabelRow}>
+          <Text style={styles.statLabel}>CARBON EMISSION SAVED</Text>
+          <Text style={styles.statIcon}>♻️</Text>
+        </View>
+
+            
+            <Text style={styles.statValue}>1140 kg CO2 </Text>
+          </View>
+
+          <View style={styles.statBox}>
+          <View style={styles.statLabelRow}>
+          <Text style={styles.statLabel}>SACK OF TRASH</Text>
+          <Text style={styles.statIcon}>🧺</Text>
+        </View>
+            <View style={styles.statRowSplit}>
+              <Text style={styles.statSplit}><Text style={styles.boldText}>DONATED</Text> {collectionStats.donated}</Text>
+              <Text style={styles.statSplit}><Text style={styles.boldText}>COLLECTED</Text> {collectionStats.collected}</Text>
+            </View>
+          </View>
+
+          <View style={styles.statBox}>
+            <Text style={styles.statLabel}>AVERAGE MONTHLY CONTRIBUTION</Text>
+            <Text style={styles.statValue}>15</Text>
+            <Text style={styles.statSuffix}>SACKS PER MONTH</Text>
+          </View>
+        </View>
+
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-          <Text style={styles.logoutButtonText}>Logout</Text>
+          <Text style={styles.logoutButtonText}>LOG OUT</Text>
         </TouchableOpacity>
       </ScrollView>
     </LinearGradient>
@@ -174,133 +130,176 @@ const ProfileScreen = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  statLabelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-
-
-  listContent: {
-    paddingTop: 8,
-    paddingHorizontal: 16,
-    paddingBottom: 16,
+  statIcon: {
+    fontSize: 16,
+    color: '#ccc',
   },
   
 
-
-  headerBackground: {
-    height: 200,
-    backgroundColor: '#023F0F',
-    justifyContent: 'flex-end',
-    alignItems: 'flex-start',
-    paddingLeft: 20,
-  },
-  overlayProfileImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 100,
-    borderWidth: 6,
-    borderColor: '#023F0F',
-    marginBottom: -45,
-    zIndex: 10,
-  },
-  userCard: {
+  ratingRow: {
     backgroundColor: '#1A3620',
     borderRadius: 12,
-    paddingVertical: 20,
-    paddingHorizontal: 20,
-    marginTop: 50,
+    padding: 16,
     marginBottom: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  ratingSection: {
+    flexShrink: 1,
+  },
+  rating: {
+    fontSize: 16,
+    color: '#00FF66',
+    marginVertical:2,
+  },
+  ratingLabel: {
+    color: '#aaa',
+    fontSize: 12,
+    flexWrap: 'wrap',
+  },
+  polyWrapper: {
+    alignItems: 'flex-end',
+  },
+  polyCount: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#00FF66',
+  },
+  polyLabel: {
+    color: '#aaa',
+    fontSize: 12,
+    textTransform: 'uppercase',
+  },
+  
+
+  headerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    backgroundColor: '#1A3620',
+  },
+  headerTitle: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'regular',
+    textTransform: 'uppercase',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+  },
+
+  container: { flex: 1 },
+  scrollContainer: { padding: 18 },
+ 
+  headerWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 20,
+    marginBottom: 20,
+  },
+  profileImage: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    borderWidth: 2,
+    borderColor: '#00FF66',
+  },
+  headerTextContainer: {
+    flex: 1,
   },
   profileName: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#fff',
-    marginBottom: 4,
   },
   profileLocation: {
     color: '#ccc',
     fontSize: 13,
-    marginBottom: 2,
   },
   memberSince: {
-    color: '#888',
+    color: '#aaa',
     fontSize: 12,
+  },
+
+ 
+  actionButton: {
+    backgroundColor: '#1A3620',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 5,
+  },
+  actionButtonTextMP: {
+    color: '#fff',
+    textAlign: 'left',
+    fontWeight: 'regular',
+  },
+  actionButtonTextTH: {
+    color: '#fff',
+    textAlign: 'left',
+    fontWeight: 'regular',
   },
   sectionTitle: {
     color: '#fff',
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: 'bold',
-    marginBottom: 12,
-    marginLeft: 4,
-    letterSpacing: 1.2,
     textTransform: 'uppercase',
+    marginBottom: 10,
   },
-  statCard: {
+  allTimeStatsContainer: {
     backgroundColor: '#1A3620',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 6,
+    borderRadius: 10,
+    padding: 18,
+    marginBottom:1,
+  },
+  statBox: {
+    marginBottom:16,
+    borderColor:'white'
   },
   statLabel: {
-    color: '#fff',
-    fontSize: 13,
-    marginBottom: 4,
-  },
-  statValue: {
-    fontSize: 18,
-    color: '#FFFFFF',
-    fontWeight: '700',
-    letterSpacing: 0.25,
-  },
-  statValueRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  statRowSpaceBetween: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
+    color: '#ccc',
+    fontSize: 12,
     marginBottom: 6,
   },
-  doubleCardRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 12,
-  },
-  smallCard: {
-    flex: 1,
-    backgroundColor: '#1A3620',
-    borderRadius: 12,
-    padding: 16,
-  },
-  suffix: {
-    fontSize: 10,
-    color: '#9CA3AF', // muted gray
-    fontWeight: '400',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-  },
-  statIcon: {
-    fontSize: 16,
-  },
-  transactionText: {
+  statValue: {
     color: '#fff',
-    textAlign: 'center',
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  statRowSplit: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  statSplit: {
+    color: '#fff',
+    fontSize: 14,
+  },
+  boldText: {
+    fontWeight: 'bold',
+  },
+  statSuffix: {
+    color: '#9CA3AF',
+    fontSize: 10,
+    textTransform: 'uppercase',
+    marginBottom: 6,
   },
   logoutButton: {
-    marginTop: 2,
-    backgroundColor: 'red',
-    padding: 12,
-    borderRadius: 100,
+    backgroundColor: '#1A3620',
+    padding: 16,
+    borderRadius: 10,
     alignItems: 'center',
+    marginTop: 8,
   },
   logoutButtonText: {
     color: 'white',
-    fontSize: 16,
     fontWeight: 'bold',
   },
 });
 
 export default ProfileScreen;
+

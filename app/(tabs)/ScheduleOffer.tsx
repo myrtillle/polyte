@@ -8,6 +8,8 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { offersService, updateOffer } from '@/services/offersService';
 import { notificationService } from '@/services/notificationService';
+import { IconButton } from 'react-native-paper';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const ScheduleOffer = () => {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
@@ -63,13 +65,23 @@ const ScheduleOffer = () => {
   };
 
   return (
+    <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: '#1A3620' }}>
     <View style={styles.container}>
-      <Text style={styles.title}>Schedule</Text>
-
+                <View style={styles.headerContainer}>
+                <IconButton
+                  icon="arrow-left"
+                  size={24}
+                  iconColor="white"
+                  onPress={() => navigation.goBack()}
+                  style={{ position: 'absolute', left: 0 }}
+                />
+            <Text style={styles.headerTitle}>Schedule</Text>
+          </View>
+          <View style={styles.mainContent}>
       <View style={styles.inputContainer}>
         <Text style={styles.label}>Date</Text>
         <TouchableOpacity style={styles.input} onPress={() => setShowDatePicker(true)}>
-          <Text>{date.toDateString()}</Text>
+          <Text style={styles.inputText}>{date.toDateString()}</Text>
         </TouchableOpacity>
         {showDatePicker && (
           <DateTimePicker
@@ -85,8 +97,10 @@ const ScheduleOffer = () => {
 
         <Text style={styles.label}>Time</Text>
         <TouchableOpacity style={styles.input} onPress={() => setShowTimePicker(true)}>
-          <Text>{time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
-        </TouchableOpacity>
+        <Text style={styles.inputText}>
+          {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </Text>
+      </TouchableOpacity>
         {showTimePicker && (
           <DateTimePicker
             value={time}
@@ -98,41 +112,108 @@ const ScheduleOffer = () => {
             }}
           />
         )}
-      </View>
+         </View>
+        <TouchableOpacity style={styles.button} onPress={handleSchedule}>
+            <Text style={styles.buttonText}>Save Schedule</Text>
+          </TouchableOpacity>
 
-      <TouchableOpacity style={styles.button} onPress={handleSchedule}>
-        <Text style={styles.buttonText}>Save Schedule</Text>
-      </TouchableOpacity>
-    </View>
+        </View>
+         </View>
+     
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, padding: 20, backgroundColor: '#122C0F', justifyContent: 'center' 
+  mainContent: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    backgroundColor: '#122C0F',
   },
-  title: { 
-    fontSize: 22, fontWeight: 'bold', color: 'white', textAlign: 'center', marginBottom: 20 
+  headerContainer: {
+    width: '100%',
+    backgroundColor: '#1A3620',
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
   },
-  inputContainer: { 
-    marginBottom: 15 
+  
+  headerTitle: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'regular',
+    textTransform: 'uppercase',
+  },
+  backButton: {
+    position: 'absolute',
+    left: 16,
+    top: '50%',
+    transform: [{ translateY: -12 }],
+  },
+  backArrow: {
+    color: 'white',
+    fontSize: 22,
+  },
+  
+  container: {
+    flex: 1,
+  
+    backgroundColor: '#122C0F',
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
+    textAlign: 'center',
+    marginBottom: 24,
+    textTransform: 'uppercase',
+    
+  },
+  inputContainer: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 14,
+    color: '#BFBFBF',
+    marginBottom: 4,
+    marginTop: 12,
   },
   input: {
-    backgroundColor: '#333',
-    color: 'white',
-    padding: 10,
+    backgroundColor: '#1E3D28',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     borderRadius: 8,
     marginBottom: 10,
+  },
+  inputText: {
+    color: 'white',
     fontSize: 16,
+    fontWeight: 'regular',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    
   },
-  label: { 
-    fontSize: 16, color: 'white', marginBottom: 5 
+  button: {
+    backgroundColor: '#00C853',
+    paddingVertical: 20,
+    borderRadius: 20,
+    alignItems: 'center',
+    marginTop: 380,
+    height:60,
+
+
   },
-  button: { 
-    backgroundColor: '#28a745', padding: 12, borderRadius: 5, alignItems: 'center', marginTop: 20 
-  },
-  buttonText: { 
-    color: 'white', fontSize: 16, fontWeight: 'bold' 
+  buttonText: {
+    color: 'black',
+    fontSize: 14,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    justifyContent:'center'
   },
 });
 
