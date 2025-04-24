@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Image, StyleSheet, FlatList, RefreshControl, Modal, TouchableOpacity } from 'react-native';
+import { View, Image, StyleSheet, FlatList, RefreshControl, Modal, TouchableOpacity, Alert } from 'react-native';
 import { Text, Card, Button, Chip, Searchbar, IconButton, ActivityIndicator } from 'react-native-paper';
 import { postsService } from '../../services/postsService';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
@@ -14,6 +14,7 @@ import messagebubbleIcon from '../../assets/images/messagebubble.png';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/services/supabase';
 import { notificationService } from '@/services/notificationService';
+import { messagesService } from '@/services/messagesService';
 
 export interface Post {
   id: string;
@@ -129,8 +130,22 @@ export default function HomeScreen() {
     }
   };
   
-  const handleSendMessage = (post: Post) => {
-    navigation.navigate('ChatScreen', { chatId: post.id, post });
+  const handleSendMessage = async (post: Post) => {
+    const senderId = currentUserId!;
+    const receiverId = post.user_id;
+
+    try {
+      const chatId = await messagesService.getOrCreateChatId(senderId, receiverId);
+  
+      navigation.navigate('ChatScreen', {
+        chatId,
+        userId: senderId,
+        post,
+      });
+    } catch (error) {
+      console.error("❌ Failed to get or create chat:", error);
+      Alert.alert("Error", "Could not start chat.");
+    }   
   };
 
   const navigateToViewPost = async (post: Post) => {
@@ -243,7 +258,7 @@ export default function HomeScreen() {
         </View>
   
         <TouchableOpacity style={styles.notificationWrapper}>
-          <IconButton icon="bell" iconColor="white" size={24} onPress={() => navigation.navigate('Notifications', { onViewed: () => setShowBadge(false) })} />
+          <IconButton icon="bell" iconColor="white" size={24} onPress={() => navigation.navigate('Notifications')} />
           {unreadCount > 0 && showBadge && (
             <View style={{
               position: 'absolute',

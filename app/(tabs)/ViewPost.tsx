@@ -17,7 +17,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { Offer } from '../../services/offersService';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { notificationService } from '@/services/notificationService';
-
+import { messagesService } from '@/services/messagesService';
 
 
 type ViewPostRouteProp = RouteProp<RootStackParamList, 'ViewPost'>;
@@ -27,10 +27,12 @@ const ViewPost = () => {
   const route = useRoute<ViewPostRouteProp>();
   const navigation = useNavigation<viewPostNavigationProp>();
 
-  // Only ONE state for post
+  const { postId } = route.params;
+  // Only ONE state for post  
   const greenMark = require('../../assets/images/greenmark.png');
   const cashIcon = require('../../assets/images/cash.png');
   const [post, setPost] = useState<Post | null>(route.params?.post ?? null)
+
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentText, setCommentText] = useState('');
   const [error, setError] = useState('');
@@ -39,6 +41,7 @@ const ViewPost = () => {
   const [currentUser, setCurrentUser] = useState<{ id: string } | null>(null);
   const [activeTab, setActiveTab] = useState('post');
   const [offers, setOffers] = useState<Offer[]>([]);
+  
   function formatTimeAgo(dateString: string) {
     const now = new Date();
     const postDate = new Date(dateString);
@@ -66,9 +69,8 @@ const ViewPost = () => {
   
   const fetchPostAndOffers = async () => {
     try {
-      // ✅ Get post ID from existing state or route params
+      setLoading(true);
       const postId = post?.id || route.params?.post?.id;
-  
       if (!postId) {
         console.error("❌ No valid post ID!");
         return;
@@ -79,7 +81,8 @@ const ViewPost = () => {
       // ✅ Fetch post details (including post_item_types)
       const fetchedPost = await postsService.getPostById(postId);
       setPost(fetchedPost);
-  
+      
+      setLoading(false);
       // ✅ Fetch offers for this post
       const fetchedOffers = await getOffersByPost(postId);
       setOffers(fetchedOffers);
@@ -89,6 +92,26 @@ const ViewPost = () => {
     }
   };
 
+  const handleSendMessage = async () => {
+    if (!currentUser?.id || !post?.user_id) {
+      Alert.alert("Error", "Cannot start chat: Missing user info.");
+      return;
+    }
+  
+    try {
+      const chatId = await messagesService.getOrCreateChatId(currentUser.id, post.user_id);
+  
+      navigation.navigate('ChatScreen', {
+        chatId,
+        userId: currentUser.id,
+        post,
+      });
+    } catch (err) {
+      console.error("❌ Failed to navigate to ChatScreen:", err);
+      Alert.alert("Error", "Failed to start chat.");
+    }
+  };
+  
   console.log('RAW location:', post?.location);
 
   const extractCoords = (pointStr: string) => {
@@ -100,10 +123,10 @@ const ViewPost = () => {
     };
   };
   
-  
   const coords = typeof post?.location === 'string' ? extractCoords(post.location) : null;
 
   console.log('coords: ', coords);
+
   const fetchComments = async (postId: string) => {
     try {
       console.log('🔄 Fetching comments for post ID:', postId);
@@ -217,17 +240,6 @@ const ViewPost = () => {
     }
 
     console.log("✅ Accepting offer, navigating to ScheduleOffer:", offer);
-    
-    await notificationService.sendNotification(
-      post.user_id,
-      'New Offer Received',
-      `Someone submitted an offer on your post: "${post.description}"`,
-      'offer_accepted',
-      {
-        type: 'offer',
-        id: offer.id
-      }
-    );
 
     navigation.navigate("ScheduleOffer", { offer, post });
   };
@@ -342,6 +354,8 @@ const ViewPost = () => {
 
   // console.log('ViewPost  Post Object:', post);
   // Move this block AFTER all hooks
+  if (loading) return <Text style={{ color: 'black' }}>Loading post...</Text>;
+
   if (!post) {
     console.log("post is NULL before rendering!");
     return (
@@ -506,7 +520,7 @@ const ViewPost = () => {
           </View>
         ) : (
           <View style={styles.actionRow}>
-            <TouchableOpacity style={styles.fullButton}>
+            <TouchableOpacity style={styles.fullButton}  onPress={handleSendMessage}>
               <Image
                 source={require('../../assets/images/messagebubble.png')}
                 style={styles.buttonIcon}

@@ -5,25 +5,13 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../../types/navigation';
 import { Button } from 'react-native-paper';
-import { offersService } from '../../services/offersService';
+import { offersService, Schedule } from '../../services/offersService';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { scheduleService } from '@/services/scheduleService';
 import { supabase } from '@/services/supabase';
 
-
 // type CollectionScheduleRouteProp = RouteProp<RootStackParamList, 'CollectionSchedule'>;
 
-export interface Schedule {
-    status: string;
-    scheduled_time: string;
-    scheduled_date: string;
-    collectorName: string;
-    offererName: string;
-    photoUrl: string;
-    purok: string;
-    barangay: string;
-    user_id: string;
-}
 
 const CollectionSchedule = () => {
     const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();

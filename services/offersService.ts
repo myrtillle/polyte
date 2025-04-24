@@ -23,6 +23,19 @@ export interface Offer {
   }>;
 }
 
+export interface Schedule {
+  offer_id: string;
+  status: string;
+  scheduled_time: string;
+  scheduled_date: string;
+  collectorName: string;
+  offererName: string;
+  photoUrl: string;
+  purok: string;
+  barangay: string;
+  user_id: string;
+}
+
 export const createOffer = async (offerData: Offer) => {
   const { error } = await supabase.from('offers').insert([offerData]);
 
@@ -166,7 +179,7 @@ export const offersService = {
     try {
         const { data, error } = await supabase
             .from('offer_schedules')
-            .select('status, scheduled_time, scheduled_date, post_id, user_id, offer_id')
+            .select('offer_id, status, scheduled_time, scheduled_date, post_id, user_id, offer_id')
             .eq('offer_id', offerId)
             .single();
   
@@ -178,6 +191,7 @@ export const offersService = {
         const photoUrl = postDetails.photos?.[0] ?? '';
   
         return {
+            offer_id: data.offer_id,
             status: data.status,
             scheduled_time: data.scheduled_time,
             scheduled_date: data.scheduled_date,
@@ -219,7 +233,8 @@ export const offersService = {
       .maybeSingle();
   
     if (error || !data) {
-      throw new Error("Could not get offerer ID");
+      console.error("❌ Error fetching offerer ID:", error);
+      throw error; 
     }
   
     return data.user_id;

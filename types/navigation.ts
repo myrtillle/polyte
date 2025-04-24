@@ -1,6 +1,5 @@
 // import { Post } from "@/app/(tabs)/home";
-import { Offer } from '../services/offersService'
-import { Schedule } from '../app/(tabs)/CollectionSchedule'
+import { Offer, Schedule } from '../services/offersService'
  
 export type RootStackParamList = {
   Login: undefined;
@@ -15,8 +14,9 @@ export type RootStackParamList = {
   CollectionSchedule: { offerID: string }; 
   ChatScreen: { 
     chatId: string; 
-    userId?: string; post?: 
-    Post; schedule?: Schedule 
+    userId?: string; 
+    post?: Post; 
+    schedule?: Schedule;
   };
   TransacHist: undefined;
   ViewTransaction: { offerId: string };
@@ -28,7 +28,8 @@ export type RootStackParamList = {
   };
   MyPosts: undefined;
   Review: undefined;
-  Notifications: { onViewed?: () => void } | undefined;
+  Notifications: undefined;
+  TransaCompleted: { weight: number; points: number };
 };
 
 export type BottomTabParamList = {

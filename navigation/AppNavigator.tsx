@@ -17,6 +17,7 @@ import MyPosts from '@/app/(tabs)/MyPosts';
 import Review from '@/app/(tabs)/Review';
 import Notifications from '@/app/(tabs)/Notifications';
 import EditPost from '@/app/(tabs)/EditPost'
+import TransaCompleted from '@/app/(tabs)/TransaCompleted';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -90,6 +91,10 @@ export function AppNavigator() {
       <Stack.Screen
         name="EditPost"
         component={EditPost}
+      />
+       <Stack.Screen
+        name="TransaCompleted"
+        component={TransaCompleted}
       />
     </Stack.Navigator>
   );

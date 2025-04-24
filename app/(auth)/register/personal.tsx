@@ -82,7 +82,7 @@ export default function PersonalSignupScreen() {
       <TextInput label="Surname" value={lastName}  theme={inputTheme} onChangeText={setLastName} mode="outlined" style={styles.input} outlineStyle={{ borderRadius: 25 }}/>
       <TextInput label="Firstname" value={firstName}  theme={inputTheme}onChangeText={setFirstName} mode="outlined" style={styles.input} outlineStyle={{ borderRadius: 25 }}/>
       <TextInput label="Username" value={username} theme={inputTheme} onChangeText={setUsername} mode="outlined" style={styles.input} autoCapitalize="none" outlineStyle={{ borderRadius: 25 }}/>
-      <TextInput label="Email" value={email}  theme={inputTheme} onChangeText={setEmail} mode="outlined" style={styles.input} autoCapitalize="none" keyboardType="phone-pad" outlineStyle={{ borderRadius: 25 }}/>
+      <TextInput label="Email" value={email}  theme={inputTheme} onChangeText={setEmail} mode="outlined" style={styles.input} autoCapitalize="none" outlineStyle={{ borderRadius: 25 }}/>
 
       {/* Password Fields */}
       <TextInput label="Password" value={password}  theme={inputTheme} onChangeText={setPassword} mode="outlined" style={styles.input} secureTextEntry outlineStyle={{ borderRadius: 25 }}/>

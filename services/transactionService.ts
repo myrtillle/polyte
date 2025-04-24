@@ -9,7 +9,10 @@ type RawTransactionData = {
   id: string;
   user_id: string;
   post_id: string;
-  images: string[]; // assuming it's an array of URLs
+  images: string[]; 
+  offered_items: string[];
+  offered_weight: number;
+  price: number;
   offer_schedules: {
     scheduled_date: string;
     scheduled_time: string;
@@ -47,6 +50,9 @@ type TransactionDetail = {
   collector_name: string;
   photo_url: string | null;
   proof_image_url: string | null;
+  items: string[];
+  weight: number;
+  price: number;
 };
 
 export type Transaction = {
@@ -152,12 +158,10 @@ export const transactionService = {
       user_id,
       post_id,
       images,
-      offer_schedules (
-        scheduled_date,
-        scheduled_time,
-        status,
-        collection_img
-      ),
+      offered_items,
+      offered_weight,
+      price,
+      offer_schedules (*),
       posts (
         collection_modes:collection_modes!posts_collection_mode_id_fkey (
           name
@@ -206,7 +210,10 @@ export const transactionService = {
       collector_id: collector?.id,
       collector_name: `${collector?.first_name ?? ''} ${collector?.last_name ?? ''}`.trim(),
       photo_url: data.images?.[0] || null,
-      proof_image_url: schedule?.collection_img || null 
+      proof_image_url: schedule?.collection_img || null,
+      items: data.offered_items ?? [],
+      weight: data.offered_weight ?? 0,
+      price: data.price ?? 0
     };
 
     console.log('✅ Returning flattened transaction result:', result);
@@ -325,12 +332,24 @@ export const transactionService = {
     }
   },
 
-  // transactionService.ts
- async markAsPaid(offerId: string): Promise<boolean>{
-  try {
+  async markAsAwaitingPayment(offerId: string) {
     const { error } = await supabase
       .from('offer_schedules')
       .update({ status: 'awaiting_payment' })
+      .eq('offer_id', offerId);
+  
+    if (error) {
+      console.error('Error updating status:', error.message);
+      return false;
+    }
+    return true;
+  },  
+  // transactionService.ts
+ async markAsForCompletion(offerId: string): Promise<boolean>{
+  try {
+    const { error } = await supabase
+      .from('offer_schedules')
+      .update({ status: 'for_completion' })
       .eq('offer_id', offerId);
 
     if (error) throw error;

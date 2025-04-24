@@ -14,7 +14,7 @@ export default function Notifications() {
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const route = useRoute<NotificationsRouteProp>();
-  const { onViewed } = route.params || {};
+  // const { onViewed } = route.params || {};
 
   // useFocusEffect(
   //   React.useCallback(() => {
@@ -37,6 +37,26 @@ export default function Notifications() {
     fetchUserAndNotifications();
   }, []);
 
+  useFocusEffect(
+    React.useCallback(() => {
+      // Your logic for when screen is focused
+      const markViewed = async () => {
+        try {
+          const { data: sessionData, error: sessionError } = await supabase.auth.getUser();
+          if (!sessionError && sessionData?.user?.id) {
+            await notificationService.markAsRead(sessionData.user.id);
+            const refreshed = await notificationService.getUserNotifications(sessionData.user.id);
+            setNotifications(refreshed);
+          }
+        } catch (err) {
+          console.error("Error in onViewed logic:", err);
+        }
+      };
+  
+      markViewed();
+    }, [])
+  );
+  
   const handleMarkAllAsRead = async () => {
     try {
       if (!userId) return;
@@ -60,35 +80,39 @@ export default function Notifications() {
           )
         );
       }
-  
+      
+      console.log("🔔 Notification data:", notif);
+      console.log("📌 Post ID:", notif.post_id);
+
       if (type === 'new_offer' || type === 'new_comment') {
 
-        const { data: post, error } = await supabase
+        // First get the offer using target_id
+        const { data: offer, error: offerError } = await supabase
+        .from('posts')
+        .select('id')
+        .eq('id', notif.target_id)
+        .single();
+
+      if (!offer || offerError) {
+        // Alert.alert('Error', 'Offer not found.');
+        return;
+      }
+
+      const { data: post, error: postError } = await supabase
         .from('posts')
         .select('*, post_item_types(item_types(*)), personal_users(*)')
-        .eq('id', post_id)
+        .eq('id', offer.id)
         .single();
-    
-      // if (!post || error) {
-      //   Alert.alert('Error', 'Post not found.');
-      //   return;
-      // }
-      
-        navigation.navigate('ViewPost', { post });
-  
-      } else if (type === 'offer_accepted') {
-        navigation.navigate('CollectionSchedule', { offerID: offer_id });
-  
-      } else if (type === 'chat') {
-        navigation.navigate('ChatScreen', {
-          chatId: chat_id,
-          userId: user_id ?? undefined,
-        });
-  
-      } else if (type === 'transaction_notif') {
-        console.log('🔍 Navigating to ViewTransaction with:', offer_id);
 
-        navigation.navigate('ViewTransaction',  { offerId: offer_id }); 
+      if (!post || postError) {
+        Alert.alert('Error', 'Post not found.');
+        return;
+      }
+
+      navigation.navigate('ViewPost', { post });
+  
+      } else if (type === 'offer_accepted' || 'transaction_completed' || 'payment_send') {
+        navigation.navigate('ViewTransaction', { offerId: notif.target_id });
   
       } else {
         console.warn("Unhandled notification type:", type);

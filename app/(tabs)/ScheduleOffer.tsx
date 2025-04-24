@@ -48,9 +48,9 @@ const ScheduleOffer = () => {
 
       await notificationService.sendNotification(
         offer.user_id, // OF's user_id from the offer
-        'Schedule Created',
-        `A schedule has been set for your offer. Please review and confirm it.`,
-        'schedule_set',
+        'Offer Accepted',
+        `Seeker has accepted your offer and a collection schedule has been set. Please review and confirm it.`,
+        'offer_accepted',
         {
           type: 'offer',
           id: offer.id

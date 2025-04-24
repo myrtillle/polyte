@@ -28,7 +28,6 @@ const TransacHist = () => {
   }, [selectedTab]);
   //
   const filtered = transactions.filter((t) => {
-    console.log(`📂 Filtered for ${selectedTab}:`, filtered);
     if (selectedTab === 'Pending') return t.status === 'pending' || t.status === 'for_collection' || t.status === 'proof_uploaded' || t.status === 'awaiting_payment';
     if (selectedTab === 'Done') return t.status === 'completed';
     if (selectedTab === 'Cancelled') return t.status === 'cancelled';
