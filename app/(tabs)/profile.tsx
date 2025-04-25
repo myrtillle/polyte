@@ -75,23 +75,11 @@ const ProfileScreen = () => {
           <Text style={styles.ratingLabel}>USER RATING AS OF THIS MONTH</Text>
         </View>
 
-<<<<<<< Updated upstream
         <View style={styles.polyWrapper}>
           <Text style={styles.polyCount}>{profile.totalPoints}</Text>
           <Text style={styles.polyLabel}>POLY COLLECTED</Text>
         </View>
       </TouchableOpacity>
-=======
-        <Card style={styles.statCard}>
-          <Card.Content>
-            <View style={styles.statRowSpaceBetween}>
-              <Text style={styles.statLabel}>AVERAGE MONTHLY CONTRIBUTION [STATIC]</Text>
-              <Text style={styles.suffix}>KG PER MONTH</Text>
-            </View>
-            <Text style={styles.statValue}>15</Text>
-          </Card.Content>
-        </Card>
->>>>>>> Stashed changes
 
 
         <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('MyPosts')}>
