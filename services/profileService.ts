@@ -1,6 +1,16 @@
 // services/userService.ts
 import { supabase } from './supabase';
 
+type OfferScheduleWithPost = {
+  post_id: string;
+  status: string;
+  posts: {
+    user_id: string;
+    kilograms: number;
+  } | { user_id: string; kilograms: number }[]; // handle both object and array
+};
+
+
 export const profileService = {
   async fetchCurrentUserDetails() {
     const { data: sessionData, error: sessionError } = await supabase.auth.getUser();
@@ -76,32 +86,42 @@ export const profileService = {
     return formattedPosts;
   }, 
 
-  async fetchUserCollection (userId: string) {
+  async fetchUserCollection(userId: string) {
     try {
-      const { data: collected, error: err1 } = await supabase
-        .from('posts')
-        .select('kilograms')
-        .eq('user_id', userId)
-        .eq('category_id', 1); // Seeking For → Collected
-
-      const { data: donated, error: err2 } = await supabase
-        .from('posts')
-        .select('kilograms')
-        .eq('user_id', userId)
-        .eq('category_id', 2); // For Collection → Donated
-
-      if (err1 || err2) throw err1 || err2;
-
-      const collectedTotal = collected.reduce((sum, row) => sum + (row.kilograms || 0), 0);
-      const donatedTotal = donated.reduce((sum, row) => sum + (row.kilograms || 0), 0);
-
+      // Step 1: Get completed schedules joined with post weights where the user is the offerer
+      const { data, error } = await supabase
+        .from('offer_schedules')
+        .select(`
+          id,
+          status,
+          post_id,
+          posts (kilograms, user_id)
+        `)
+        .eq('status', 'completed');
+  
+      if (error) throw error;
+  
+      let donatedTotal = 0;
+  
+      (data as OfferScheduleWithPost[])?.forEach((schedule) => {
+        const post = Array.isArray(schedule.posts) ? schedule.posts[0] : schedule.posts;
+      
+        if (post?.user_id === userId) {
+          donatedTotal += post.kilograms || 0;
+        }
+      });      
+  
+      // Optionally, still calculate collectedTotal (if needed)
+      // In this example, we just return 0 unless you want to apply the same logic for collectors
+  
       return {
-        collected: collectedTotal,
+        collected: 0,
         donated: donatedTotal,
       };
     } catch (error) {
-      console.error("❌ Failed to fetch collection stats:", error);
+      console.error("❌ Failed to fetch accurate donation stats:", error);
       return { collected: 0, donated: 0 };
     }
   }
+  
 };

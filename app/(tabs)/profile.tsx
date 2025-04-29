@@ -15,6 +15,17 @@ const ProfileScreen = () => {
   const [collectionStats, setCollectionStats] = useState({ collected: 0, donated: 0 });
   const [userId, setUserId] = useState<string | null>(null);
 
+  const co2Saved = collectionStats.donated * 1.5;
+
+  const monthsSinceJoined = profile?.created_at
+    ? Math.max(
+        1,
+        (new Date().getFullYear() - new Date(profile.created_at).getFullYear()) * 12 +
+        (new Date().getMonth() - new Date(profile.created_at).getMonth())
+      )
+    : 1;
+
+  const averageMonthly = collectionStats.donated / monthsSinceJoined;
 
   useEffect(() => {
     const getUserId = async () => {
@@ -33,6 +44,7 @@ const ProfileScreen = () => {
       if (data?.id) {
         const stats = await profileService.fetchUserCollection(data.id);
         setCollectionStats(stats);
+        
       }
     } catch (err) {
       console.error(err);
@@ -43,6 +55,7 @@ const ProfileScreen = () => {
 
   useEffect(() => {
     loadProfile();
+    
   }, []);
 
   useEffect(() => {
@@ -139,12 +152,12 @@ const ProfileScreen = () => {
         </View>
 
             
-            <Text style={styles.statValue}>1140 kg CO2 </Text>
+            <Text style={styles.statValue}>{co2Saved.toFixed(2)} kg of CO2</Text>
           </View>
 
           <View style={styles.statBox}>
           <View style={styles.statLabelRow}>
-          <Text style={styles.statLabel}>SACK OF TRASH</Text>
+          <Text style={styles.statLabel}>KG OF TRASH</Text>
           <Text style={styles.statIcon}>🧺</Text>
         </View>
             <View style={styles.statRowSplit}>
@@ -155,7 +168,7 @@ const ProfileScreen = () => {
 
           <View style={styles.statBox}>
             <Text style={styles.statLabel}>AVERAGE MONTHLY CONTRIBUTION</Text>
-            <Text style={styles.statValue}>15</Text>
+            <Text style={styles.statValue}>{averageMonthly.toFixed(1)}</Text>
             <Text style={styles.statSuffix}>SACKS PER MONTH</Text>
           </View>
         </View>

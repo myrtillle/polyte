@@ -323,7 +323,7 @@ export default function ViewTransaction() {
 
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>STATUS</Text>
-          <Text style={styles.status}><Text style={styles.icon}>🚚</Text> {transaction?.status?.toUpperCase()}</Text>
+          <Text style={styles.status}><Text style={styles.icon}>🚚</Text> {transaction?.status?.replace(/_/g, ' ').toUpperCase()}</Text>
         </View>
 
         <View style={styles.card}>
@@ -342,17 +342,36 @@ export default function ViewTransaction() {
             </Text>
           )}
 
-          {isOfferer && !hasAgreed && (
+          {isOfferer && (
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <TouchableOpacity
-                style={{ backgroundColor: '#00D964', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, marginRight: 8 }}
-                onPress={handleAgreeToSchedule}
+                style={{
+                  backgroundColor: hasAgreed ? '#888' : '#00D964',
+                  paddingHorizontal: 10,
+                  paddingVertical: 6,
+                  borderRadius: 20,
+                  marginRight: 8,
+                }}
+                onPress={hasAgreed ? undefined : handleAgreeToSchedule}
+                disabled={hasAgreed}
               >
-                <Text style={{ color: '#023F0F', fontWeight: 'bold', fontSize: 12 }}>AGREE</Text>
+                <Text style={{
+                  color: '#023F0F',
+                  fontWeight: 'bold',
+                  fontSize: 12,
+                }}>
+                  {hasAgreed ? 'AGREED' : 'AGREE'}
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={{ backgroundColor: '#1E592B', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20 }}
+                style={{
+                  backgroundColor: '#1E592B',
+                  paddingHorizontal: 10,
+                  paddingVertical: 6,
+                  borderRadius: 20,
+                }}
+                disabled={hasAgreed}
                 onPress={async () => {
                   const { data: { user }, error } = await supabase.auth.getUser();
                   if (user) {
@@ -375,7 +394,13 @@ export default function ViewTransaction() {
                   }
                 }}
               >
-                <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 12 }}>CHAT SEEKER</Text>
+                <Text style={{
+                  color: 'white',
+                  fontWeight: 'bold',
+                  fontSize: 12,
+                }}>
+                  CHAT SEEKER
+                </Text>
               </TouchableOpacity>
             </View>
           )}
@@ -419,7 +444,6 @@ export default function ViewTransaction() {
         {/* Proof of Collection */}
         <View style={[styles.card, !hasAgreed && { opacity: 0.5 }]}>
           <Text style={styles.collectionStatusHeader}>COLLECTION STATUS</Text>
-          <Text style={styles.collectionStatusText}>Status: {transaction?.status?.toUpperCase()}</Text>
           <TouchableOpacity onPress={() => setProofModalVisible(true)}>
                <Text style={[styles.proofText, { textDecorationLine: 'underline' }]}>
                 Proof of Collection

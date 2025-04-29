@@ -39,7 +39,7 @@ const TransacHist = () => {
     
     <TouchableOpacity style={styles.card}onPress={() => navigation.navigate('ViewTransaction', { offerId: item.id })}>
       <Text style={styles.statusTitle}>
-        {item.status.toUpperCase()}
+        {item.status.replace(/_/g, ' ').toUpperCase()}
       </Text>
       <Text style={styles.items}>
         {item.offered_items?.join(', ')}
