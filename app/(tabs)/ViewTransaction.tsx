@@ -368,7 +368,8 @@ export default function ViewTransaction() {
                         photoUrl: transaction?.photo_url,
                         purok: transaction?.purok,
                         barangay: transaction?.barangay,
-                        user_id: user.id
+                        user_id: transaction?.collector_id, // correct owner
+                        offer_id: offerId
                       }
                     });
                   }
@@ -644,7 +645,7 @@ export default function ViewTransaction() {
                   </Text>
                   {isOfferer && (
                     <TouchableOpacity onPress={handleUploadProof}>
-                      <Text style={{ color: 'white', textDecorationLine: 'underline', textAlign: 'center' }}>Upload</Text>
+                      <Text style={{ color: 'black', textDecorationLine: 'underline', textAlign: 'center' }}>Upload</Text>
                     </TouchableOpacity>
                   )}
                 </View>

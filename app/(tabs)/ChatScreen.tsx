@@ -314,7 +314,7 @@ const ChatScreen = () => {
 
                     <Button
                     title="Back to Transaction"
-                    onPress={() => navigation.navigate('ViewTransaction', { offerId: chatId })}
+                    onPress={() => navigation.navigate('ViewTransaction', { offerId: schedule.offer_id })}
                     color="#888"
                     />
 

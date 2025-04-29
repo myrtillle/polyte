@@ -2,6 +2,7 @@ export default {
   expo: {
     name: 'polytev2',
     slug: 'polytev2',
+    icon: './assets/logo.png',
     version: '1.0.0',
     sdkVersion: '52.0.46',
     android: {

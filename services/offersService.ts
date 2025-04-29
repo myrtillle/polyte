@@ -21,6 +21,7 @@ export interface Offer {
       name: string;
     };
   }>;
+  created_at: string;
 }
 
 export interface Schedule {

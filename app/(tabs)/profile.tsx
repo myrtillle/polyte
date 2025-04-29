@@ -13,26 +13,65 @@ const ProfileScreen = () => {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [collectionStats, setCollectionStats] = useState({ collected: 0, donated: 0 });
+  const [userId, setUserId] = useState<string | null>(null);
+
 
   useEffect(() => {
-    const loadProfile = async () => {
-      try {
-        const data = await profileService.fetchCurrentUserDetails();
-        setProfile(data);
-
-        if (data?.id) {
-          const stats = await profileService.fetchUserCollection(data.id);
-          setCollectionStats(stats);
-        }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
+    const getUserId = async () => {
+      const { data, error } = await supabase.auth.getUser();
+      if (data?.user?.id) setUserId(data.user.id);
     };
+  
+    getUserId();
+  }, []);
+  
+  const loadProfile = async () => {
+    try {
+      const data = await profileService.fetchCurrentUserDetails();
+      setProfile(data);
 
+      if (data?.id) {
+        const stats = await profileService.fetchUserCollection(data.id);
+        setCollectionStats(stats);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadProfile();
   }, []);
+
+  useEffect(() => {
+    if (!userId) return;
+  
+    const subscription = supabase
+      .channel('user_polys')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'user_polys',
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          const newPoints = payload.new.points;
+          console.log('🟢 New points earned:', newPoints);
+  
+
+          loadProfile();
+        }
+      )
+      .subscribe();
+  
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, [userId]);  
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();

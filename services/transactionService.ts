@@ -14,6 +14,7 @@ type RawTransactionData = {
   offered_weight: number;
   price: number;
   offer_schedules: {
+    id: string,
     scheduled_date: string;
     scheduled_time: string;
     status: string;
@@ -53,6 +54,7 @@ type TransactionDetail = {
   items: string[];
   weight: number;
   price: number;
+  schedule_id: string;
 };
 
 export type Transaction = {
@@ -199,6 +201,7 @@ export const transactionService = {
 
 
     const result: TransactionDetail = {
+      schedule_id: schedule?.id,
       scheduled_date: schedule?.scheduled_date,
       scheduled_time: schedule?.scheduled_time,
       status: schedule?.status,
@@ -413,12 +416,26 @@ export const transactionService = {
       .from('offer_schedules')
       .update({ status: 'completed' })
       .eq('offer_id', offerId);
-    
+      
       if (error) {
         console.error("❌ Failed to mark as completed:", error);
         return false;
       }
-  
+      
+      // Calculate and add points to user_polys table
+      const earnedPoints = Math.round(transaction.weight * 100);
+      const { error: pointError } = await supabase
+        .from('user_polys')
+        .insert([{
+          user_id: transaction.offerer_id,
+          offer_id: offerId,
+          offer_schedule_id: transaction.schedule_id ?? null,
+          points: earnedPoints
+        }]);
+
+      if (pointError) {
+        console.error("❌ Failed to insert points:", pointError);
+      }
       await notificationService.sendNotification(
         transaction.offerer_id,
         'Transaction Completed',
