@@ -9,6 +9,7 @@ interface SignUpResponse {
   error: AuthError | null;
 }
 
+
 export const authService = {
   async signUp(data: {
     email: string;
@@ -97,6 +98,12 @@ export const authService = {
   async signOut() {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
+  },
+  
+  async forgotPassword(email: string) {
+    return await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: 'polyte://reset-password',
+    });
   },
 
   async getCurrentUser() {

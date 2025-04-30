@@ -8,7 +8,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../../types/navigation';
 import { profileService } from '@/services/profileService';
 
-const ProfileScreen = () => {
+export default function ProfileScreen() {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -355,5 +355,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ProfileScreen;
 

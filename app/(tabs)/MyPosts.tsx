@@ -248,7 +248,7 @@ export default function HomeScreen() {
           styles.categoryText,
           selectedCategory === 1 && styles.categoryTextActive,
         ]}>
-          FOR COLLECTION
+          SEEKING
         </Text>
       </TouchableOpacity>
   
@@ -263,7 +263,7 @@ export default function HomeScreen() {
           styles.categoryText,
           selectedCategory === 2 && styles.categoryTextActive,
         ]}>
-          SEEKING FOR
+          SELLING
         </Text>
       </TouchableOpacity>
     </View>
@@ -278,23 +278,21 @@ export default function HomeScreen() {
   const renderPost = ({ item }: { item: Post }) => (
     <Card style={[
       styles.card,
-      item.category_id === 2 && { backgroundColor: '#172B1F' } // Darker for SEEKING
-    ]}>
+        item.category_id === 2 && { backgroundColor: '#172B1F' } // Darker for SEEKING
+      ]}>
       <Card.Content>
         <View style={styles.cardWrapper}>
           <View style={styles.infoWrapper}>
             {/* Name and time */}
             <View style={styles.userInfo}>
-  <Text style={styles.userName}>
-    {item.user?.name ?? item.user?.email ?? 'Unknown User'}
-  </Text>
-  <Text style={styles.timePosted}>
-    {formatTimeAgo(item.created_at)}
-  </Text>
-</View>
+              <Text style={styles.userName}>
+                {item.user?.name ?? item.user?.email ?? 'Unknown User'}
+              </Text>
+              <Text style={styles.timePosted}>
+                {formatTimeAgo(item.created_at)}
+              </Text>
+            </View>
 
-
-      
             {/* Mode label (yellow icon + text) */}
             <View style={styles.labelRow}>
               {(() => {
@@ -331,12 +329,12 @@ export default function HomeScreen() {
           {/* Image from database */}
           {item.photos && item.photos.length > 0 && (
             <View style={styles.imageContainer}>
-            <Image
-              source={{ uri: item.photos[0] }}
-              style={styles.postImage}
-            />
-          </View>
-        )}
+              <Image
+                source={{ uri: item.photos[0] }}
+                style={styles.postImage}
+              />
+            </View>
+          )}
         </View>
 
         {/* Actions */}
@@ -397,6 +395,17 @@ export default function HomeScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
         contentContainerStyle={styles.listContent}
+
+        ListEmptyComponent={
+          <View style={styles.emptyFallback}>
+            {/* <Image
+              source={require('../../assets/images/empty.png')} // replace with your placeholder image
+              style={styles.emptyImage}
+            /> */}
+            <Text style={styles.emptyText}>You haven’t posted anything yet.</Text>
+            <Text style={styles.emptySubText}>Click the + button to get started!</Text>
+          </View>
+        }        
       />
   
       <Modal
@@ -729,4 +738,32 @@ const styles = StyleSheet.create({
     color: 'red',
     marginTop: 20,
   },
+  emptyFallback: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 60,
+    paddingHorizontal: 20,
+  },
+  
+  emptyImage: {
+    width: 120,
+    height: 120,
+    resizeMode: 'contain',
+    marginBottom: 16,
+  },
+  
+  emptyText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    textAlign: 'center',
+  },
+  
+  emptySubText: {
+    fontSize: 13,
+    color: '#CCCCCC',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  
 }); 

@@ -9,7 +9,7 @@ import MapView, { Marker, PROVIDER_DEFAULT, PROVIDER_GOOGLE, Region, MapViewProp
 // import { WebView } from 'react-native-webview';
 import * as Location from 'expo-location';
 import { supabase } from '../../services/supabase';
-
+import { BackHandler } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'react-native';
 import { rgbaColor } from 'react-native-reanimated/lib/typescript/Colors';
@@ -174,6 +174,23 @@ export default function PostScreen() {
     getSession();
   }, []);
 
+  useEffect(() => {
+    const onBackPress = () => {
+      Alert.alert(
+        "Are you sure?",
+        "Your changes may not be saved.",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Yes", onPress: () => router.back() }
+        ]
+      );
+      return true; // prevent default back
+    };
+  
+    const backHandler = BackHandler.addEventListener("hardwareBackPress", onBackPress);
+    return () => backHandler.remove(); // cleanup
+  }, []);
+  
   // Load all necessary data
   useEffect(() => {
     const loadData = async () => {
@@ -331,7 +348,16 @@ export default function PostScreen() {
           icon="arrow-left"
           size={24}
           iconColor="white"
-          onPress={() => router.back()}
+          onPress={() =>
+            Alert.alert(
+              "Are you sure?",
+              "Your changes may not be saved.",
+              [
+                { text: "Cancel", style: "cancel" },
+                { text: "Yes", onPress: () => router.back() }
+              ]
+            )
+          }          
           style={styles.backIcon}
         />
         <Text style={styles.headerTitle}>Create Post</Text>

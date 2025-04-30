@@ -18,7 +18,7 @@ interface ChatPreview {
   seen: boolean;
 }
 
-const MessagesScreen = () => {
+export default function MessagesScreen() {
   const navigation = useNavigation<MessagesScreenNavProp>();
   const [userId, setUserId] = useState<string | null>(null);
   const [conversations, setConversations] = useState<ChatPreview[]>([]);
@@ -125,5 +125,3 @@ const MessagesScreen = () => {
     </View>
   );
 };
-
-export default MessagesScreen;

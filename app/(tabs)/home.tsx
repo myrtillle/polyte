@@ -305,7 +305,7 @@ export default function HomeScreen() {
           styles.categoryText,
           selectedCategory === 1 && styles.categoryTextActive,
         ]}>
-          FOR COLLECTION
+          SEEKING
         </Text>
       </TouchableOpacity>
   
@@ -320,7 +320,7 @@ export default function HomeScreen() {
           styles.categoryText,
           selectedCategory === 2 && styles.categoryTextActive,
         ]}>
-          SEEKING FOR
+          SELLING
         </Text>
       </TouchableOpacity>
     </View>

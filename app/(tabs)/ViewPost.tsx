@@ -261,7 +261,7 @@ const ViewPost = () => {
   };
 
   const handleSeeDetails = (offer: Offer) => {
-    navigation.navigate("CollectionSchedule", { offerID: offer.id });
+    navigation.navigate("ViewTransaction", { offerId: offer.id });
   };
 
   const isOfferAccepted = (offer: Offer) => {
@@ -528,31 +528,37 @@ const ViewPost = () => {
               <Text style={styles.fullButtonText}>SEND MESSAGE</Text>
             </TouchableOpacity>
         
-            <TouchableOpacity
-              style={styles.fullButton}
-              onPress={() => {
-                if (!post?.post_item_types?.length) {
-                  Alert.alert("Error", "Plastic item types are missing.");
-                  return;
-                }
-                navigation.navigate('MakeOffer', { post });
-              }}
-            >
-              <Image
-                source={require('../../assets/images/trashbag.png')}
-                style={styles.buttonIcon}
-              />
-              <Text style={styles.fullButtonText}>SEND OFFER</Text>
-            </TouchableOpacity>
+            {!isPostOwner && post?.category_id === 1 && (
+              <TouchableOpacity
+                style={styles.fullButton}
+                onPress={() => {
+                  if (!post?.post_item_types?.length) {
+                    Alert.alert("Error", "Plastic item types are missing.");
+                    return;
+                  }
+                  navigation.navigate('MakeOffer', { post });
+                }}
+              >
+                <Image source={require('../../assets/images/trashbag.png')} style={styles.buttonIcon} />
+                <Text style={styles.fullButtonText}>SEND OFFER</Text>
+              </TouchableOpacity>
+            )}
+
+            {!isPostOwner && post?.category_id === 2 && (
+              <TouchableOpacity
+                style={styles.fullButton}
+                onPress={handleSendMessage}
+              >
+                <Image source={require('../../assets/images/trashbag.png')} style={styles.buttonIcon} />
+                <Text style={styles.fullButtonText}>INTERESTED</Text>
+              </TouchableOpacity>
+            )}
         
             <TouchableOpacity style={styles.iconOnlyButton}>
               <Text style={styles.dots}>⋮</Text>
             </TouchableOpacity>
           </View>
         )}
-
-
-
 
           {/* Comments Section */}
           <Divider style={styles.divider} />
@@ -1088,7 +1094,21 @@ const styles = StyleSheet.create({
     fontStyle: 'normal',
   },
   
-
+  statusBadge: {
+    backgroundColor: '#0FC246',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    marginTop: 4,
+    alignSelf: 'flex-start',
+  },
+  statusBadgeText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+  },
+  
   tabContainer: {
     flexDirection: 'row',
     justifyContent: 'space-evenly',
