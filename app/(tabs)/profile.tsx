@@ -234,16 +234,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
+
     backgroundColor: '#1A3620',
+    position: 'relative',
+    paddingVertical: 20,
+    paddingHorizontal: 10,
+
   },
   headerTitle: {
     color: 'white',
     fontSize: 14,
     fontWeight: 'regular',
     textTransform: 'uppercase',
-    paddingVertical: 16,
-    paddingHorizontal: 16,
   },
 
   container: { flex: 1 },

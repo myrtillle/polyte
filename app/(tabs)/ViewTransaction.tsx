@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, ScrollView, RefreshControl, Modal } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, ScrollView, RefreshControl, Modal, } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { transactionService } from '@/services/transactionService';
@@ -9,6 +9,26 @@ import { supabase } from '@/services/supabase';
 import { scheduleService } from '@/services/scheduleService';
 import * as ImagePicker from 'expo-image-picker';
 import { notificationService } from '@/services/notificationService';
+import locationIcon from '../../assets/images/greenmark.png';
+import pickupIcon from '../../assets/images/pickup.png';
+import dropoffIcon from '../../assets/images/dropoff.png';
+import meetupIcon from '../../assets/images/meetup.png';
+import cashIcon from '../../assets/images/cash.png';
+import proofIcon from '../../assets/images/images3d.png';
+import { Button, Divider, IconButton } from 'react-native-paper';
+
+
+const getModeData = (modeName: string) => {
+  const lower = modeName.toLowerCase();
+  if (lower.includes('pickup')) {
+    return { icon: pickupIcon, color: '#FFD700' }; // Yellow
+  } else if (lower.includes('drop')) {
+    return { icon: dropoffIcon, color: '#FF8515' }; // Orange
+  } else {
+    return { icon: meetupIcon, color: '#00FF57' }; // Green
+  }
+};
+
 
 interface proofImage {
   photo: string;
@@ -79,6 +99,7 @@ export default function ViewTransaction() {
   }, [offerId]);
   
   useEffect(() => {
+
     const getUser = async () => {
       const { data, error } = await supabase.auth.getUser();
       if (error || !data.user) {
@@ -309,8 +330,20 @@ export default function ViewTransaction() {
   }
 
   return (
-    <LinearGradient colors={['#023F0F', '#05A527']} style={styles.container}>
+    <LinearGradient colors={['#023F0F', '#05A527']} style={{ flex: 1 }}>
+  {/* Header outside the padding container */}
+      <View style={styles.headerContainer}>
+        <IconButton
+          icon="arrow-left"
+          size={24}
+          iconColor="white"
+          onPress={() => navigation.navigate('TransacHist')}
+          style={{ position: 'absolute', left: 0 }}
+        />
+        <Text style={styles.headerTitle}>TRANSACTION DETAILS</Text>
+      </View>
       <ScrollView
+       contentContainerStyle={{ padding: 16 }}
          refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -319,11 +352,10 @@ export default function ViewTransaction() {
           />
         }
       >
-        <Text style={styles.header}>SEE POST</Text>
 
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>STATUS</Text>
-          <Text style={styles.status}><Text style={styles.icon}>🚚</Text> {transaction?.status?.replace(/_/g, ' ').toUpperCase()}</Text>
+          <Text style={styles.status}>{transaction?.status?.replace(/_/g, ' ').toUpperCase()}</Text>
         </View>
 
         <View style={styles.card}>
@@ -406,19 +438,42 @@ export default function ViewTransaction() {
           )}
 
           <Text style={styles.subLabel}>ITEMS</Text>
+          <View style={styles.itemList}>
           {transaction?.items?.length > 0 ? (
             transaction.items.map((item: string, index: number) => (
-              <Text key={index} style={styles.subValue}>• {item}</Text>
+              <View key={index} style={styles.itemChip}>
+                <Text style={styles.itemChipText}>{item}</Text>
+              </View>
             ))
           ) : (
             <Text style={styles.subValue}>N/A</Text>
           )}
+        </View>
 
           <Text style={styles.subLabel}>SETTLED AT</Text>
-          <Text style={styles.subValue}>{transaction?.purok}, {transaction?.barangay}</Text>
+          <View style={styles.addressRow}>
+          <Image source={locationIcon} style={styles.locationIcon} resizeMode="contain" />
+          <Text style={styles.subValue}>
+            {transaction?.purok}, {transaction?.barangay}
+          </Text>
+        </View>
 
-          <Text style={styles.subLabel}>IN METHOD OF</Text>
-          <Text style={styles.subValue}><Text style={styles.icon}>📦</Text> {transaction?.method}</Text>
+
+        <Text style={styles.subLabel}>IN METHOD OF</Text>
+        <View style={styles.modeRow}>
+          {(() => {
+            const mode = getModeData(transaction?.method || '');
+            return (
+              <>
+                <Image source={mode.icon} style={[styles.modeIcon, { tintColor: mode.color }]} />
+                <Text style={[styles.modeText, { color: mode.color }]}>
+                  {transaction?.method?.toUpperCase()}
+                </Text>
+              </>
+            );
+          })()}
+        </View>
+
         </View>
 
         <View style={styles.cardRow}>
@@ -444,11 +499,16 @@ export default function ViewTransaction() {
         {/* Proof of Collection */}
         <View style={[styles.card, !hasAgreed && { opacity: 0.5 }]}>
           <Text style={styles.collectionStatusHeader}>COLLECTION STATUS</Text>
-          <TouchableOpacity onPress={() => setProofModalVisible(true)}>
-               <Text style={[styles.proofText, { textDecorationLine: 'underline' }]}>
-                Proof of Collection
-              </Text>
-            </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setProofModalVisible(true)}
+            style={styles.proofCard}
+          >
+            <View style={styles.proofTextContainer}>
+              <Text style={styles.proofCardTitle}>PROOF OF COLLECTION</Text>
+              <Text style={styles.proofCardSubtitle}>Tap Here to Upload images</Text>
+            </View>
+            <Image source={proofIcon} style={styles.proofCardImage} />
+          </TouchableOpacity>
 
 
           {/* Step Tracker */}
@@ -509,7 +569,11 @@ export default function ViewTransaction() {
           <View style={[styles.card, !hasAgreed && { opacity: 0.5 }]}>
             <Text style={styles.collectionStatusHeader}>PAYMENT</Text>
             
-            <Text style={styles.bigText}>₱ {transaction?.price ?? 'N/A'}</Text>
+            <View style={styles.offerPriceRow}>
+            <Image source={cashIcon} style={styles.offerPesoIcon} />
+            <Text style={styles.offerPriceText}>₱ {transaction?.price?.toFixed(2) ?? 'N/A'}</Text>
+          </View>
+
 
             {isPostOwner && transaction?.status === 'awaiting_payment' && (
               <TouchableOpacity style={styles.confirmButton} onPress={handleMockPayment}>
@@ -627,60 +691,71 @@ export default function ViewTransaction() {
         
       {proofModalVisible && (
         <Modal
-          transparent
-          visible={proofModalVisible}
-          animationType="slide"
-          onRequestClose={() => setProofModalVisible(false)}
-        >
-          <View style={styles.modalBackdrop}>
-            <View style={styles.modalBox}>
-              <Text style={styles.modalText}>Proof of Collection</Text>
-              {hasProof ? (
-                <>
-                  <Image source={{ uri: transaction.proof_image_url }} style={styles.collectionProofImage} />
-                  {isPostOwner && (
-                    <TouchableOpacity
-                      style={[styles.modalButton, {
-                        backgroundColor: canConfirm ? '#00D964' : '#888', marginTop: 14
-                      }]}
-                      disabled={!canConfirm}
-                      onPress={async () => {
-                        const success = await transactionService.markAsAwaitingPayment(offerId);
-                        if (success) {
-                          const updated = await transactionService.fetchTransactionDetails(offerId);
-                          setTransaction(updated);
-                          Alert.alert('Confirmed', 'Collection confirmed. Waiting for payment.');
-                          setProofModalVisible(false);
-                        } else {
-                          Alert.alert('Error', 'Failed to confirm collection.');
-                        }
-                      }}
-                    >
-                      <Text style={{ fontWeight: 'bold', color: '#003d1a' }}>
-                        {isConfirmed ? 'COLLECTION CONFIRMED' : 'CONFIRM COLLECTION'}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                </>
-              ) : (
-                <View>
-                  <Text style={{ color: 'white', textAlign: 'center', marginBottom: 12 }}>
-                    No proof of collection uploaded yet.
+        transparent
+        visible={proofModalVisible}
+        animationType="slide"
+        onRequestClose={() => setProofModalVisible(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.proofModalContainer}>
+            <Text style={styles.proofModalHeader}> PROOF OF COLLECTION </Text>
+      
+            {hasProof ? (
+              <>
+                <Image source={{ uri: transaction.proof_image_url }} style={styles.proofImage} />
+      
+                {isPostOwner && (
+                  <TouchableOpacity
+                    style={[
+                      styles.confirmButton,
+                      {
+                        marginTop: 20,
+                        backgroundColor: canConfirm ? '#00D964' : '#888',
+                      },
+                    ]}
+                    disabled={!canConfirm}
+                    onPress={async () => {
+                      const success = await transactionService.markAsAwaitingPayment(offerId);
+                      if (success) {
+                        const updated = await transactionService.fetchTransactionDetails(offerId);
+                        setTransaction(updated);
+                        Alert.alert('Confirmed', 'Collection confirmed. Waiting for payment.');
+                        setProofModalVisible(false);
+                      } else {
+                        Alert.alert('Error', 'Failed to confirm collection.');
+                      }
+                    }}
+                  >
+                    <Text style={[
+                    styles.confirmText,
+                    canConfirm && { color: '#023F0F' }  // black text if tappable
+                  ]}>
+                    {isConfirmed ? 'COLLECTION CONFIRMED' : 'CONFIRM COLLECTION'}
                   </Text>
-                  {isOfferer && (
-                    <TouchableOpacity onPress={handleUploadProof}>
-                      <Text style={{ color: 'black', textDecorationLine: 'underline', textAlign: 'center' }}>Upload</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              )}
 
-              <TouchableOpacity onPress={() => setProofModalVisible(false)} style={[styles.modalButton, { marginTop: 16, backgroundColor: '#ccc' }]}> 
-                <Text>Close</Text>
-              </TouchableOpacity>
-            </View>
+                  </TouchableOpacity>
+                )}
+              </>
+            ) : (
+              <View style={{ marginTop: 10 }}>
+                <Text style={styles.proofModalText}>No proof of collection uploaded yet.</Text>
+                {isOfferer && (
+                  <TouchableOpacity onPress={handleUploadProof}>
+                    <Text style={styles.proofUploadText}>Upload Now</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+      
+            <TouchableOpacity
+              onPress={() => setProofModalVisible(false)}
+              style={[styles.modalButton, {  marginTop: 10 }]}
+            >
+              <Text style={{ fontWeight: 'bold',color:'white' }}>CLOSE</Text>
+            </TouchableOpacity>
           </View>
-        </Modal>
+        </View>
+      </Modal>
 
       )}
 
@@ -711,6 +786,180 @@ export default function ViewTransaction() {
 }
 
 const styles = StyleSheet.create({
+  headerTitle: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'regular',
+    textTransform: 'uppercase',
+  },
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+    paddingHorizontal: 10,
+    backgroundColor: '#1A3620',
+    position: 'relative',
+  },
+
+  proofCard: {
+    backgroundColor: '#1E592B',
+    borderColor: '#00FF57',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 2,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal:12,
+    paddingVertical:6,
+
+  },
+  
+  proofTextContainer: {
+    flex: 1,
+  },
+  
+  proofCardTitle: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
+ 
+  
+  },
+  
+  proofCardSubtitle: {
+    color: '#ccc',
+    fontSize: 12,
+  },
+  
+  proofCardImage: {
+    width:60,
+    height:50,
+    marginLeft: 8,
+  },
+  
+  proofModalContainer: {
+    width: '91%',
+    backgroundColor: '#1A3620',
+    padding: 22,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 8,
+    elevation: 8,
+   
+  },
+  
+  proofModalHeader: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    fontWeight: 'regular',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  
+  proofModalText: {
+    fontSize: 14,
+    color: '#CCCCCC',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  
+  proofUploadText: {
+    fontSize: 14,
+    color: '#00D964',
+    fontWeight: 'bold',
+    textAlign: 'center',
+    textDecorationLine: 'underline',
+  },
+  
+  proofImage: {
+    width: '100%',
+    height: 220,
+    borderRadius: 10,
+    borderColor: '#ccc',
+    borderWidth: 1,
+    marginTop: 8,
+  },
+  
+
+  offerPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  
+  offerPesoIcon: {
+    width: 26,
+    height: 26,
+    resizeMode: 'contain',
+  },
+  
+  offerPriceText: {
+    color: '#00FF57',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  
+  modeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 4,
+  },
+  modeIcon: {
+    width: 18,
+    height: 18,
+  },
+  modeText: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+  },
+  
+
+  addressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    marginBottom: 6,
+  },
+  
+  locationIcon: {
+    width: 18, // ← change icon size independently here
+    height: 18,
+    marginRight: 4,
+  },
+  
+  itemList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 6,
+    marginBottom: 10,
+    gap: 6,
+  },
+  
+  itemChip: {
+    backgroundColor: '#1E592B',
+    borderRadius: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  
+  itemChipText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+  },
+  
   container: { flex: 1, padding: 16 },
   header: {
     fontSize: 16,
@@ -722,8 +971,8 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: '#1A3620',
     borderRadius: 12,
-    padding: 14,
-    marginBottom: 12
+    padding: 16,
+    marginBottom: 5
   },
   cardRow: {
     backgroundColor: '#1A3620',
@@ -780,11 +1029,12 @@ const styles = StyleSheet.create({
   confirmButton: {
     backgroundColor: '#00D964',
     paddingVertical: 14,
+    paddingHorizontal:60,
     borderRadius: 100,
     alignItems: 'center'
   },
   confirmText: {
-    color: '#023F0F',
+    color: 'darkgray',
     fontWeight: 'bold'
   },
   proofText: {
@@ -828,7 +1078,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#0C1F10',
     padding: 16,
     borderRadius: 12,
-    marginTop: 20,
     alignItems: 'center',
   },
   collectionStatusHeader: {
