@@ -138,6 +138,7 @@ const MakeOffer = () => {
       console.error("Cannot send offer: No authenticated user!");
       return;
     }
+    
     if (!price || !offeredWeight || selectedItems.length === 0) {
       Alert.alert("Missing Fields", "Please fill in all required fields before sending your offer.");
       return;

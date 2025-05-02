@@ -18,7 +18,7 @@ export default {
     android: {
       "config": {
         "googleMaps": {
-          "apiKey": "AIzaSyDU8Ufeqdzk4TJOSmwP_zYpK08rrjQc3P8"
+          "apiKey": "AIzaSyDm9L1U_ihCMd2hkGYpujnurBWktWVf1qA"
         }
       },
       adaptiveIcon: {

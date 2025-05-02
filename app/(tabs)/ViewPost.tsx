@@ -67,6 +67,8 @@ const ViewPost = () => {
     }
   };
   
+  const isSellingPost = post?.category_id === 2;
+
   const fetchPostAndOffers = async () => {
     try {
       setLoading(true);
@@ -264,6 +266,58 @@ const ViewPost = () => {
     navigation.navigate("ViewTransaction", { offerId: offer.id });
   };
 
+  const handleInterested = async () => {
+    if (!currentUser?.id) {
+      console.error("Cannot express interest: No authenticated user!");
+      return;
+    }
+  
+    if (!post?.id) {
+      console.error("Cannot express interest: No valid post!");
+      return;
+    }
+  
+    try {
+      const { data, error } = await supabase
+        .from('offers')
+        .insert([
+          {
+            post_id: post.id,
+            user_id: currentUser.id,
+            offered_items: [],
+            offered_weight: 0,
+            requested_weight: 0,
+            price: 0,
+            message: 'Interested in collecting your plastics!',
+            images: [],
+            status: 'pending',
+          },
+        ])
+        .select(); // fetch inserted data if needed
+  
+      if (error) {
+        console.error('❌ Failed to register interest:', error.message);
+        Alert.alert('Error', 'Failed to show interest. Please try again.');
+        return;
+      }
+  
+      const insertedOffer = data?.[0];
+      if (!insertedOffer) {
+        console.warn('⚠️ No offer returned after insertion.');
+        return;
+      }
+  
+      console.log('✅ Interest registered successfully:', insertedOffer);
+  
+      Alert.alert('Success', 'You are now listed as interested!');
+      // Optionally, refresh offers list here if needed
+      // await fetchOffersAgain();
+    } catch (err) {
+      console.error('❌ Unexpected error in handleInterested:', err);
+      Alert.alert('Error', 'Something went wrong.');
+    }
+  };
+  
   const isOfferAccepted = (offer: Offer) => {
     return offer.status === 'accepted';
   };
@@ -407,13 +461,8 @@ const ViewPost = () => {
             activeTab === 'offers' && styles.activeTabButton,
           ]}
         >
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === 'offers' && styles.activeTabText,
-            ]}
-          >
-            OFFERS
+          <Text style={styles.tabText}>
+            {post?.category_id === 2 ? 'INTERESTED USERS' : 'OFFERS'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -468,6 +517,18 @@ const ViewPost = () => {
         {/* Post Description */}
         <Text style={styles.description}>{post.description}</Text>
 
+        {/* Post Description */}
+        <Text style={styles.description}>{post.kilograms}</Text>
+        
+
+        {/* Post Description */}
+        {isSellingPost && (
+          <View>
+            <Text style={styles.description}>Price: {post.price || 0}</Text>
+            {/* <Text style={styles.description}>{post.price || 0}</Text> */}
+          </View>
+        )}
+
         {/* Item Types */}
         <View style={styles.itemList}>
           {post.post_item_types?.map((item, index) => (
@@ -520,43 +581,44 @@ const ViewPost = () => {
           </View>
         ) : (
           <View style={styles.actionRow}>
-            <TouchableOpacity style={styles.fullButton}  onPress={handleSendMessage}>
-              <Image
-                source={require('../../assets/images/messagebubble.png')}
-                style={styles.buttonIcon}
-              />
-              <Text style={styles.fullButtonText}>SEND MESSAGE</Text>
-            </TouchableOpacity>
-        
-            {!isPostOwner && post?.category_id === 1 && (
-              <TouchableOpacity
-                style={styles.fullButton}
-                onPress={() => {
-                  if (!post?.post_item_types?.length) {
-                    Alert.alert("Error", "Plastic item types are missing.");
-                    return;
-                  }
-                  navigation.navigate('MakeOffer', { post });
-                }}
-              >
-                <Image source={require('../../assets/images/trashbag.png')} style={styles.buttonIcon} />
-                <Text style={styles.fullButtonText}>SEND OFFER</Text>
-              </TouchableOpacity>
-            )}
+            {!isPostOwner() && (
+              <>
+                <TouchableOpacity style={styles.fullButton} onPress={handleSendMessage}>
+                  <Image source={require('../../assets/images/messagebubble.png')} style={styles.buttonIcon} />
+                  <Text style={styles.fullButtonText}>SEND MESSAGE</Text>
+                </TouchableOpacity>
 
-            {!isPostOwner && post?.category_id === 2 && (
-              <TouchableOpacity
-                style={styles.fullButton}
-                onPress={handleSendMessage}
-              >
-                <Image source={require('../../assets/images/trashbag.png')} style={styles.buttonIcon} />
-                <Text style={styles.fullButtonText}>INTERESTED</Text>
-              </TouchableOpacity>
+                {post?.category_id === 1 && (
+                  <TouchableOpacity
+                    style={styles.fullButton}
+                    onPress={() => {
+                      if (!post?.post_item_types?.length) {
+                        Alert.alert("Error", "Plastic item types are missing.");
+                        return;
+                      }
+                      navigation.navigate('MakeOffer', { post });
+                    }}
+                  >
+                    <Image source={require('../../assets/images/trashbag.png')} style={styles.buttonIcon} />
+                    <Text style={styles.fullButtonText}>SEND OFFER</Text>
+                  </TouchableOpacity>
+                )}
+
+                {post?.category_id === 2 && (
+                  <TouchableOpacity
+                    style={styles.fullButton}
+                    onPress={handleInterested}
+                  >
+                    <Image source={require('../../assets/images/trashbag.png')} style={styles.buttonIcon} />
+                    <Text style={styles.fullButtonText}>INTERESTED</Text>
+                  </TouchableOpacity>
+                )}
+
+                <TouchableOpacity style={styles.iconOnlyButton}>
+                  <Text style={styles.dots}>⋮</Text>
+                </TouchableOpacity>
+              </>
             )}
-        
-            <TouchableOpacity style={styles.iconOnlyButton}>
-              <Text style={styles.dots}>⋮</Text>
-            </TouchableOpacity>
           </View>
         )}
 
@@ -609,82 +671,134 @@ const ViewPost = () => {
         activeTab === 'offers' ? (
           <ScrollView style={styles.content}>
             {offers.length === 0 ? (
-              <Text style={styles.noOffers}>No offers yet.</Text>
+              <Text style={styles.noOffers}>
+                {post?.category_id === 2 ? 'No interested users yet.' : 'No offers yet.'}
+              </Text>
             ) : (
               offers.map((offer, index) => {
                 const isUserOfferOwner = isOfferOwner(offer);
                 const isUserPostOwner = isPostOwner();
                 const isAccepted = isOfferAccepted(offer);
 
-                return (
-                  <View key={index} style={styles.offerCard}>
-                    {/* 🧑 Avatar + Title + Time + Image */}
-                    <View style={styles.headerRow}>
-                    <View style={styles.leftInfo}>
-                      <Image source={{ uri: 'https://i.pravatar.cc/36' }} style={styles.offerAvatar} />
-                      <View>
-                        <Text style={styles.offerUserText}>
-                         NAMES
-                        </Text>
-                        <Text style={styles.offerTimeText}>{formatTimeAgo(offer.created_at)}</Text>
+                if (post?.category_id === 2) {
+                  // Selling Post - INTERESTED USERS layout
+                  return (
+                    <View key={index} style={styles.offerCard}>
+                      <View style={styles.headerRow}>
+                        <View style={styles.leftInfo}>
+                          <Image source={{ uri: 'https://i.pravatar.cc/36' }} style={styles.offerAvatar} />
+                          <View>
+                            <Text style={styles.offerUserText}>{offer.personal_users?.first_name} {offer.personal_users?.last_name}</Text>
+                            <Text style={styles.offerTimeText}>{formatTimeAgo(offer.created_at)}</Text>
+                          </View>
+                        </View>
+                      </View>
+
+                      <Text style={styles.offerDescription}>
+                        {offer.message || 'No message provided'}
+                      </Text>
+
+                      {offer.status && (
+                        <View style={styles.statusBadge}>
+                          <Text style={styles.statusBadgeText}>
+                            {offer.status.replace(/_/g, ' ').toUpperCase()}
+                          </Text>
+                        </View>
+                      )}
+                      
+                      <View style={styles.offerActionRow}>
+                        {/* Action buttons based on owner */}
+                        {isUserOfferOwner && offer.status === 'pending' && (
+                          <>
+                            <TouchableOpacity style={styles.deleteOfferButton} onPress={() => handleDeleteOffer(offer.id)}>
+                              <Text style={styles.deleteOfferText}>DELETE</Text>
+                            </TouchableOpacity>
+                          </>
+                        )}
+
+                        {!isUserPostOwner && isUserOfferOwner && offer.status === 'accepted' && (
+                          <TouchableOpacity style={styles.fullGreenButton} onPress={() => handleSeeDetails(offer)}>
+                            <Text style={styles.fullButtonTextinoffers}>SEE DETAILS</Text>
+                          </TouchableOpacity>
+                        )}
+
+                        {isUserPostOwner && !isUserOfferOwner && (
+                          <>
+                            <TouchableOpacity style={styles.redButton} onPress={() => handleDeclineOffer(offer.id)}>
+                              <Text style={styles.buttonText}>DECLINE</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.greenButton} onPress={() => handleAcceptOffer(offer)}>
+                              <Text style={styles.buttonText}>ACCEPT</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.iconButton} onPress={() => handleChatWithUser(offer.user_id)}>
+                              <Image source={require('../../assets/images/paperplane.png')} style={styles.sendIcon} />
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.iconButton}>
+                              <Text style={styles.moreOptionsText}>⋮</Text>
+                            </TouchableOpacity>
+                          </>
+                        )}
                       </View>
                     </View>
+                  );
+                }
 
-                    {/* 📸 Thumbnail absolutely positioned */}
-                    {offer.images?.[0] && (
-                      <Image source={{ uri: offer.images[0] }} style={styles.offerImageThumbnail} />
-                    )}
-                  </View>
-                
-                    {/* 📄 Description */}
+                // Seeking Post - Full Offer layout
+                return (
+                  <View key={index} style={styles.offerCard}>
+                    <View style={styles.headerRow}>
+                      <View style={styles.leftInfo}>
+                        <Image source={{ uri: 'https://i.pravatar.cc/36' }} style={styles.offerAvatar} />
+                        <View>
+                          <Text style={styles.offerUserText}>{offer.personal_users?.first_name} {offer.personal_users?.last_name}</Text>
+                          <Text style={styles.offerTimeText}>{formatTimeAgo(offer.created_at)}</Text>
+                        </View>
+                      </View>
+                      {offer.images?.[0] && (
+                        <Image source={{ uri: offer.images[0] }} style={styles.offerImageThumbnail} />
+                      )}
+                    </View>
+
                     <Text style={styles.offerDescription}>
-                    {offer.message || 'No description provided'}
-                  </Text>
+                      {offer.message || 'No description provided'}
+                    </Text>
 
-                
-                    {/* ⚖️ Weight */}
                     <Text style={styles.offerWeight}>
                       {offer.offered_weight} / {offer.requested_weight} KG
                     </Text>
-                
-                    {/* 💰 Price */}
-                    <View style={styles.offerPriceRow}>
-                    <Image source={cashIcon} style={styles.offerPesoIcon} />
-                    <Text style={styles.offerPriceText}>₱ {offer.price.toFixed(2)}</Text>
-                  </View>
 
-                
-                    {/* 🟩 Plastic Labels */}
+                    <View style={styles.offerPriceRow}>
+                      <Image source={cashIcon} style={styles.offerPesoIcon} />
+                      <Text style={styles.offerPriceText}>₱ {offer.price.toFixed(2)}</Text>
+                    </View>
+
                     <View style={styles.offerChips}>
-                    {offer.offered_items.map((item, idx) => (
+                      {offer.offered_items.map((item, idx) => (
                         <View key={idx} style={styles.offerChip}>
                           <Text style={styles.offerChipText}>{item}</Text>
                         </View>
                       ))}
                     </View>
-                
-                    {/* 🎯 Action Buttons */}
+
                     <View style={styles.offerActionRow}>
-                      {/* IF POST BY ME */}
+                      {/* Action buttons based on owner */}
                       {isUserPostOwner && isUserOfferOwner && (
                         <>
                           <TouchableOpacity style={styles.deleteOfferButton} onPress={() => handleDeleteOffer(offer.id)}>
-                            <Text style={styles.deleteOfferText}>DELETE OFFER</Text>
+                            <Text style={styles.deleteOfferText}>DELETE</Text>
                           </TouchableOpacity>
                           <TouchableOpacity style={styles.editOfferButton} onPress={() => handleEditOffer(offer)}>
                             <MaterialIcons name="edit" size={22} color="white" />
                           </TouchableOpacity>
                         </>
                       )}
-                
-                      {/* IF NOT POSTED BY ME */}
+
                       {!isUserPostOwner && isUserOfferOwner && (
                         <TouchableOpacity style={styles.fullGreenButton} onPress={() => handleSeeDetails(offer)}>
                           <Text style={styles.fullButtonTextinoffers}>SEE DETAILS</Text>
                         </TouchableOpacity>
                       )}
-                
-                      {/* OFFER BY OTHER USER TO MY POST */}
+
                       {isUserPostOwner && !isUserOfferOwner && (
                         <>
                           <TouchableOpacity style={styles.redButton} onPress={() => handleDeclineOffer(offer.id)}>
@@ -704,15 +818,14 @@ const ViewPost = () => {
                     </View>
                   </View>
                 );
-                
-              })
-            )}
-          </ScrollView>
+        })
+      )}
+  </ScrollView>
         ) : null
       )}
     </View>
   );
-};
+  };
 
 const styles = StyleSheet.create({
   headerRow: {

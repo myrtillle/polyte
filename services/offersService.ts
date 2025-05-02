@@ -22,6 +22,10 @@ export interface Offer {
     };
   }>;
   created_at: string;
+  personal_users?: {
+    first_name: string;
+    last_name: string;
+  }
 }
 
 export interface Schedule {

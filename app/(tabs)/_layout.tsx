@@ -24,7 +24,7 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="Leaderboard"
+        name="leaderboard"
         options={{
           title: 'Leaderboard',
           tabBarIcon: ({ color, size }) => (
@@ -76,7 +76,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="Notifications" options={{ href: null }} />
       <Tabs.Screen name="EditPost" options={{ href: null }} />
       <Tabs.Screen name="TransaCompleted" options={{ href: null }} />
-      <Tabs.Screen name="leaderboard" options={{ href: null }} />
+      {/* <Tabs.Screen name="leaderboard" options={{ href: null }} /> */}
     </Tabs>
   );
 }

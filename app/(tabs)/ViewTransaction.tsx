@@ -52,6 +52,8 @@ export default function ViewTransaction() {
   // console.log('🔍 Navigated with offerId:', offerId);
   console.log('📦 ViewTransaction received offerId:', offerId);
   
+  const isSellingPost = transaction?.category_id === 2; // Category 2 means Selling
+
   const paid = transaction?.status === 'awaiting_payment' || transaction?.status === 'for_completion' || transaction?.status === 'completed';
 
   useEffect(() => {
@@ -596,10 +598,8 @@ export default function ViewTransaction() {
             )}
           </View>
 
-
-
         {/* Offerer Button */}
-        {isOfferer && ['for_completion', 'completed'].includes(transaction?.status) && (
+        {((isSellingPost && isOfferer) || (!isSellingPost && isPostOwner)) && ['for_completion', 'completed'].includes(transaction?.status) && (
           <TouchableOpacity
             style={[
               styles.confirmButton,
@@ -704,7 +704,7 @@ export default function ViewTransaction() {
               <>
                 <Image source={{ uri: transaction.proof_image_url }} style={styles.proofImage} />
       
-                {isPostOwner && (
+                {((isSellingPost && isOfferer) || (!isSellingPost && isPostOwner)) && transaction?.status === 'proof_uploaded' && (
                   <TouchableOpacity
                     style={[
                       styles.confirmButton,
@@ -739,10 +739,8 @@ export default function ViewTransaction() {
             ) : (
               <View style={{ marginTop: 10 }}>
                 <Text style={styles.proofModalText}>No proof of collection uploaded yet.</Text>
-                {isOfferer && (
-                  <TouchableOpacity onPress={handleUploadProof}>
-                    <Text style={styles.proofUploadText}>Upload Now</Text>
-                  </TouchableOpacity>
+                {((isSellingPost && isPostOwner) || (!isSellingPost && isOfferer)) && transaction?.status === 'for_collection' && (
+                  <TouchableOpacity onPress={handleUploadProof}>UPLOAD PROOF</TouchableOpacity>
                 )}
               </View>
             )}

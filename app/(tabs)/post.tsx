@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { postsService, CreatePostData } from '../../services/postsService';
 import * as ImagePicker from 'expo-image-picker';
-import MapView, { Marker, PROVIDER_DEFAULT, PROVIDER_GOOGLE, Region, MapViewProps  } from 'react-native-maps';
+import MapView, { Marker, PROVIDER_GOOGLE, Region, MapViewProps  } from 'react-native-maps';
 // import { WebView } from 'react-native-webview';
 import * as Location from 'expo-location';
 import { supabase } from '../../services/supabase';
@@ -62,6 +62,7 @@ interface FormData {
     longitude: number;
     address?: string;
   };
+  price?: string;
 }
 
 export default function PostScreen() {
@@ -103,6 +104,7 @@ export default function PostScreen() {
       longitude: 125.4553,
       address: '',
     },
+    price: '',
   });
 
   const pickImages = async () => {
@@ -237,6 +239,7 @@ export default function PostScreen() {
         status: 'active',
         photos: Array.isArray(formData.photos) ? formData.photos : [formData.photos],
         location: formattedLocation, 
+        price: formData.price ? parseFloat(formData.price) : 0,
       };
   
       console.log("Submitting post data:", JSON.stringify(postData, null, 2));
@@ -373,10 +376,10 @@ export default function PostScreen() {
           <Text style={styles.sectionTitle}>CATEGORY</Text>
 
           {/* SELLING Button */}
-          <TouchableOpacity onPress={() => setFormData(prev => ({ ...prev, category_id: categories[0]?.id }))}>
+          <TouchableOpacity onPress={() => setFormData(prev => ({ ...prev, category_id: categories[1]?.id }))}>
             <LinearGradient
               colors={
-                formData.category_id === categories[0]?.id
+                formData.category_id === categories[1]?.id
                   ? ['#023F0F', '#00FF57']  // selected = gradient
                   : ['#2C5735', '#2C5735']  // not selected = solid color
               }
@@ -388,10 +391,10 @@ export default function PostScreen() {
           </TouchableOpacity>
 
           {/* SEEKING Button */}
-          <TouchableOpacity onPress={() => setFormData(prev => ({ ...prev, category_id: categories[1]?.id }))}>
+          <TouchableOpacity onPress={() => setFormData(prev => ({ ...prev, category_id: categories[0]?.id }))}>
             <LinearGradient
               colors={
-                formData.category_id === categories[1]?.id
+                formData.category_id === categories[0]?.id
                   ? ['#023F0F', '#00FF57']
                   : ['#2C5735', '#2C5735']
               }
@@ -462,6 +465,27 @@ export default function PostScreen() {
             textColor="#FFFFFF"
           />
         </View>
+
+        {formData.category_id === categories[0]?.id && ( // SELLING category
+          <View style={styles.kilogramsContainer}>
+            <View style={styles.kilogramsLabel}>
+              {/* <Image source={} style={styles.kilogramsIcon} /> */}
+              <Text style={styles.kilogramsTitle}>PRICE</Text>
+            </View>
+
+            <View style={styles.kilogramsInputWrapper}>
+              <TextInput
+                underlineColor="transparent"
+                activeUnderlineColor="transparent"
+                value={formData.price || ''}
+                onChangeText={text => setFormData(prev => ({ ...prev, price: text }))}
+                keyboardType="numeric"
+                style={[styles.kilogramsInput, { color: '#FFFFFF' }]}
+                textColor="#FFFFFF"
+              />
+            </View>
+          </View>
+        )}
       </View>
 
       <View style={styles.galleryContainer}>
@@ -493,7 +517,7 @@ export default function PostScreen() {
           <>
             <MapView
               ref={ mapRef }
-              provider={Platform.OS === 'android' ? (null as any) : undefined}
+              provider={PROVIDER_GOOGLE}
               style={styles.map}
               initialRegion={DAVAO_COORDS}
               onPress={(e) => {

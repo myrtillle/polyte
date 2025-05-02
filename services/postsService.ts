@@ -12,6 +12,7 @@ export interface Post {
   user_id: string;
   description: string;
   kilograms: number;
+  price: number;
   category_id: number;
   collection_mode_id: number;
   status: string;
@@ -108,6 +109,7 @@ export const postsService = {
         category_id: post.category_id,
         status: 'active',
         photos: postData.photos, 
+        price: postData.price ?? null
       }])
       .select(`
         *,
