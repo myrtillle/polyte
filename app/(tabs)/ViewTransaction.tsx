@@ -365,10 +365,12 @@ export default function ViewTransaction() {
           <Text style={styles.bigText}>{transaction?.scheduled_time ?? 'N/A'} - {transaction?.scheduled_date}</Text>
 
           {!hasAgreed && isPostOwner && (
-              <Text style={{ color: 'yellow', marginTop: 10 }}>
-                Waiting for offerer to agree to the schedule.
-              </Text>
-            )}
+            <Text style={{ color: 'yellow', marginTop: 10 }}>
+              {transaction?.category_id === 1
+                ? 'Waiting for offerer to agree to the schedule.'
+                : 'Waiting for collector to agree to the schedule.'}
+            </Text>
+          )}
 
           {isOfferer && !hasAgreed && (
             <Text style={{ color: '#ccc', fontSize: 12, marginTop: 6, marginBottom: 4 }}>

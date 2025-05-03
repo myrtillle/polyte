@@ -21,6 +21,7 @@ export interface Post {
   user_id: string;
   description: string;
   kilograms: number;
+  price: number;
   category_id: number;
   collection_mode_id: number;
   status: string;

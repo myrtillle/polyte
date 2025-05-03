@@ -466,7 +466,7 @@ export default function PostScreen() {
           />
         </View>
 
-        {formData.category_id === categories[0]?.id && ( // SELLING category
+        {formData.category_id === categories[1]?.id && ( // SELLING category
           <View style={styles.kilogramsContainer}>
             <View style={styles.kilogramsLabel}>
               {/* <Image source={} style={styles.kilogramsIcon} /> */}
@@ -524,6 +524,17 @@ export default function PostScreen() {
                 const { latitude, longitude } = e.nativeEvent.coordinate;
                 console.log('Tapped:', latitude, longitude);
                 setMarker({ latitude, longitude });
+            
+                // ✅ Update formData.location too
+                setFormData(prev => ({
+                  ...prev,
+                  location: {
+                    latitude,
+                    longitude,
+                    address: '', // you can fill it later after fetchAddress if you want
+                  }
+                }));
+            
                 fetchAddress(latitude, longitude);
               }}
             >
@@ -532,7 +543,19 @@ export default function PostScreen() {
                 draggable
                 onDragEnd={(e) => {
                   const { latitude, longitude } = e.nativeEvent.coordinate;
+                  console.log('Dragged to:', latitude, longitude);
                   setMarker({ latitude, longitude });
+              
+                  // ✅ Update formData.location too
+                  setFormData(prev => ({
+                    ...prev,
+                    location: {
+                      latitude,
+                      longitude,
+                      address: '', // fill address later if needed
+                    }
+                  }));
+              
                   fetchAddress(latitude, longitude);
                 }}
               />

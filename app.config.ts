@@ -2,7 +2,7 @@ export default {
   expo: {
     name: 'Poly.te',
     scheme: 'polyte',
-    slug: 'polyte-app',
+    slug: 'polytev2',
     icon: './assets/logo.png',
     version: '1.0.0',
     sdkVersion: '52.0.46',
@@ -14,18 +14,18 @@ export default {
       backgroundColor: '#ffffff',
     },
     assetBundlePatterns: ['**/*'],
-    
+
     android: {
       "config": {
         "googleMaps": {
-          "apiKey": "AIzaSyDm9L1U_ihCMd2hkGYpujnurBWktWVf1qA"
+          "apiKey": "AIzaSyDGM8pq1tOO2gIOeKj94sOCXduccidNCwU"
         }
       },
       adaptiveIcon: {
         foregroundImage: './assets/adaptive-icon.png',
         backgroundColor: '#ffffff',
       },
-      package: 'com.myrtille.polytev2', 
+      package: 'com.myrtille.polytev2',
       permissions: ["INTERNET", 'READ_EXTERNAL_STORAGE', 'WRITE_EXTERNAL_STORAGE', 'CAMERA'],
       intentFilters: [
         {
@@ -54,7 +54,7 @@ export default {
         locationAlwaysAndWhenInUsePermission: 'Allow $(PRODUCT_NAME) to use your location.'
       }]
     ],
-    
+
     "owner": "myrtillle",
   },
 }; 

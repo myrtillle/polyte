@@ -21,6 +21,7 @@ type RawTransactionData = {
     collection_img: string | null;
   }[];
   posts: {
+    category_id: number;
     collection_modes: {
       name: string;
     };
@@ -55,6 +56,7 @@ type TransactionDetail = {
   weight: number;
   price: number;
   schedule_id: string;
+  category_id: number;
 };
 
 export type Transaction = {
@@ -165,6 +167,7 @@ export const transactionService = {
       price,
       offer_schedules (*),
       posts (
+        category_id,
         collection_modes:collection_modes!posts_collection_mode_id_fkey (
           name
         ),
@@ -216,7 +219,8 @@ export const transactionService = {
       proof_image_url: schedule?.collection_img || null,
       items: data.offered_items ?? [],
       weight: data.offered_weight ?? 0,
-      price: data.price ?? 0
+      price: data.price ?? 0,
+      category_id: post?.category_id ?? 1,
     };
 
     console.log('✅ Returning flattened transaction result:', result);
