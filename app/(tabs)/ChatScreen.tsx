@@ -14,7 +14,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { Message } from '@/services/messagesService';
 import { formatTimeAgo } from '@/utils/dateUtils'; 
 import { Post } from '@/types/Post';
-
+import paperplaneIcon from '../../assets/images/paperplane.png';
 
 // interface Schedule {
 //     status: string;
@@ -247,18 +247,18 @@ const ChatScreen = () => {
       }, [chatId]);
       
     return (
-        <View style={{ flex: 1, padding: 10, backgroundColor: '#004d00' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-                <IconButton
-                    icon="arrow-left"
-                    size={24}
-                    onPress={() => navigation.goBack()}
-                    style={styles.backButton}
-                />
-                <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>
-                    {receiverName}
-                </Text>
-            </View>
+        <View style={{ flex: 1, backgroundColor: '#163B1F' }}>
+           <View style={styles.headerContainer}>
+          <Image
+            source={{ uri: `https://i.pravatar.cc/40?u=${chatId}` }}
+            style={styles.avatar}
+          />
+          <Text style={styles.headerTitle}>{receiverName || 'Chat'}</Text>
+        </View>
+
+
+
+        <View style={styles.messagescon}>
 
             {post && (
                 <View style={{ backgroundColor: '#1E592B', padding: 10, borderRadius: 8, marginBottom: 10 }}>
@@ -328,39 +328,87 @@ const ChatScreen = () => {
                 keyExtractor={(item, index) => item.id ?? `message-${index}`}
 
                 renderItem={({ item }) => (
-                    <View style={item.sender_id === userId ? styles.userBubble : styles.otherBubble}>
-                      {item.target_type && item.target_id && (
-                        <TouchableOpacity
-                          onPress={() => {
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: item.sender_id === userId ? 'flex-end' : 'flex-start',
+                    alignItems: 'center', // Center vertically
+                    marginVertical: 2,
+                    gap: 6, // Optional spacing between bubble and timestamp
+                  }}
+    
+  >
+    
+    {item.sender_id !== userId ? (
+      <>
+        <View style={styles.otherBubble}>
+          {item.target_type && item.target_id && (
+            <TouchableOpacity onPress={() => {
+              if (item.target_type === 'post') navigation.navigate('ViewPost', { postId: item.target_id });
+              else if (item.target_type === 'schedule') navigation.navigate('ViewTransaction', { offerId: item.target_id });
+            }}>
+              <Text style={styles.bannerText}>
+                📌 In reply to {item.target_type === 'post' ? 'Post' : 'Schedule'}
+              </Text>
+            </TouchableOpacity>
+          )}
+          <Text style={styles.messageText}>{item.message}</Text>
+        </View>
+        <Text style={[styles.timestamp, { alignSelf: 'center' }]}>
+          {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </Text>
+      </>
+    ) : (
+      <>
+        <Text style={[styles.timestamp, { alignSelf: 'center' }]}>
+          {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </Text>
+        <View style={styles.userBubble}>
+          {item.target_type && item.target_id && (
+            <TouchableOpacity onPress={() => {
+              if (item.target_type === 'post') navigation.navigate('ViewPost', { postId: item.target_id });
+              else if (item.target_type === 'schedule') navigation.navigate('ViewTransaction', { offerId: item.target_id });
+            }}>
+              <Text style={styles.bannerText}>
+                📌 In reply to this {item.target_type === 'post' ? 'Post' : 'Schedule'}
+              </Text>
+            </TouchableOpacity>
+          )}
+          <Text
+  style={[
+    styles.messageText,
+    item.sender_id === userId && { color: '#1A1A1A' } // dark color for sent messages
+  ]}
+>
+  {item.message}
+</Text>
 
-                            console.log('Clicked target:', item.target_type, item.target_id);
-                            
-                            if (item.target_type === 'post') {
-                              navigation.navigate('ViewPost', { postId: item.target_id });
-                            } else if (item.target_type === 'schedule') {
-                              navigation.navigate('ViewTransaction', { offerId: item.target_id });
-                            }
-                          }}
-                        >
-                          <Text style={styles.bannerText}>
-                            📌 In reply to {item.target_type === 'post' ? 'Post' : 'Schedule'}
-                          </Text>
-                        </TouchableOpacity>
-                      )}
-                      <Text style={styles.messageText}>{item.message}</Text>
-                    </View>
-                  )}                  
+        </View>
+      </>
+    )}
+  </View>
+)}
+                 
             />
-            <View style={{ flexDirection: 'row', marginTop: 10 }}>
-                <TextInput
-                    style={{ flex: 1, borderColor: 'gray', borderWidth: 1, marginRight: 5, color: 'white' }}
-                    placeholder='Type a message...'
-                    placeholderTextColor='#999'
-                    value={newMessage}
-                    onChangeText={setNewMessage}
-                />
-                <Button title='Send' onPress={handleSend} />
             </View>
+            <View style={styles.inputWrapper}>
+            <TouchableOpacity style={styles.iconButton}>
+               <Image source={require('@/assets/images/imagebutton.png')} style={styles.iconImage} />
+            </TouchableOpacity>
+
+            <TextInput
+              style={styles.inputField}
+              placeholder="Type your message..."
+              placeholderTextColor="#AAA"
+              multiline
+              value={newMessage}
+              onChangeText={setNewMessage}
+            />
+
+            <TouchableOpacity style={styles.iconButton} onPress={handleSend}>
+              <Image source={require('@/assets/images/paperplane.png')} style={styles.iconImage} />
+            </TouchableOpacity>
+          </View>
 
             <Modal
                 transparent={true}
@@ -391,37 +439,169 @@ const ChatScreen = () => {
         </View>
     );
 };
-
 const styles = StyleSheet.create({
-    container: { flex: 1, padding: 10, backgroundColor: '#004d00' },
-    attachment: { marginBottom: 10, backgroundColor: '#1E592B', padding: 10, borderRadius: 8 },
-    attachmentImage: { height: 100, width: 100, marginBottom: 5, borderRadius: 5 },
-    attachmentText: { color: 'white', fontWeight: 'bold' },
-    userBubble: { alignSelf: 'flex-end', backgroundColor: '#007AFF', padding: 10, borderRadius: 20, marginVertical: 5 },
-    otherBubble: { alignSelf: 'flex-start', backgroundColor: '#E5E5EA', padding: 10, borderRadius: 20, marginVertical: 5 },
-    messageText: { color: 'white' },
-    inputContainer: { flexDirection: 'row', marginTop: 10 },
-    input: { flex: 1, borderColor: 'gray', borderWidth: 1, marginRight: 5, color: 'white', padding: 8, borderRadius: 20 },
-    backButton: { 
-        marginLeft: 10,
-        marginBottom: 10,
+  timestamp: {
+  fontSize: 11,
+  color: '#888',
+  marginHorizontal: 10,
+  marginBottom: 2,
+  alignSelf: 'flex-end',
+},
+
+timestampLeft: {
+  alignSelf: 'flex-start',
+},
+
+    userBubble: {
+  alignSelf: 'flex-end',
+  backgroundColor: '#00FF66',
+  padding: 12,
+  borderRadius: 100,
+  marginVertical: 6,
+  maxWidth: '75%',
+},
+
+otherBubble: {
+  alignSelf: 'flex-start',
+  backgroundColor: '#1E592B',
+  padding: 12,
+  borderRadius: 100,
+  marginVertical: 6,
+  maxWidth: '75%',
+},
+
+messageText: {
+  color: 'white',
+  fontSize: 16,
+},
+
+
+    inputWrapper: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#132718',
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      margin: 10,
+      borderRadius: 18,
     },
-    attachmentBanner: {
-        backgroundColor: '#235F30',
-        paddingVertical: 4,
-        paddingHorizontal: 8,
-        borderRadius: 6,
-        marginBottom: 4,
-        alignSelf: 'flex-start',
-      },
-      
-      bannerText: {
-        color: '#00FF66',
-        fontWeight: 'bold',
-        fontSize: 12,
-        textDecorationLine: 'underline',
-      }
-      
+
+    inputField: {
+      flex: 1,
+      color: 'white',
+      fontSize: 14,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+    },
+
+    iconButton: {
+      padding: 6,
+    },
+
+    iconImage: {
+      width: 22,
+      height: 22,
+      resizeMode: 'contain',
+    },
+
+
+  messagescon: {   
+    flex: 1,
+    paddingHorizontal: 12,
+    backgroundColor: '#004d00',
+  },
+  
+
+avatar: {
+  width: 40,
+  height: 40,
+  borderRadius: 20,
+  marginRight: 12,
+},
+  // 🔷 Layout
+ 
+
+  // 🔷 Header
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    backgroundColor: '#1A3620',
+    position: 'relative',
+  },
+
+  backButton: {
+    position: 'absolute',
+    left: 2,
+    padding: 10,
+    zIndex: 1,
+  },
+
+  headerTitle: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'regular',
+    textTransform: 'uppercase',
+  },
+
+
+
+  // 🔷 Input Area
+  inputContainer: {
+    flexDirection: 'row',
+    marginTop: 10,
+  
+  },
+
+  input: {
+    flex: 1,
+    borderColor: 'gray',
+    borderWidth: 1,
+    marginRight: 5,
+    color: 'white',
+    padding: 8,
+    borderRadius: 20,
+  },
+
+  // 🔷 Attachments
+  attachment: {
+    marginBottom: 10,
+    backgroundColor: '#1E592B',
+    padding: 10,
+    borderRadius: 8,
+  },
+
+  attachmentImage: {
+    height: 100,
+    width: 100,
+    marginBottom: 5,
+    borderRadius: 5,
+  },
+
+  attachmentText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+
+  // 🔷 Attachment Banner (Reply Reference)
+  attachmentBanner: {
+    backgroundColor: '#235F30',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    marginBottom: 4,
+    alignSelf: 'flex-start',
+  },
+
+  bannerText: {
+    color: '#1A1A1A',
+    fontWeight: 'bold',
+    fontSize: 12,
+    textDecorationLine: 'underline',
+    textTransform: 'uppercase',
+  },
 });
+;
 
 export default ChatScreen;
