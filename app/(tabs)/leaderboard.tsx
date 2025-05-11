@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 interface LeaderboardEntry {
   name: string;
   totalPoints: number;
+   
 }
 
 export default function LeaderboardScreen() {
@@ -37,9 +38,18 @@ export default function LeaderboardScreen() {
 
   const renderItem = ({ item, index }: { item: LeaderboardEntry; index: number }) => (
     <View style={[styles.itemRow, index === 0 ? styles.topPurok : styles.regularPurok]}>
-      <Text style={[styles.purokName, index === 0 && styles.topText]}>{item.name}</Text>
-      <Text style={[styles.points, index === 0 && styles.topText]}>{item.totalPoints.toLocaleString()}</Text>
-    </View>
+  <View style={styles.itemNameWrapper}>
+    <Text style={[styles.purokName, index === 0 && styles.topText]} numberOfLines={1}>
+      {item.name}
+    </Text>
+  </View>
+  <View style={styles.itemPointsWrapper}>
+    <Text style={[styles.points, index === 0 && styles.topscore]}>
+      {item.totalPoints.toLocaleString()}
+    </Text>
+  </View>
+</View>
+
   );
 
   return (
@@ -49,19 +59,22 @@ export default function LeaderboardScreen() {
         <Text style={styles.searchPlaceholder}>PLASTIC, OBRERO USEP</Text>
         <Ionicons name="notifications" size={20} color="#00FF66" style={{ marginRight: 12 }} />
       </View> */}
-      <View style={{backgroundColor: '#1A3620', marginTop: 0, padding: 4, height: 60, }}>
-        <Text style={{ fontSize: 18, color: 'white', marginBottom: 20, textAlign: 'center', fontWeight: 'bold' }}>LEADERBOARDS</Text>
-      </View>
+      <View style={styles.headerBar}>
+  <Text style={styles.headerTitle}>LEADERBOARDS</Text>
+</View>
 
-      <TouchableOpacity style={styles.headerWrapper} onPress={() => setViewDropdownVisible(true)}>
-        <View style={styles.headerLeft}>
-          <Text style={styles.headerTitle}>
-            {viewType === 'user' ? 'USER LEADERBOARDS' : 'PUROK LEADERBOARDS'}
-          </Text>
-          <Text style={styles.headerSubtitle}>As of {formattedDate}</Text>
-        </View>
-        <Ionicons name="chevron-down" size={20} color="white" />
-      </TouchableOpacity>
+     
+        <TouchableOpacity style={styles.dropdownBox} onPress={() => setViewDropdownVisible(true)}>
+          <View style={styles.dropdownLeft}>
+            <Text style={styles.dropdownTitle}>
+              {viewType === 'user' ? 'USER LEADERBOARDS' : 'PUROK LEADERBOARDS'}
+            </Text>
+            <Text style={styles.dropdownSubtitle}>As of {formattedDate}</Text>
+          </View>
+          <Ionicons name="chevron-down" size={20} color="white" />
+        </TouchableOpacity>
+
+
 
       <View style={styles.filterTabs}>
         <TouchableOpacity style={[styles.tab, activeTab === 'ALL' && styles.activeTab]}>
@@ -92,34 +105,162 @@ export default function LeaderboardScreen() {
       <Modal transparent visible={viewDropdownVisible} animationType="fade">
         <TouchableOpacity style={styles.modalBackdrop} onPress={() => setViewDropdownVisible(false)}>
           <View style={styles.modalDropdown}>
-            <TouchableOpacity onPress={() => { setViewType('user'); setViewDropdownVisible(false); }}>
-              <Text style={styles.dropdownOption}>USER LEADERBOARDS</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => { setViewType('purok'); setViewDropdownVisible(false); }}>
-              <Text style={styles.dropdownOption}>PUROK LEADERBOARDS</Text>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
-
-      {/* Time Filter Dropdown */}
-      <Modal transparent visible={timeDropdownVisible} animationType="fade">
-        <TouchableOpacity style={styles.modalBackdrop} onPress={() => setTimeDropdownVisible(false)}>
-          <View style={styles.modalDropdown}>
-            {['ALL TIME', 'THIS MONTH', 'THIS YEAR', 'THIS WEEK'].map((range) => (
-              <TouchableOpacity key={range} onPress={() => { setTimeFilter(range as any); setTimeDropdownVisible(false); }}>
-                <Text style={styles.dropdownOption}>{range}</Text>
+            {[
+              { label: 'USER LEADERBOARDS', value: 'user' },
+              { label: 'PUROK LEADERBOARDS', value: 'purok' },
+            ].map((option) => (
+              <TouchableOpacity
+                key={option.value}
+                onPress={() => {
+                  setViewType(option.value as 'user' | 'purok');
+                  setViewDropdownVisible(false);
+                }}
+                style={[
+                  styles.dropdownItem,
+                  viewType === option.value && styles.dropdownItemActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.dropdownOption,
+                    viewType === option.value && styles.dropdownOptionActive,
+                  ]}
+                >
+                  {option.label}
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
         </TouchableOpacity>
       </Modal>
+
+
+      {/* Time Filter Dropdown */}
+
+      <Modal transparent visible={timeDropdownVisible} animationType="fade">
+        <TouchableOpacity style={styles.modalBackdrop} onPress={() => setTimeDropdownVisible(false)}>
+          <View style={styles.modalDropdown}>
+            {['ALL TIME', 'THIS MONTH', 'THIS YEAR', 'THIS WEEK'].map((range) => (
+              <TouchableOpacity
+                key={range}
+                onPress={() => {
+                  setTimeFilter(range as any);
+                  setTimeDropdownVisible(false);
+                }}
+                style={[
+                  styles.dropdownItem,
+                  timeFilter === range && styles.dropdownItemActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.dropdownOption,
+                    timeFilter === range && styles.dropdownOptionActive,
+                  ]}
+                >
+                  {range}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+   
     </LinearGradient>
+    
   );
+  
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingTop: 50 },
+  dropdownBox: {
+  backgroundColor: '#1A3620',
+  borderRadius: 12,
+  marginHorizontal: 16,
+  paddingHorizontal: 14,
+  paddingVertical: 20,
+  marginBottom: 12,
+  marginTop: 20,
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+},
+
+dropdownLeft: {
+  flex: 1,
+},
+
+  dropdownItem: {
+  paddingVertical: 10,
+  paddingHorizontal: 12,
+  borderRadius: 6,
+  
+},
+
+dropdownItemActive: {
+  backgroundColor: '#E0FFE0',
+},
+
+dropdownOptionActive: {
+  fontWeight: 'bold',
+  color: '#023F0F',
+},
+
+  itemNameWrapper: {
+  flex: 1,
+  paddingRight: 10,
+},
+
+itemPointsWrapper: {
+  minWidth: 80,
+  alignItems: 'flex-end',
+},
+  
+  dropdownTitle: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: 14,
+    textTransform: 'uppercase',
+  },
+  
+  dropdownSubtitle: {
+    color: '#CCCCCC',
+    fontSize: 10,
+    
+  },
+  
+
+  
+  sectionWrapper: {
+    backgroundColor: '#1A3620',
+    marginHorizontal: 16,
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 14,
+    marginBottom: 12,
+  },
+  
+  
+  container: { flex: 1,},
+
+  headerBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+
+    backgroundColor: '#1A3620',
+    position: 'relative',
+    paddingVertical: 18,
+    paddingHorizontal: 10,
+
+  },
+  headerTitle: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'regular',
+    textTransform: 'uppercase',
+  },
   searchBar: {
     backgroundColor: '#1A3620',
     flexDirection: 'row',
@@ -142,11 +283,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   headerLeft: {},
-  headerTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: 'white',
-  },
+
   headerSubtitle: {
     color: '#ccc',
     fontSize: 11,
@@ -160,8 +297,8 @@ const styles = StyleSheet.create({
   tab: {
     backgroundColor: '#1A3620',
     paddingVertical: 6,
-    paddingHorizontal: 16,
-    borderRadius: 20,
+    paddingHorizontal: 20,
+    borderRadius: 5,
     marginRight: 10,
   },
   tabText: {
@@ -182,7 +319,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1A3620',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 20,
+    borderRadius: 5,
     marginLeft: 'auto',
   },
   dropdownText: {
@@ -191,16 +328,26 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   itemRow: {
-    backgroundColor: '#1A3620',
-    padding: 14,
-    borderRadius: 10,
-    marginBottom: 8,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
+  backgroundColor: '#1A3620',
+  paddingVertical: 14,
+  paddingHorizontal: 16,
+  borderRadius: 10,
+  marginBottom: 8,
+  flexDirection: 'row',
+  alignItems: 'center',
+},
+
   topPurok: {
-    backgroundColor: '#A0C84B',
-  },
+  backgroundColor: '#D4FF6D', // bright highlight color
+  borderWidth: 1.5,
+  borderColor: '#D4FF6D',
+  shadowColor: '#D4FF6D',
+  shadowOffset: { width: 0, height: 0 },
+  shadowOpacity: 0.8,
+  shadowRadius: 10,
+  elevation: 8,
+},
+
   regularPurok: {
     backgroundColor: '#1A3620',
   },
@@ -215,8 +362,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   topText: {
-    color: '#1A3620',
+  color: '#023F0F',
+  fontWeight: 'bold',
+  fontSize:16,
   },
+   
+  topscore:{
+    color: '#023F0F',
+    fontWeight: 'bold',
+    fontSize:18,
+  
+  }
+,
   modalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',
@@ -225,15 +382,16 @@ const styles = StyleSheet.create({
   },
   modalDropdown: {
     backgroundColor: '#fff',
-    borderRadius: 10,
+    borderRadius:10,
     paddingVertical: 10,
     paddingHorizontal: 20,
-    minWidth: 200,
+    minWidth: 325,
     elevation: 5,
   },
   dropdownOption: {
     fontSize: 14,
     paddingVertical: 8,
     color: '#023F0F',
+    
   },
 });
