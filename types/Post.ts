@@ -2,10 +2,12 @@ export interface Post {
     id: string;
     user_id: string;
     description: string;
+    price: number;
     kilograms: number;
     category_id: number;
     collection_mode_id: number;
     status: string;
+    location?: string;
     created_at: string;
     photos?: string[];
     user?: {

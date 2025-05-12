@@ -18,6 +18,7 @@ import { Offer } from '../../services/offersService';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { notificationService } from '@/services/notificationService';
 import { messagesService } from '@/services/messagesService';
+import Constants from 'expo-constants';
 
 
 type ViewPostRouteProp = RouteProp<RootStackParamList, 'ViewPost'>;
@@ -39,6 +40,7 @@ const ViewPost = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ id: string } | null>(null);
+  const [address, setAddress] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('post');
   const [offers, setOffers] = useState<Offer[]>([]);
   
@@ -72,7 +74,7 @@ const ViewPost = () => {
   const fetchPostAndOffers = async () => {
     try {
       setLoading(true);
-      const postId = post?.id || route.params?.post?.id;
+      const postId = post?.id || route.params?.postId || route.params?.post?.id;
       if (!postId) {
         console.error("❌ No valid post ID!");
         return;
@@ -129,6 +131,29 @@ const ViewPost = () => {
 
   console.log('coords: ', coords);
 
+  const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.GOOGLE_MAPS_API_KEY || '';
+
+  const reverseGeocode = async (latitude: number, longitude: number) => {
+    console.log('📍 Trying to reverse geocode (Google) lat:', latitude, 'lng:', longitude);
+    console.log("🌍 Sending coords to Google:", latitude, longitude);
+    console.log("Current Google Maps API Key:", GOOGLE_MAPS_API_KEY);
+
+    try {
+      const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${GOOGLE_MAPS_API_KEY}`);
+      const data = await response.json();
+      // console.log('🏠 Google Maps Geocode Response:', data);
+      if (data.status === 'OK' && data.results.length > 0) {
+        return data.results[0].formatted_address;
+      } else {
+        console.warn('⚠️ No address found in Google Maps.');  
+        return null;
+      }
+    } catch (error) {
+      console.error('❌ Error reverse geocoding with Google Maps:', error);
+      return null;
+    }
+  };
+  
   const fetchComments = async (postId: string) => {
     try {
       console.log('🔄 Fetching comments for post ID:', postId);
@@ -332,9 +357,28 @@ const ViewPost = () => {
         setPost(null);  // Clean up when unfocused
         setOffers([]);  // Clear previous offers
       };
-    }, [route.params?.post])
+    }, [route.params?.post, route.params?.postId])
   );
 
+  useEffect(() => {
+    const getAddress = async () => {
+      if (coords) {
+        console.log('🛰 Fetching readable address for coords:', coords);
+        const addressResult = await reverseGeocode(coords.latitude, coords.longitude);
+        if (addressResult) {
+          console.log('✅ Address received:', addressResult);
+          setAddress(addressResult);
+        } else {
+          console.warn('⚠️ No address found from coords.');
+        }
+      } else {
+        console.warn('⚠️ No coordinates available to reverse geocode.');
+      }
+    };
+    getAddress();
+  }, [coords]);
+  
+  
   // Fetch comments only when a new post is received
   useEffect(() => {
     if (route.params?.post?.id) {
@@ -510,7 +554,7 @@ const ViewPost = () => {
         {/* meetup locs */}
         {coords && (
           <Text style={styles.userAddress}>
-            📍 Location: {coords.latitude.toFixed(5)}, {coords.longitude.toFixed(5)}
+            📍 {address || `${coords.latitude.toFixed(5)}, ${coords.longitude.toFixed(5)}`}
           </Text>
         )}
 

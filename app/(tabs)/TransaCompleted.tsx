@@ -1,13 +1,21 @@
 // PointsEarnedScreen.tsx
 import React, { useEffect, useRef } from 'react';
-import { View, Text, Image, StyleSheet, Animated, Dimensions } from 'react-native';
-import { useRoute } from '@react-navigation/native';
+import { View, Text, Image, StyleSheet, Animated, Dimensions, TouchableOpacity } from 'react-native';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList
 
+ } from '@/types/navigation';
 const screenHeight = Dimensions.get('window').height;
 
+type NavigationProp = StackNavigationProp<RootStackParamList, 'TransaCompleted'>;
+
 export default function TransaCompleted() {
+  const navigation = useNavigation<NavigationProp>();
   const route = useRoute();
-  const { weight, points } = route.params as { weight: number; points: number };
+  const { weight, points, offerId } = route.params as { weight: number; points: number; offerId: string };
+
+
 
   const pulse = useRef(new Animated.Value(1)).current;
   const slideUp = useRef(new Animated.Value(screenHeight)).current;
@@ -42,7 +50,22 @@ export default function TransaCompleted() {
         You have earned {points} points for the {weight} kilograms you offered.
       </Text>
       <Text style={styles.messageText}>Thank you for recycling with Poly.te! 🌱</Text>
+
+      <TouchableOpacity
+        style ={{
+          backgroundColor: '#00D964',
+          paddingVertical: 12,
+          paddingHorizontal: 28,
+          borderRadius: 24,
+          marginTop: 20,
+        }}
+        onPress={() => navigation.navigate('Ratings', { offerId })}
+        >
+        <Text style={{ color: '#023F0F', fontWeight: 'bold' }}>LEAVE A REVIEW</Text>
+      </TouchableOpacity>
     </Animated.View>
+
+
   );
 }
 

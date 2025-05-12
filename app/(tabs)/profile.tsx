@@ -91,7 +91,10 @@ export default function ProfileScreen() {
     if (error) {
       console.error("❌ Logout Failed:", error.message);
     } else {
-      navigation.replace('Login');
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
     }
   };
 

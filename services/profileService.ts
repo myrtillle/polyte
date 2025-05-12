@@ -19,7 +19,13 @@ export const profileService = {
 
     const { data: userDetails, error: userError } = await supabase
       .from('personal_users')
-      .select('id, first_name, last_name, purok, barangay, created_at')
+      .select(`
+        id, 
+        first_name, 
+        last_name, 
+        purok, 
+        barangays (name), 
+        created_at`)
       .eq('id', userId)
       .single();
     if (userError) throw new Error(userError.message);
@@ -34,6 +40,7 @@ export const profileService = {
 
     return {
       ...userDetails,
+      barangay: userDetails.barangays?.[0]?.name ?? '',
       totalPoints,
     };
   },
@@ -68,7 +75,7 @@ export const profileService = {
             first_name,
             last_name,
             purok,
-            barangay
+            barangays ( name )
         )
         `)
         .eq('user_id', userId)
@@ -79,8 +86,15 @@ export const profileService = {
     const formattedPosts = data.map(post => ({
         ...post,
         user: post.personal_users
-            ? { email: post.personal_users.email, name: `${post.personal_users.first_name} ${post.personal_users.last_name}` }
-            : null
+          ? {
+              email: post.personal_users.email,
+              name: `${post.personal_users.first_name ?? ''} ${post.personal_users.last_name ?? ''}`,
+              barangay: post.personal_users.barangays?.[0]?.name ?? '',
+              purok: post.personal_users.purok ?? '',
+              first_name: post.personal_users.first_name ?? '',
+              last_name: post.personal_users.last_name ?? '',
+            }
+          : undefined,
     }));
 
     return formattedPosts;

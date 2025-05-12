@@ -18,6 +18,7 @@ import Review from '@/app/(tabs)/Review';
 import Notifications from '@/app/(tabs)/Notifications';
 import EditPost from '@/app/(tabs)/EditPost'
 import TransaCompleted from '@/app/(tabs)/TransaCompleted';
+import Ratings from '@/app/(tabs)/Ratings';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -95,6 +96,10 @@ export function AppNavigator() {
        <Stack.Screen
         name="TransaCompleted"
         component={TransaCompleted}
+      />
+       <Stack.Screen
+        name="Ratings"
+        component={Ratings}
       />
     </Stack.Navigator>
   );

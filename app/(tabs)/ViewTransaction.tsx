@@ -602,22 +602,33 @@ export default function ViewTransaction() {
 
         {/* Offerer Button */}
         {((isSellingPost && isOfferer) || (!isSellingPost && isPostOwner)) && ['for_completion', 'completed'].includes(transaction?.status) && (
-          <TouchableOpacity
-            style={[
-              styles.confirmButton,
-              transaction?.status === 'completed' && { backgroundColor: '#888' }
-            ]}
-            disabled={transaction?.status === 'completed'}
-            onPress={() => {
-              if (transaction?.status === 'for_completion') {
-                setConfirmVisible(true);
-              }
-            }}
-          >
-            <Text style={styles.confirmText}>
-              {transaction?.status === 'completed' ? 'TRANSACTION COMPLETED' : 'COMPLETE TRANSACTION'}
-            </Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'center' }}>
+            <TouchableOpacity
+              style={[
+                styles.confirmButton,
+                transaction?.status === 'completed' && { backgroundColor: '#888' }
+              ]}
+              disabled={transaction?.status === 'completed'}
+              onPress={() => {
+                if (transaction?.status === 'for_completion') {
+                  setConfirmVisible(true);
+                }
+              }}
+            >
+              <Text style={styles.confirmText}>
+                {transaction?.status === 'completed' ? 'TRANSACTION COMPLETED' : 'COMPLETE TRANSACTION'}
+              </Text>
+            </TouchableOpacity>
+
+            {transaction?.status === 'completed' && (
+              <TouchableOpacity
+                style={[styles.confirmButton, { backgroundColor: '#FFD700' }]}
+                onPress={() => navigation.navigate('Ratings', { offerId })}
+              >
+                <Text style={[styles.confirmText, { color: '#023F0F' }]}>RATE</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         )}
   
         {/* Complete Transaction Button */}

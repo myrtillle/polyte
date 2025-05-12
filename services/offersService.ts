@@ -2,6 +2,8 @@ import { supabase } from './supabase';
 import { postsService } from './postsService';
 import * as FileSystem from 'expo-file-system';
 import { Platform } from 'react-native';
+import 'react-native-get-random-values';
+import { v4 as uuidv4 } from 'uuid';
 
 
 export interface Offer {
@@ -129,7 +131,7 @@ export const offersService = {
   async uploadImage(fileUri: string, bucketName: string = 'offers') {
     try {
       const fileType = fileUri.split('.').pop();
-      const fileName = `image_${Date.now()}.${fileType}`;
+      const fileName = `image_${uuidv4()}.${fileType}`;
 
       console.log("📷 filename:", fileName);
 
@@ -192,7 +194,7 @@ export const offersService = {
   
         // Fetch related user data (collector and offerer)
         const postDetails = await postsService.getPostById(data.post_id);
-        const collectorName = postDetails.user?.name ?? 'Unknown';
+        const collectorName = `${postDetails.users?.raw_user_meta_data?.first_name ?? ''} ${postDetails.users?.raw_user_meta_data?.last_name ?? ''}`.trim() || 'Unknown'
         const photoUrl = postDetails.photos?.[0] ?? '';
   
         return {
@@ -201,10 +203,10 @@ export const offersService = {
             scheduled_time: data.scheduled_time,
             scheduled_date: data.scheduled_date,
             collectorName,
-            offererName: postDetails.user?.name ?? 'Unknown',
+            offererName: `${postDetails.users?.raw_user_meta_data?.first_name ?? ''} ${postDetails.users?.raw_user_meta_data?.last_name ?? ''}`.trim() || 'Unknown',
             photoUrl,
-            purok: postDetails.user?.purok ?? 'Unknown',
-            barangay: postDetails.user?.barangay ?? 'Unknown',
+            purok: postDetails.users?.puroks?.name ?? 'Unknown',
+            barangay: postDetails.users?.barangays?.name ?? 'Unknown',
             user_id: data.user_id,
         };
     } catch (error) {

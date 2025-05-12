@@ -4,8 +4,8 @@ import HomeScreen from '@/app/(tabs)/home';
 import PostScreen from '../app/(tabs)/post';
 import ProfileScreen from '../app/(tabs)/profile';
 import MessagesScreen from '@/app/(tabs)/messages';
-import { BottomTabParamList } from '../types/navigation';
 import LeaderboardScreen from '@/app/(tabs)/leaderboard';
+import { BottomTabParamList } from '../types/navigation';
 
 const Tab = createBottomTabNavigator<BottomTabParamList>();
 

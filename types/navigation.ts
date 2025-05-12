@@ -30,6 +30,7 @@ export type RootStackParamList = {
   Review: undefined;
   Notifications: undefined;
   TransaCompleted: { weight: number; points: number };
+  Ratings: { offerId: string };
 };
 
 export type BottomTabParamList = {

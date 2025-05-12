@@ -1,17 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Dimensions, Alert, Platform } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Dimensions, Alert, Platform, KeyboardAvoidingView } from 'react-native';
 import { TextInput, Button, Title, Text, IconButton, SegmentedButtons, Chip } from 'react-native-paper';
 import { router } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { postsService, CreatePostData } from '../../services/postsService';
 import * as ImagePicker from 'expo-image-picker';
-import MapView, { Marker, PROVIDER_GOOGLE, Region, MapViewProps  } from 'react-native-maps';
-// import { WebView } from 'react-native-webview';
+import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { supabase } from '../../services/supabase';
 import { BackHandler } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Image } from 'react-native';
+import { Animated } from 'react-native';
+import Constants from 'expo-constants';
 import { rgbaColor } from 'react-native-reanimated/lib/typescript/Colors';
 
 type IconName = 'account-multiple' | 'map-marker' | 'home' | 'image-plus';
@@ -72,23 +73,14 @@ export default function PostScreen() {
     latitudeDelta: 0.01,
     longitudeDelta: 0.01,
   };
-    
+
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [itemTypes, setItemTypes] = useState<ItemType[]>([]);
   const [collectionModes, setCollectionModes] = useState<CollectionMode[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-
-  //location
-  const [region, setRegion] = useState<Region>(DAVAO_COORDS);
-  const [marker, setMarker] = useState({ latitude: DAVAO_COORDS.latitude, longitude: DAVAO_COORDS.longitude });
-  const [address, setAddress] = useState('');
-  const mapRef = useRef<MapView>(null);
-  // const [loading, setLoading] = useState(true);
-
-  // Separate state for UI-only data
-  const [selectedMode, setSelectedMode] = useState('');
+  const [step, setStep] = useState<1 | 2>(1);
 
   // Form data matching db schema
   const [formData, setFormData] = useState<FormData>({
@@ -107,6 +99,118 @@ export default function PostScreen() {
     price: '',
   });
 
+  const [mapReady, setMapReady] = useState(false);
+  const [region, setRegion] = useState<Region>(DAVAO_COORDS);
+  const [marker, setMarker] = useState({
+    latitude: DAVAO_COORDS.latitude,
+    longitude: DAVAO_COORDS.longitude
+  });
+  const mapRef = useRef<MapView>(null);
+
+  const [address, setAddress] = useState('');
+
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
+  // Add this function to get address from coordinates
+  const getAddressFromCoordinates = async (latitude: number, longitude: number) => {
+    try {
+      const response = await Location.reverseGeocodeAsync({
+        latitude,
+        longitude
+      });
+
+      if (response && response[0]) {
+        const addressParts = [
+          response[0].street,
+          response[0].district,
+          response[0].city,
+          response[0].region,
+          response[0].postalCode
+        ].filter(Boolean); // Remove null/undefined values
+
+        const formattedAddress = addressParts.join(', ');
+        setAddress(formattedAddress);
+        setFormData(prev => ({
+          ...prev,
+          location: {
+            ...prev.location,
+            address: formattedAddress
+          }
+        }));
+      }
+    } catch (error) {
+      console.error('Error getting address:', error);
+      setAddress('Address not found');
+    }
+  };
+
+  // Update getCurrentLocation function
+  const getCurrentLocation = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Please allow location access to use this feature.');
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+
+      const newRegion = {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      };
+
+      setRegion(newRegion);
+      setMarker({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+      setFormData(prev => ({
+        ...prev,
+        location: {
+          ...prev.location,
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        }
+      }));
+
+      // Get address for current location
+      await getAddressFromCoordinates(location.coords.latitude, location.coords.longitude);
+
+      // Animate to the new region
+      mapRef.current?.animateToRegion(newRegion, 1000);
+    } catch (error) {
+      console.error('Error getting location:', error);
+      Alert.alert('Error', 'Could not get your current location. Using default location instead.');
+    }
+  };
+
+  // Update the useEffect for map initialization
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      const timer = setTimeout(() => {
+        setMapReady(true);
+        getCurrentLocation(); // Get location when map is ready
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else {
+      setMapReady(true);
+      getCurrentLocation(); // Get location when map is ready
+    }
+  }, []);
+
+  const safeLatitude = isNaN(formData.location.latitude) ? 7.1907 : formData.location.latitude;
+  const safeLongitude = isNaN(formData.location.longitude) ? 125.4553 : formData.location.longitude;
+  // const [loading, setLoading] = useState(true);
+
+  // Separate state for UI-only data
+  const [selectedMode, setSelectedMode] = useState('');
+
+
   const pickImages = async () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -114,23 +218,26 @@ export default function PostScreen() {
         Alert.alert('Permission Denied', 'Sorry, we need camera roll permissions to make this work!');
         return;
       }
-  
+
+      // Check current number of photos
+      if (formData.photos.length >= 5) {
+        Alert.alert('Maximum Photos Reached', 'You can only upload up to 5 photos.');
+        return;
+      }
+
       setUploading(true);
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsMultipleSelection: true,
         quality: 1,
+        selectionLimit: 5 - formData.photos.length, // Limit remaining selections
       });
-  
+
       if (!result.canceled) {
         const assets = result.assets || [];
-  
-        const uploadedImages = await Promise.all(
+        const newPhotos = await Promise.all(
           assets.map(async (asset) => {
             try {
-              console.log("Picked asset (Android):", asset);
-  
-              // Use the uploadImage function from postsService
               const url = await postsService.uploadImage(asset.uri);
               if (!url) {
                 throw new Error("Image upload returned null or undefined");
@@ -148,10 +255,10 @@ export default function PostScreen() {
             }
           })
         );
-  
+
         setFormData((prev) => ({
           ...prev,
-          photos: uploadedImages.filter((url) => url !== null),
+          photos: [...prev.photos, ...newPhotos.filter((url) => url !== null)].slice(0, 5),
         }));
       }
     } catch (error) {
@@ -167,6 +274,7 @@ export default function PostScreen() {
     }
   };
   
+  // console.log("navigated to post");
   // Get current user session
   useEffect(() => {
     const getSession = async () => {
@@ -176,6 +284,58 @@ export default function PostScreen() {
     getSession();
   }, []);
 
+  const resetForm = () => {
+    setFormData({
+      category_id: null,
+      item_type_ids: [],
+      description: '',
+      kilograms: '',
+      collection_mode_id: null,
+      status: 'active',
+      photos: [],
+      location: {
+        latitude: DAVAO_COORDS.latitude,
+        longitude: DAVAO_COORDS.longitude,
+        address: '',
+      },
+      price: '',
+    });
+    setMarker({
+      latitude: DAVAO_COORDS.latitude,
+      longitude: DAVAO_COORDS.longitude,
+    });
+    setStep(1);
+  };
+  
+  // Add cleanup effect
+  useEffect(() => {
+    return () => {
+      // Reset all form data when component unmounts
+      setFormData({
+        category_id: null,
+        item_type_ids: [],
+        description: '',
+        kilograms: '',
+        collection_mode_id: null,
+        status: 'active',
+        photos: [],
+        location: {
+          latitude: 7.1907,
+          longitude: 125.4553,
+          address: '',
+        },
+        price: '',
+      });
+      setStep(1);
+      setMarker({
+        latitude: DAVAO_COORDS.latitude,
+        longitude: DAVAO_COORDS.longitude,
+      });
+      setAddress('');
+    };
+  }, []);
+
+  // Modify the back handler to use router.replace instead of back
   useEffect(() => {
     const onBackPress = () => {
       Alert.alert(
@@ -183,14 +343,20 @@ export default function PostScreen() {
         "Your changes may not be saved.",
         [
           { text: "Cancel", style: "cancel" },
-          { text: "Yes", onPress: () => router.back() }
+          { 
+            text: "Yes", 
+            onPress: () => {
+              resetForm();
+              router.replace('/(tabs)/home');
+            }
+          }
         ]
       );
-      return true; // prevent default back
+      return true;
     };
   
     const backHandler = BackHandler.addEventListener("hardwareBackPress", onBackPress);
-    return () => backHandler.remove(); // cleanup
+    return () => backHandler.remove();
   }, []);
   
   // Load all necessary data
@@ -212,58 +378,53 @@ export default function PostScreen() {
     loadData();
   }, []);
 
-
-  const formatLocationToWKT = (lat: number, lon: number): string => {
-    return `POINT(${lon} ${lat})`;
-  };
+  useEffect(() => {
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        console.log('Permission to access location was denied');
+      } else {
+        console.log('✅ Location permission granted');
+      }
+    })();
+  }, []);
 
   const handleSubmit = async () => {
-    if (!userId || !formData.category_id || !formData.collection_mode_id) {
-      console.error('Missing required fields');
+    if (!userId) {
+      Alert.alert('Error', 'User not found. Please try again.');
       return;
     }
-  
+
     try {
       setLoading(true);
-      
-      const { latitude, longitude } = formData.location;
-      // Format location for database submission
-      const formattedLocation = formatLocationToWKT(latitude, longitude);
-  
+      setValidationErrors([]);
+
+      const longitude = formData.location?.longitude;
+      const latitude = formData.location?.latitude;
+
       const postData: CreatePostData = {
         ...formData,
         kilograms: parseFloat(formData.kilograms),
         user_id: userId,
-        category_id: formData.category_id,
-        collection_mode_id: formData.collection_mode_id,
+        category_id: formData.category_id!,
+        collection_mode_id: formData.collection_mode_id!,
         status: 'active',
         photos: Array.isArray(formData.photos) ? formData.photos : [formData.photos],
-        location: formattedLocation, 
+        location: longitude && latitude ? `POINT(${longitude} ${latitude})` : '',
         price: formData.price ? parseFloat(formData.price) : 0,
       };
-  
-      console.log("Submitting post data:", JSON.stringify(postData, null, 2));
-  
+
+      // Validate post data
+      const validation = postsService.validatePostData(postData);
+      if (!validation.isValid) {
+        setValidationErrors(validation.errors);
+        Alert.alert('Validation Error', validation.errors.join('\n'));
+        return;
+      }
+
       await postsService.createPost(postData);
       router.back();
-  
-      // Reset form after submission
-      setFormData({
-        category_id: null,
-        item_type_ids: [],
-        description: '',
-        kilograms: '',
-        collection_mode_id: null,
-        status: 'active',
-        photos: [],
-        location: {
-          latitude: 0,
-          longitude: 0,
-          address: '',
-        },
-      });
-      setAddress('');
-      setMarker({ latitude: 0, longitude: 0 });
+      resetForm();
       Alert.alert("Success", "Post created successfully!");
     } catch (error) {
       console.error('Error creating post:', error);
@@ -283,354 +444,390 @@ export default function PostScreen() {
     }));
   };
 
-  const fetchAddress = async (lat: number, lon: number) => {
-    try {
-      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`, {
-        headers: {
-          'User-Agent': 'Polyte/1.0',
-          'Accept-Language': 'en',
-        },
-      });
-      if (!response.ok) throw new Error('Failed to fetch address');
-      const data = await response.json();
-      setAddress(data.display_name);
-    } catch (err) {
-      console.error('Reverse geocoding failed:', err);
+  // Add function to remove a photo
+  const removePhoto = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      photos: prev.photos.filter((_, i) => i !== index)
+    }));
+  };
+
+  if (region) {
+    console.log('✅ Rendering MapView with region:', region);
+    console.log('🧷 Marker is at:', marker);
+  } else {
+    console.log('❌ Region is null or undefined at render');
+  }
+  
+  const validateStep1 = (): { isValid: boolean; errors: string[] } => {
+    const errors: string[] = [];
+
+    if (!formData.category_id) {
+      errors.push('Please select a category');
     }
-  };
-  
-  const onDragEnd = (e: { nativeEvent: { coordinate: { latitude: number, longitude: number } } }) => {
-    const { latitude, longitude } = e.nativeEvent.coordinate;
-    console.log("Dragged to:", latitude, longitude);
-    
-    // Update both location and form data states
-    setMarker({ latitude, longitude });
-    // setFormData((prev) => ({
-    //   ...prev,
-    //   location: { latitude, longitude, address: '' },
-    // }));
-    
-    // Fetch the address after updating the location
-    fetchAddress(latitude, longitude);
-  };
-  
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') return;
-  
-        const { coords } = await Location.getCurrentPositionAsync({});
-        setMarker({ latitude: coords.latitude, longitude: coords.longitude });
-  
-        // animate to user's location
-        mapRef.current?.animateToRegion({
-          latitude: coords.latitude,
-          longitude: coords.longitude,
-          latitudeDelta: 0.01,
-          longitudeDelta: 0.01,
-        }, 1000);
-  
-        fetchAddress(coords.latitude, coords.longitude);  
-      } catch (err) {
-        console.warn('Location fallback to Davao');
-      }
-    })();
-  }, []);
-  
+    if (!formData.item_type_ids || formData.item_type_ids.length < 2) {
+      errors.push('Please select at least 2 types of plastics');
+    }
 
-  
+    if (!formData.kilograms || parseFloat(formData.kilograms) <= 0) {
+      errors.push('Please enter a valid weight in kilograms');
+    }
+
+    if (!formData.collection_mode_id) {
+      errors.push('Please select a collection mode');
+    }
+
+    if (!formData.photos || formData.photos.length === 0) {
+      errors.push('Please add at least one photo');
+    }
+
+    // Price validation for selling category
+    if (formData.category_id === 2 && (!formData.price || parseFloat(formData.price) <= 0)) {
+      errors.push('Please enter a valid price');
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  };
+
+  const handleNext = () => {
+    const validation = validateStep1();
+    if (!validation.isValid) {
+      Alert.alert('Required Fields', validation.errors.join('\n'));
+      return;
+    }
+    setStep(2);
+  };
+
+  // Modify the header back button handler
+  const handleBackPress = () => {
+    Alert.alert(
+      "Are you sure?",
+      "Your changes may not be saved.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Yes", 
+          onPress: () => {
+            resetForm();
+            router.replace('/(tabs)');
+          }
+        }
+      ]
+    );
+  };
 
   return (
+    
     <View style={{ flex: 1, backgroundColor: '#023F0F' }}>
-
       {/* Sticky Header */}
       <View style={styles.headerContainer}>
         <IconButton
           icon="arrow-left"
           size={24}
           iconColor="white"
-          onPress={() =>
-            Alert.alert(
-              "Are you sure?",
-              "Your changes may not be saved.",
-              [
-                { text: "Cancel", style: "cancel" },
-                { text: "Yes", onPress: () => router.back() }
-              ]
-            )
-          }          
+          onPress={handleBackPress}          
           style={styles.backIcon}
         />
         <Text style={styles.headerTitle}>Create Post</Text>
       </View>
+      
+      <View style={{ flexDirection: 'row', justifyContent: 'center', padding: 16 }}>
+        <View style={[styles.stepDot, step === 1 && styles.activeDot]} />
+        <View style={[styles.stepDot, step === 2 && styles.activeDot]} />
+      </View>
+      
+      {step === 1 && (
+        <ScrollView 
+          style={{ padding: 16, backgroundColor: '#023F0F', flex: 1 }}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          scrollEnabled={true}  
+          nestedScrollEnabled={true}
+        >
+          {/* Category Selection */}
+          <View style={styles.categoryContainer}>
+            <Text style={styles.sectionTitle}>CATEGORY</Text>
 
-      {/* Scrollable Content */}
-      <ScrollView style={{ padding: 16, backgroundColor: '#023F0F' }}>
-
-        <Text style={styles.headerTitle}>Create Post</Text>
-        
-        {/* Category Selection */}
-        <View style={styles.categoryContainer}>
-          <Text style={styles.sectionTitle}>CATEGORY</Text>
-
-          {/* SELLING Button */}
-          <TouchableOpacity onPress={() => setFormData(prev => ({ ...prev, category_id: categories[1]?.id }))}>
-            <LinearGradient
-              colors={
-                formData.category_id === categories[1]?.id
-                  ? ['#023F0F', '#00FF57']  // selected = gradient
-                  : ['#2C5735', '#2C5735']  // not selected = solid color
-              }
-              style={styles.categoryButton}
-            >
-              <Text style={styles.categoryText}>SELLING</Text>
-              <Image source={require('../../assets/images/selling.png')} style={styles.categoryImage} />
-            </LinearGradient>
-          </TouchableOpacity>
-
-          {/* SEEKING Button */}
-          <TouchableOpacity onPress={() => setFormData(prev => ({ ...prev, category_id: categories[0]?.id }))}>
-            <LinearGradient
-              colors={
-                formData.category_id === categories[0]?.id
-                  ? ['#023F0F', '#00FF57']
-                  : ['#2C5735', '#2C5735']
-              }
-              style={styles.categoryButton}
-            >
-              <Text style={styles.categoryText}>SEEKING</Text>
-              <Image source={require('../../assets/images/seeking.png')} style={styles.categoryImage} />
-            </LinearGradient>
-          </TouchableOpacity>
-
-        </View>
-
-        <Text style={styles.sectionTitle}>WASTER INFORMATION</Text>
-        {/* Item Types Section */}
-        <View style={styles.itemTypesContainer}>
-          <View style={styles.itemTypesHeader}>
-            <Text style={styles.itemTypesTitle}>TYPE OF PLASTICS</Text>
-            <Text style={styles.itemTypesInfo}>SELECT AT LEAST 2</Text>
-            <MaterialCommunityIcons name="information-outline" size={18} color="limegreen" />
-          </View>
-
-          <View style={styles.itemTypesGrid}>
-            {itemTypes.map(type => (
-              <TouchableOpacity
-                key={type.id}
-                style={[styles.itemTypeButton, formData.item_type_ids.includes(type.id) && styles.selectedItemType]}
-                onPress={() => toggleItemType(type.id)}
+            {/* SELLING Button */}
+            <TouchableOpacity onPress={() => setFormData(prev => ({ ...prev, category_id: categories[1]?.id }))}>
+              <LinearGradient
+                colors={
+                  formData.category_id === categories[1]?.id
+                    ? ['#023F0F', '#00FF57']  // selected = gradient
+                    : ['#2C5735', '#2C5735']  // not selected = solid color
+                }
+                style={styles.categoryButton}
               >
-                <Text style={styles.itemTypeText}>{type.name}</Text>
-              </TouchableOpacity>
-            ))}
+                <Text style={styles.categoryText}>SELLING</Text>
+                <Image source={require('../../assets/images/selling.png')} style={styles.categoryImage} />
+              </LinearGradient>
+            </TouchableOpacity>
+
+            {/* SEEKING Button */}
+            <TouchableOpacity onPress={() => setFormData(prev => ({ ...prev, category_id: categories[0]?.id }))}>
+              <LinearGradient
+                colors={
+                  formData.category_id === categories[0]?.id
+                    ? ['#023F0F', '#00FF57']
+                    : ['#2C5735', '#2C5735']
+                }
+                style={styles.categoryButton}
+              >
+                <Text style={styles.categoryText}>SEEKING</Text>
+                <Image source={require('../../assets/images/seeking.png')} style={styles.categoryImage} />
+              </LinearGradient>
+            </TouchableOpacity>
+
           </View>
-        </View>
 
-        {/* Description */}
-        <View style={styles.descriptionContainer}>
-          <Text style={styles.sectionTitle}>DESCRIPTION</Text>
-          <View style={styles.descriptionBox}>
-            <TextInput
-              label=""
-              value={formData.description}
-              onChangeText={text => setFormData(prev => ({ ...prev, description: text }))}
-              multiline
-              style={styles.input}
-              underlineColor="transparent"
-              textColor="#FFFFFF"
-              activeUnderlineColor="transparent"
-            />
+          <Text style={styles.sectionTitle}>WASTE INFORMATION</Text>
+          {/* Item Types Section */}
+          <View style={styles.itemTypesContainer}>
+            <View style={styles.itemTypesHeader}>
+              <Text style={styles.itemTypesTitle}>TYPE OF PLASTICS</Text>
+              <Text style={styles.itemTypesInfo}>SELECT AT LEAST 2</Text>
+              <MaterialCommunityIcons name="information-outline" size={18} color="limegreen" />
+            </View>
+
+            <View style={styles.itemTypesGrid}>
+              {itemTypes.map(type => (
+                <TouchableOpacity
+                  key={type.id}
+                  style={[styles.itemTypeButton, formData.item_type_ids.includes(type.id) && styles.selectedItemType]}
+                  onPress={() => toggleItemType(type.id)}
+                >
+                  <Text style={styles.itemTypeText}>{type.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
-        </View>
 
-        {/* Weight */}
-        <View style={styles.kilogramsContainer}>
-        <View style={styles.kilogramsLabel}>
-          <Image source={require('../../assets/images/trashbag.png')} style={styles.kilogramsIcon} />
-          <Text style={styles.kilogramsTitle}>TOTAL KILOGRAMS</Text>
-        </View>
+          {/* Description */}
+          <View style={styles.descriptionContainer}>
+            <Text style={styles.sectionTitle}>DESCRIPTION</Text>
+            <View style={styles.descriptionBox}>
+              <TextInput
+                label=""
+                value={formData.description}
+                onChangeText={text => setFormData(prev => ({ ...prev, description: text }))}
+                multiline
+                style={styles.input}
+                underlineColor="transparent"
+                textColor="#FFFFFF"
+                activeUnderlineColor="transparent"
+              />
+            </View>
+          </View>
 
-        <View style={styles.kilogramsInputWrapper}>
-          <TextInput
-            underlineColor="transparent"
-            activeUnderlineColor="transparent"
-            value={formData.kilograms}
-            onChangeText={text => setFormData(prev => ({ ...prev, kilograms: text }))}
-            keyboardType="numeric"
-          
-          style={[styles.kilogramsInput, { color: '#FFFFFF' }]}
-            textColor="#FFFFFF"
-          />
-        </View>
-
-        {formData.category_id === categories[1]?.id && ( // SELLING category
+          {/* Weight */}
           <View style={styles.kilogramsContainer}>
             <View style={styles.kilogramsLabel}>
-              {/* <Image source={} style={styles.kilogramsIcon} /> */}
-              <Text style={styles.kilogramsTitle}>PRICE</Text>
+              <Image source={require('../../assets/images/trashbag.png')} style={styles.kilogramsIcon} />
+              <Text style={styles.kilogramsTitle}>TOTAL KILOGRAMS</Text>
             </View>
 
             <View style={styles.kilogramsInputWrapper}>
               <TextInput
                 underlineColor="transparent"
                 activeUnderlineColor="transparent"
-                value={formData.price || ''}
-                onChangeText={text => setFormData(prev => ({ ...prev, price: text }))}
+                value={formData.kilograms}
+                onChangeText={text => setFormData(prev => ({ ...prev, kilograms: text }))}
                 keyboardType="numeric"
-                style={[styles.kilogramsInput, { color: '#FFFFFF' }]}
+              
+              style={[styles.kilogramsInput, { color: '#FFFFFF' }]}
                 textColor="#FFFFFF"
               />
             </View>
+
+            {formData.category_id === categories[1]?.id && ( // SELLING category
+              <View style={styles.kilogramsContainer}>
+                <View style={styles.kilogramsLabel}>
+                  {/* <Image source={} style={styles.kilogramsIcon} /> */}
+                  <Text style={styles.kilogramsTitle}>PRICE</Text>
+                </View>
+
+                <View style={styles.kilogramsInputWrapper}>
+                  <TextInput
+                    underlineColor="transparent"
+                    activeUnderlineColor="transparent"
+                    value={formData.price || ''}
+                    onChangeText={text => setFormData(prev => ({ ...prev, price: text }))}
+                    keyboardType="numeric"
+                    style={[styles.kilogramsInput, { color: '#FFFFFF' }]}
+                    textColor="#FFFFFF"
+                  />
+                </View>
+              </View>
+            )}
           </View>
-        )}
-      </View>
 
-      <View style={styles.galleryContainer}>
-        <Text style={styles.sectionTitle}>GALLERY</Text>
-        
-        <View style={styles.imageUploadWrapper}>
-          <TouchableOpacity style={styles.imageUploadBox} onPress={pickImages}>
-            <MaterialCommunityIcons 
-              name={'image-plus' as IconName} 
-              size={50} 
-              color="#aaa" 
-            />
-            <Text style={styles.uploadText}>ADD IMAGE OF YOUR WASTE</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.imageContainer}>
-          {formData.photos?.map((uri: string, index: number) => (
-            <Image key={index} source={{ uri }} style={styles.uploadedImage} />
-          ))}
-          {uploading && <ActivityIndicator size="large" color="#00FF57" />}
-        </View>
-      </View>
-
-      <View style={styles.mapContainer}>
-        {loading ? (
-          <ActivityIndicator size="large" color="#00FF57" />
-        ) : (
-          <>
-            <MapView
-              ref={ mapRef }
-              provider={PROVIDER_GOOGLE}
-              style={styles.map}
-              initialRegion={DAVAO_COORDS}
-              onPress={(e) => {
-                const { latitude, longitude } = e.nativeEvent.coordinate;
-                console.log('Tapped:', latitude, longitude);
-                setMarker({ latitude, longitude });
+          <View style={styles.galleryContainer}>
+            <Text style={styles.sectionTitle}>GALLERY</Text>
+            <Text style={styles.photoLimitText}>{formData.photos.length}/5 photos</Text>
             
-                // ✅ Update formData.location too
-                setFormData(prev => ({
-                  ...prev,
-                  location: {
-                    latitude,
-                    longitude,
-                    address: '', // you can fill it later after fetchAddress if you want
+            <View style={styles.imageUploadWrapper}>
+              {formData.photos.length < 5 && (
+                <TouchableOpacity style={styles.imageUploadBox} onPress={pickImages}>
+                  <MaterialCommunityIcons 
+                    name={'image-plus' as IconName} 
+                    size={50} 
+                    color="#aaa" 
+                  />
+                  <Text style={styles.uploadText}>ADD IMAGE OF YOUR WASTE</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <View style={styles.imageContainer}>
+              {formData.photos?.map((uri: string, index: number) => (
+                <View key={index} style={styles.imageWrapper}>
+                  <Image source={{ uri }} style={styles.uploadedImage} />
+                  <TouchableOpacity 
+                    style={styles.removeImageButton}
+                    onPress={() => removePhoto(index)}
+                  >
+                    <MaterialCommunityIcons name="close-circle" size={24} color="#FF4444" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+              {uploading && <ActivityIndicator size="large" color="#00FF57" />}
+            </View>
+          </View>
+
+          {/* Collection Mode */}
+          <View>
+            <View style={{ marginTop: 20 }}>
+              <Text style={styles.sectionTitle}>MODE OF COLLECTION:</Text>
+
+              {collectionModes.map((mode) => {
+              const modeName = mode.name.toLowerCase();
+
+              let iconSource;
+              if (modeName.includes('pickup')) {
+                iconSource = require('../../assets/images/NEW/CAR.png');
+              } else if (modeName.includes('drop')) {
+                iconSource = require('../../assets/images/NEW/ORANGE.png');
+              } else if (modeName.includes('meet')) {
+                iconSource = require('../../assets/images/NEW/HOUSE.png');
+              } else {
+                iconSource = require('../../assets/images/NEW/HOUSE.png'); // fallback
+              }
+
+              return (
+                <TouchableOpacity
+                  key={mode.id}
+                  style={[
+                    styles.collectionCard,
+                    formData.collection_mode_id === mode.id && styles.collectionCardSelected,
+                  ]}
+                  onPress={() =>
+                    setFormData((prev) => ({ ...prev, collection_mode_id: mode.id }))
                   }
-                }));
-            
-                fetchAddress(latitude, longitude);
-              }}
-            >
-              <Marker
-                coordinate={marker}
-                draggable
-                onDragEnd={(e) => {
+                >
+                  <Image source={iconSource} style={styles.collectionIcon} />
+                  <Text
+                    style={[
+                      styles.collectionText,
+                      formData.collection_mode_id === mode.id && styles.collectionTextSelected,
+                    ]}
+                  >
+                    {mode.name.toUpperCase()}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+
+            </View>
+          </View>
+          <Button 
+            onPress={handleNext} 
+            style={[
+              styles.button,
+              !validateStep1().isValid && styles.buttonDisabled
+            ]}
+            disabled={!validateStep1().isValid}
+          >
+            Next
+          </Button>
+        </ScrollView>
+      )}
+
+      {step === 2 && (
+        <View style={{ flex: 1, backgroundColor: '#023F0F' }}>
+          <Text style={{ color: 'white', textAlign: 'center', fontSize: 16, marginVertical: 12 }}>
+            Tap to drop a pin on the map
+          </Text>
+
+          <View style={styles.mapContainer}>
+            {mapReady ? (
+              <MapView
+                ref={mapRef}
+                provider={PROVIDER_GOOGLE}
+                style={styles.map}
+                initialRegion={region}
+                onRegionChangeComplete={setRegion}
+                onPress={async (e) => {
                   const { latitude, longitude } = e.nativeEvent.coordinate;
-                  console.log('Dragged to:', latitude, longitude);
                   setMarker({ latitude, longitude });
-              
-                  // ✅ Update formData.location too
                   setFormData(prev => ({
                     ...prev,
                     location: {
+                      ...prev.location,
                       latitude,
-                      longitude,
-                      address: '', // fill address later if needed
+                      longitude
                     }
                   }));
-              
-                  fetchAddress(latitude, longitude);
+                  // Get address for tapped location
+                  await getAddressFromCoordinates(latitude, longitude);
                 }}
-              />
-            </MapView>
-
-            <View style={styles.addressContainer}>
-              <Text style={styles.addressText}>Address: {address || 'Tap the map to set location.'}</Text>
-            </View>
-
-            <Button mode="contained" onPress={() => Alert.alert('Location Selected!')} style={styles.button} 
-            labelStyle={{ fontSize:14, color: '#132718', fontWeight: 'regular' }}>
-              
-              CONFIRM LOCATION
-            </Button>
-          </>
-        )}
-      </View>
-
-      {/* Collection Mode */}
-      <View>
-        <View style={{ marginTop: 20 }}>
-          <Text style={styles.sectionTitle}>MODE OF COLLECTION:</Text>
-
-          {collectionModes.map((mode) => {
-          const modeName = mode.name.toLowerCase();
-
-          let iconSource;
-          if (modeName.includes('pickup')) {
-            iconSource = require('../../assets/images/NEW/CAR.png');
-          } else if (modeName.includes('drop')) {
-            iconSource = require('../../assets/images/NEW/ORANGE.png');
-          } else if (modeName.includes('meet')) {
-            iconSource = require('../../assets/images/NEW/HOUSE.png');
-          } else {
-            iconSource = require('../../assets/images/NEW/HOUSE.png'); // fallback
-          }
-
-          return (
-            <TouchableOpacity
-              key={mode.id}
-              style={[
-                styles.collectionCard,
-                formData.collection_mode_id === mode.id && styles.collectionCardSelected,
-              ]}
-              onPress={() =>
-                setFormData((prev) => ({ ...prev, collection_mode_id: mode.id }))
-              }
-            >
-              <Image source={iconSource} style={styles.collectionIcon} />
-              <Text
-                style={[
-                  styles.collectionText,
-                  formData.collection_mode_id === mode.id && styles.collectionTextSelected,
-                ]}
               >
-                {mode.name.toUpperCase()}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+                <Marker
+                  coordinate={marker}
+                  draggable
+                  onDragEnd={async (e) => {
+                    const { latitude, longitude } = e.nativeEvent.coordinate;
+                    setMarker({ latitude, longitude });
+                    setFormData(prev => ({
+                      ...prev,
+                      location: {
+                        ...prev.location,
+                        latitude,
+                        longitude
+                      }
+                    }));
+                    // Get address for dragged location
+                    await getAddressFromCoordinates(latitude, longitude);
+                  }}
+                />
+              </MapView>
+            ) : (
+              <View style={[styles.map, styles.mapPlaceholder]}>
+                <ActivityIndicator size="large" color="#00FF57" />
+              </View>
+            )}
+          </View>
 
+          {/* Address Display Box */}
+          <View style={styles.addressContainer}>
+            <Text style={styles.addressLabel}>Selected Location:</Text>
+            <Text style={styles.addressText}>{address || 'Loading address...'}</Text>
+          </View>
+
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 16 }}>
+            <Button mode="outlined" onPress={() => setStep(1)}>
+              Back
+            </Button>
+            <Button mode="contained" onPress={handleSubmit} loading={loading}>
+              Submit Post
+            </Button>
+          </View>
         </View>
-      </View>
-      
-      <Button 
-        mode="contained" 
-        onPress={handleSubmit}
-        loading={loading}
-        style={styles.button}
-        labelStyle={{ fontSize:16, color: '#132718', fontWeight: 'bold' }}
-      >
-        CREATE POST
-      </Button>
-      </ScrollView>
-      
+      )}
+
     </View>
   );
 }
@@ -879,9 +1076,14 @@ const styles = StyleSheet.create({
     textAlign: 'center', // Centers text for multiline support
     flexWrap: 'wrap', // Ensures text wraps inside button
   },
-  
-
-  
+  centerPin: {
+  position: 'absolute',
+  top: '50%',
+  left: '50%',
+  marginLeft: -20, // half of pin width
+  marginTop: -40,  // full pin height
+  zIndex: 10,
+},
   container: {
     flex: 1,
     backgroundColor: '#023F0F',
@@ -896,6 +1098,16 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     fontWeight: 'bold',
   },
+  stepDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#555',
+    marginHorizontal: 6,
+  },
+  activeDot: {
+    backgroundColor: '#00FF57',
+  },  
   itemTypes: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -978,27 +1190,59 @@ const styles = StyleSheet.create({
     backgroundColor: '#1A3620',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 30,
     marginTop: 16,
-    alignItems: 'center',
-  },
-  map: {
-    width: '100%',
-    height: 250, // 🟢 Reduced from screen height
-    borderRadius: 10,
-  },
-  addressContainer: {
-    marginTop: 16,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    padding: 12,
-    width: '100%',
-  },
-  addressText: {
-    fontSize: 14,
-    color: '#333',
+    zIndex: 100,
+    height: 300,
   },
   
+  map: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 10,
+  },
+
+  mapPlaceholder: {
+    backgroundColor: '#1A3620',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addressContainer: {
+    backgroundColor: '#1A3620',
+    borderRadius: 12,
+    padding: 16,
+    margin: 16,
+    marginTop: 0,
+  },
+  addressLabel: {
+    color: '#00FF57',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  addressText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+  },
+  photoLimitText: {
+    color: '#aaa',
+    fontSize: 12,
+    marginBottom: 8,
+  },
+  imageWrapper: {
+    position: 'relative',
+    margin: 4,
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    backgroundColor: 'white',
+    borderRadius: 12,
+  },
+  buttonDisabled: {
+    backgroundColor: '#2C5735',
+    opacity: 0.7,
+  },
 }); 
