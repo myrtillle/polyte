@@ -758,22 +758,29 @@ const ViewPost = () => {
                       )}
                       
                       <View style={styles.offerActionRow}>
-                        {/* Action buttons based on owner */}
-                        {isUserOfferOwner && offer.status === 'pending' && (
-                          <>
-                            <TouchableOpacity style={styles.deleteOfferButton} onPress={() => handleDeleteOffer(offer.id)}>
-                              <Text style={styles.deleteOfferText}>DELETE</Text>
-                            </TouchableOpacity>
-                          </>
-                        )}
-
-                        {!isUserPostOwner && isUserOfferOwner && offer.status === 'accepted' && (
+                        {/* ✅ CASE: Accepted → show SEE DETAILS to both offerer and post owner */}
+                        {offer.status === 'accepted' && (isUserOfferOwner || isUserPostOwner) && (
                           <TouchableOpacity style={styles.fullGreenButton} onPress={() => handleSeeDetails(offer)}>
                             <Text style={styles.fullButtonTextinoffers}>SEE DETAILS</Text>
                           </TouchableOpacity>
                         )}
 
-                        {isUserPostOwner && !isUserOfferOwner && (
+                        {/* ✅ CASE: Declined → show DISABLED "Declined" button to both offerer and post owner */}
+                        {offer.status === 'declined' && (isUserOfferOwner || isUserPostOwner) && (
+                          <View style={[styles.fullGreenButton, { backgroundColor: '#6c757d' }]}>
+                            <Text style={[styles.fullButtonTextinoffers, { color: '#ccc' }]}>DECLINED</Text>
+                          </View>
+                        )}
+
+                        {/* ✅ CASE: Offerer sees DELETE while still pending */}
+                        {offer.status === 'pending' && isUserOfferOwner && (
+                          <TouchableOpacity style={styles.deleteOfferButton} onPress={() => handleDeleteOffer(offer.id)}>
+                            <Text style={styles.deleteOfferText}>DELETE</Text>
+                          </TouchableOpacity>
+                        )}
+
+                        {/* ✅ CASE: Post Owner sees ACCEPT/DECLINE + chat */}
+                        {offer.status === 'pending' && isUserPostOwner && (
                           <>
                             <TouchableOpacity style={styles.redButton} onPress={() => handleDeclineOffer(offer.id)}>
                               <Text style={styles.buttonText}>DECLINE</Text>

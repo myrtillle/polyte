@@ -93,6 +93,7 @@ export type ProfileStackParamList = {
   Review: undefined;
   Ratings: { offerId: string };
   TransaCompleted: { weight: number; points: number };
+  RedeemRewards: undefined;
 };
 
 export type PostStackParamList = {

@@ -12,8 +12,13 @@ import {
 import { supabase } from '@/services/supabase';
 import { rewardsService } from '@/services/rewardsService';
 import { Button } from 'react-native-paper';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { useNavigation, useRoute } from '@react-navigation/native';
+import { HomeStackParamList, MessagesStackParamList, ProfileStackParamList, RootStackParamList } from '../../types/navigation';
 
-export default function ClaimRewardsScreen() {
+const profileNavigation = useNavigation<StackNavigationProp<ProfileStackParamList>>();    
+
+export default function RedeemRewards() {
   const [rewards, setRewards] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedReward, setSelectedReward] = useState<any>(null);
@@ -58,7 +63,7 @@ export default function ClaimRewardsScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Claim Your Rewards</Text>
+      <Text style={styles.header}>Redeem Rewards</Text>
       <FlatList
         data={rewards}
         keyExtractor={(item) => item.id}
@@ -84,7 +89,12 @@ export default function ClaimRewardsScreen() {
         renderItem={({ item }) => (
           <View style={styles.historyCard}>
             <Text style={styles.historyText}>{item.reward_name}</Text>
-            <Text style={styles.historyStatus}>{item.status}</Text>
+            <Text style={{ 
+              color: item.status === 'approved' ? '#00FF66' : item.status === 'rejected' ? 'red' : '#ccc', 
+              fontSize: 12 
+            }}>
+              {item.status.toUpperCase()}
+            </Text>
           </View>
         )}
         ListEmptyComponent={<Text style={styles.emptyText}>No redemption history</Text>}

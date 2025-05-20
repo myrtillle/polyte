@@ -110,11 +110,7 @@ export default function ProfileScreen() {
   };
 
   const handleClaimReward = () => {
-    Alert.alert(
-      "Claim Reward",
-      "This feature is coming soon! Stay tuned for exciting rewards based on your Poly points.",
-      [{ text: "OK" }]
-    );
+    profileNavigation.navigate('RedeemRewards');
   };
 
   if (loading) return <ActivityIndicator color="#00D964" size="large" style={{ flex: 1 }} />;
@@ -143,17 +139,20 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.ratingRow} onPress={() => profileNavigation.navigate('Review')}>
-          <View style={styles.ratingSection}>
+        <View style={styles.ratingRow}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Text style={styles.rating}>{renderStars(profile.averageRating)}</Text>
-            <Text style={styles.ratingLabel}>USER RATING AS OF THIS MONTH</Text>
+            <TouchableOpacity onPress={() => profileNavigation.navigate('Review')}>
+              <Text style={styles.viewLink}> View</Text>
+            </TouchableOpacity>
           </View>
+          <Text style={styles.ratingLabel}>USER RATING AS OF THIS MONTH</Text>
 
           <View style={styles.polyWrapper}>
             <Text style={styles.polyCount}>{profile.totalPoints}</Text>
             <Text style={styles.polyLabel}>POLY COLLECTED</Text>
           </View>
-        </TouchableOpacity>
+        </View>
 
         <TouchableOpacity 
           style={[styles.actionButton, styles.claimRewardButton]} 
@@ -219,7 +218,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#ccc',
   },
-  
 
   ratingRow: {
     backgroundColor: '#1A3620',
@@ -243,6 +241,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     flexWrap: 'wrap',
   },
+  viewLink: {
+  fontSize: 13,
+  color: '#00FF66',
+  marginLeft: 6,
+  textDecorationLine: 'underline',
+},
   polyWrapper: {
     alignItems: 'flex-end',
   },
