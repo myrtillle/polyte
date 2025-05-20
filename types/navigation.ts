@@ -1,81 +1,71 @@
-// import { Post } from "@/app/(tabs)/home";
-import { Offer, Schedule } from '../services/offersService'
- 
-export type RootStackParamList = {
-  Login: undefined;
-  Signup: undefined;
-  Main: undefined;
-  Leaderboard: undefined;
-  ViewPost: { postId?: string; post?: Post };
-  EditPost: { post: Post };
-  MakeOffer: {post: Post };
-  EditOffer: { offer: Offer };
-  ScheduleOffer: { offer: Offer; post: Post };
-  CollectionSchedule: { offerID: string }; 
-  ChatScreen: { 
-    chatId: string; 
-    userId?: string; 
-    post?: Post; 
-    schedule?: Schedule;
-  };
-  TransacHist: undefined;
-  ViewTransaction: { offerId: string };
-  ConfirmDelivery: {
-    offerId: string;
-    offererName: string;
-    collectorName: string;
-    photoUrl: string;
-  };
-  MyPosts: undefined;
-  Review: undefined;
-  Notifications: undefined;
-  TransaCompleted: { weight: number; points: number };
-};
+import { NavigatorScreenParams } from '@react-navigation/native';
+import { Schedule } from '@/services/offersService';
+import { Post } from '@/services/postsService';
+import { Offer } from '@/services/offersService';
+// 🧱 Reusable types
+// export interface Post {
+//   id: string;
+//   user_id: string;
+//   description: string;
+//   price: number;
+//   kilograms: number;
+//   category_id: number;
+//   collection_mode_id: number;
+//   status: string;
+//   created_at: string;
+//   photos?: string[];
+//   location?: string;
+//   user?: {
+//     email: string;
+//     name: string;
+//     barangay: number;
+//     purok: string;
+//     first_name: string;
+//     last_name: string;
+//   };
+//   category?: {
+//     id: number;
+//     name: string;
+//   };
+//   collection_mode?: {
+//     id: number;
+//     name: string;
+//     icon: string;
+//   };
+//   post_item_types?: Array<{
+//     item_types: {
+//       id: number;
+//       name: string;
+//     };
+//   }>;
+// }
 
-export type BottomTabParamList = {
-  Home: undefined;
-  Leaderboard: undefined;
-  Post: undefined;
-  Messages: { userId: string }; 
-  Profile: undefined;
-};
+// export interface Schedule {
+//   id: string;
+//   offer_id: string;
+//   status: string;
+//   scheduled_date: string;
+//   scheduled_time: string;
+//   purok: string;
+//   barangay: string;
+//   photo_url?: string;
+//   offerer_name?: string;
+//   collector_name?: string;
+// }
 
-export interface Post {
-  id: string;
-  user_id: string;
-  description: string;
-  kilograms: number;
-  price: number;
-  category_id: number;
-  collection_mode_id: number;
-  status: string;
-  created_at: string;
-  photos?: string[];
-  location?: string;
-  user?: {
-    email: string;
-    name: string;
-    barangay: number;
-    purok: string;
-    first_name: string;
-    last_name: string;
-  };
-  category?: {
-    id: number;
-    name: string;
-  };
-  collection_mode?: {
-    id: number;
-    name: string;
-    icon: string;
-  };
-  post_item_types?: Array<{
-    item_types: {
-      id: number;
-      name: string;
-    };
-  }>;
-}
+// export interface Offer {
+//   id: string;
+//   post_id: string;
+//   user_id: string;
+//   offered_items: string[];
+//   offered_weight: number;
+//   requested_weight: number;
+//   price: number;
+//   message: string;
+//   status: string;
+//   images: string[];
+//   created_at: string;
+// }
 
 export type Comment = {
   id: string;
@@ -86,40 +76,60 @@ export type Comment = {
   created_at: string;
 };
 
-export type PostType = {
-  id: string;
-  user_id: string;
-  description: string;
-  kilograms: number;
-  category_id: number;
-  collection_mode_id: number;
-  status: string;
-  created_at: string;
-  photos?: string[];
-  user?: {
-    email: string;
-    name: string;
-  };
-  category?: {
-    id: number;
-    name: string;
-  };
-  collection_mode?: {
-    id: number;
-    name: string;
-    icon: string;
-  };
-  post_item_types?: Array<{
-    item_types: {
-      id: number;
-      name: string;
-    };
-  }>;
-}
+// ✅ Per-tab stack navigation types
+export type HomeStackParamList = {
+  HomeMain: undefined;
+  ViewPost: { postId?: string; post?: Post };
+  MakeOffer: { post: Post };
+  Notifications: undefined;
+};
 
-export type ConfirmDeliveryParams = {
-  offerId: string;
-  offererName: string;
-  collectorName: string;
-  photoUrl: string;
+export type ProfileStackParamList = {
+  ProfileMain: undefined;
+  TransacHist: undefined;
+  ViewTransaction: { offerId: string };
+  Settings: undefined;
+  MyPosts: undefined;
+  Review: undefined;
+  Ratings: { offerId: string };
+  TransaCompleted: { weight: number; points: number };
+};
+
+export type PostStackParamList = {
+  PostMain: undefined;
+
+};
+
+export type MessagesStackParamList = {
+  MessagesMain: undefined;
+  ChatScreen: {
+    chatId: string;
+    userId?: string;
+    post?: Post;
+    schedule?: Schedule;
+  };
+};
+
+export type BottomTabParamList = {
+  Home: undefined;
+  Messages: undefined;
+  Post: undefined;
+  Profile: undefined;
+  Leaderboard: undefined;
+};
+
+// ✅ RootStack for AppNavigator
+export type RootStackParamList = {
+  CollectionSchedule: { offerID: string };
+  Login: { message: string; } | undefined;
+  Signup: undefined;
+  ForgotPassword: undefined;
+  Main: undefined;
+  ConfirmDelivery: {
+    scheduleId: string;
+    offerId: string;
+  };
+  EditOffer: { offer: Offer };
+  EditPost: { post: Post };
+  ScheduleOffer: { offer: Offer; post: Post };
 };

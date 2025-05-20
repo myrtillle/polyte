@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'reac
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { scheduleService } from '../../services/scheduleService';
 import { RouteProp } from '@react-navigation/native';
-import { RootStackParamList } from '../../types/navigation';
+import { ProfileStackParamList, RootStackParamList } from '../../types/navigation';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { offersService, updateOffer } from '@/services/offersService';
@@ -12,6 +12,7 @@ import { IconButton } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const ScheduleOffer = () => {
+  const profileNavigation = useNavigation<StackNavigationProp<ProfileStackParamList>>();
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, 'ScheduleOffer'>>();
   const { offer, post } = route.params;
@@ -57,7 +58,7 @@ const ScheduleOffer = () => {
         }
       );
       
-      navigation.navigate("ViewTransaction", { offerId: offer.id });
+      profileNavigation.navigate("ViewTransaction", { offerId: offer.id });
     } catch (error) {
       Alert.alert('Error', 'Failed to save schedule.');
       console.error('Error saving schedule:', error);

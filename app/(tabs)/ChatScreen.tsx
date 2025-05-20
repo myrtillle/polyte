@@ -2,19 +2,20 @@
 
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, TextInput, Button, Image, Modal, StyleSheet, Alert, TouchableOpacity } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useRoute, useNavigation, NavigationProp } from '@react-navigation/native';
 import { messagesService } from '@/services/messagesService';
 import { scheduleService } from '@/services/scheduleService';
 import { supabase } from '@/services/supabase'; 
 import { MaterialIcons } from '@expo/vector-icons';
 import { Chip, Divider, IconButton } from 'react-native-paper';
 import { offersService, Schedule } from '@/services/offersService';
-import { RootStackParamList } from '@/types/navigation';
+import { HomeStackParamList, MessagesStackParamList, ProfileStackParamList  } from '@/types/navigation';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Message } from '@/services/messagesService';
 import { formatTimeAgo } from '@/utils/dateUtils'; 
 import { Post } from '@/types/Post';
-
+import Constants from 'expo-constants';
+import paperplaneIcon from '../../assets/images/paperplane.png';
 
 // interface Schedule {
 //     status: string;
@@ -34,11 +35,10 @@ interface RouteParams {
     schedule?: Schedule;
 }
 
-type NavigationProp = StackNavigationProp<RootStackParamList, 'ChatScreen'>;
-
 const ChatScreen = () => {
     const route = useRoute();
-    const navigation = useNavigation<NavigationProp>();
+    const homeNavigation = useNavigation<StackNavigationProp<HomeStackParamList>>();
+    const profileNavigation = useNavigation<StackNavigationProp<ProfileStackParamList>>();
 
     const { chatId, userId, post, schedule } = (route.params || {}) as RouteParams;
     const [messages, setMessages] = useState<Message[]>([]);
@@ -47,6 +47,7 @@ const ChatScreen = () => {
     const [newTime, setNewTime] = useState<string>(schedule?.scheduled_time || '');
     const [newDate, setNewDate] = useState<string>(schedule?.scheduled_date || '');
     const [receiverName, setReceiverName] = useState<string>('');
+    const [address, setAddress] = useState<string | null>(null);
 
 
     useEffect(() => {
@@ -92,7 +93,7 @@ const ChatScreen = () => {
           fetchReceiver();          
         }
     }, [chatId, userId]);
-      
+    
     const handleSend = async () => {
     console.log("Send button clicked");
     console.log("chatId:", chatId, "userId:", userId, "newMessage:", newMessage);
@@ -217,7 +218,54 @@ const ChatScreen = () => {
           Alert.alert("Error", "Failed to agree on the schedule.");
         }
       };
-      
+    const extractCoords = (pointStr: string) => {
+      const match = pointStr.match(/POINT\(([-\d.]+) ([-\d.]+)\)/);
+      if (!match) return null;
+      return {
+        longitude: parseFloat(match[1]),
+        latitude: parseFloat(match[2]),
+      };
+    };
+    
+    const coords = typeof post?.location === 'string' ? extractCoords(post.location) : null;
+  
+    console.log('coords: ', coords);
+  
+    const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.GOOGLE_MAPS_API_KEY || '';
+  
+    const reverseGeocode = async (latitude: number, longitude: number) => {
+      console.log('📍 Trying to reverse geocode (Google) lat:', latitude, 'lng:', longitude);
+      console.log("🌍 Sending coords to Google:", latitude, longitude);
+      console.log("Current Google Maps API Key:", GOOGLE_MAPS_API_KEY);
+  
+      try {
+        const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${GOOGLE_MAPS_API_KEY}`);
+        const data = await response.json();
+        // console.log('🏠 Google Maps Geocode Response:', data);
+        if (data.status === 'OK' && data.results.length > 0) {
+          return data.results[0].formatted_address;
+        } else {
+          console.warn('⚠️ No address found in Google Maps.');  
+          return null;
+        }
+      } catch (error) {
+        console.error('❌ Error reverse geocoding with Google Maps:', error);
+        return null;
+      }
+    };
+
+        
+    useEffect(() => {
+      const fetchAddress = async () => {
+        if (coords) {
+          const found = await reverseGeocode(coords.latitude, coords.longitude);
+          setAddress(found);
+        }
+      };
+    
+      fetchAddress();
+    }, [coords]);
+
     useEffect(() => {
         if (!chatId) return;
       
@@ -247,48 +295,76 @@ const ChatScreen = () => {
       }, [chatId]);
       
     return (
-        <View style={{ flex: 1, padding: 10, backgroundColor: '#004d00' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-                <IconButton
-                    icon="arrow-left"
-                    size={24}
-                    onPress={() => navigation.goBack()}
-                    style={styles.backButton}
-                />
-                <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>
-                    {receiverName}
-                </Text>
-            </View>
+        <View style={{ flex: 1, backgroundColor: '#163B1F' }}>
+           <View style={styles.headerContainer}>
+          <Image
+            source={{ uri: `https://i.pravatar.cc/40?u=${chatId}` }}
+            style={styles.avatar}
+          />
+          <Text style={styles.headerTitle}>{receiverName || 'Chat'}</Text>
+        </View>
+
+
+
+        <View style={styles.messagescon}>
 
             {post && (
                 <View style={{ backgroundColor: '#1E592B', padding: 10, borderRadius: 8, marginBottom: 10 }}>
-                    {post.photos?.[0] && (
+                  {post.photos?.[0] && (
                     <Image source={{ uri: post.photos[0] }} style={{ height: 100, borderRadius: 6, marginBottom: 8 }} />
-                    )}
-                    <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>{post.description}</Text>
+                  )}
+
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>{post.description}</Text>
+                  
+                  {post.collection_mode?.name && (
                     <Text style={{ color: '#00FF66', fontWeight: 'bold', marginTop: 4 }}>
-                    Mode: {post.collection_mode?.name}
+                      Mode: {post.collection_mode.name}
                     </Text>
+                  )}
+
+                  <Text style={{ color: '#fff' }}>
+                  Weight: {post.kilograms} kg
+                  </Text>
+
+                  {post.price !== undefined && post.category_id === 2 && (
                     <Text style={{ color: '#fff' }}>
-                    Weight: {post.kilograms} kg
+                      Price: ₱ {post.price}
                     </Text>
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 4 }}>
-                    {(post.post_item_types ?? []).map((type, index) => (
-                        <Chip
-                        key={index}
-                        style={{ backgroundColor: '#235F30', marginRight: 6, marginTop: 4 }}
-                        textStyle={{ color: 'white', fontSize: 10 }}
-                        >
-                        {type.item_types?.name}
-                        </Chip>
-                    ))}
-                    </View>
-                    <Text style={{ color: '#ccc', marginTop: 4 }}>
-                    From: {post.user?.first_name} {post.user?.last_name} • Brgy {post.user?.barangay}, Purok {post.user?.purok}
+                  )}
+
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 4 }}>
+                  {(post.post_item_types ?? []).map((type, index) => (
+                      <Chip
+                      key={index}
+                      style={{ backgroundColor: '#235F30', marginRight: 6, marginTop: 4 }}
+                      textStyle={{ color: 'white', fontSize: 10 }}
+                      >
+                      {type.item_types?.name}
+                      </Chip>
+                  ))}
+                  </View>
+
+                  {coords && (
+                    <Text style={{ color: '#ccc' }}>
+                      Location: {address || `${coords.latitude.toFixed(5)}, ${coords.longitude.toFixed(5)}`}
                     </Text>
-                    <Text style={{ color: '#ccc', fontSize: 10 }}>
-                    Posted: {formatTimeAgo(post.created_at)}
-                    </Text>
+                  )}
+                  <Text style={{ color: '#ccc', fontSize: 10 }}>
+                  Posted: {formatTimeAgo(post.created_at)}
+                  </Text>
+
+                  <TouchableOpacity
+                    onPress={() => homeNavigation.navigate('ViewPost', { postId: post.id })}
+                    style={{
+                      marginTop: 10,
+                      padding: 6,
+                      borderRadius: 4,
+                      backgroundColor: '#2C5735',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Text style={{ color: 'white', fontSize: 12, fontWeight: 'bold' }}>🔙 BACK TO POST</Text>
+                  </TouchableOpacity>
                 </View>
             )}
             {schedule && (
@@ -314,7 +390,7 @@ const ChatScreen = () => {
 
                     <Button
                     title="Back to Transaction"
-                    onPress={() => navigation.navigate('ViewTransaction', { offerId: schedule.offer_id })}
+                    onPress={() => profileNavigation.navigate('ViewTransaction', { offerId: schedule.offer_id })}
                     color="#888"
                     />
 
@@ -328,39 +404,87 @@ const ChatScreen = () => {
                 keyExtractor={(item, index) => item.id ?? `message-${index}`}
 
                 renderItem={({ item }) => (
-                    <View style={item.sender_id === userId ? styles.userBubble : styles.otherBubble}>
-                      {item.target_type && item.target_id && (
-                        <TouchableOpacity
-                          onPress={() => {
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: item.sender_id === userId ? 'flex-end' : 'flex-start',
+                    alignItems: 'center', // Center vertically
+                    marginVertical: 2,
+                    gap: 6, // Optional spacing between bubble and timestamp
+                  }}
+    
+  >
+    
+    {item.sender_id !== userId ? (
+      <>
+        <View style={styles.otherBubble}>
+          {item.target_type && item.target_id && (
+            <TouchableOpacity onPress={() => {
+              if (item.target_type === 'post') homeNavigation.navigate('ViewPost', { postId: item.target_id });
+              else if (item.target_type === 'schedule') profileNavigation.navigate('ViewTransaction', { offerId: item.target_id });
+            }}>
+              <Text style={styles.bannerText}>
+                📌 In reply to {item.target_type === 'post' ? 'Post' : 'Schedule'}
+              </Text>
+            </TouchableOpacity>
+          )}
+          <Text style={styles.messageText}>{item.message}</Text>
+        </View>
+        <Text style={[styles.timestamp, { alignSelf: 'center' }]}>
+          {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </Text>
+      </>
+    ) : (
+      <>
+        <Text style={[styles.timestamp, { alignSelf: 'center' }]}>
+          {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </Text>
+        <View style={styles.userBubble}>
+          {item.target_type && item.target_id && (
+            <TouchableOpacity onPress={() => {
+              if (item.target_type === 'post') homeNavigation.navigate('ViewPost', { postId: item.target_id });
+              else if (item.target_type === 'schedule') profileNavigation.navigate('ViewTransaction', { offerId: item.target_id });
+            }}>
+              <Text style={styles.bannerText}>
+                📌 In reply to this {item.target_type === 'post' ? 'Post' : 'Schedule'}
+              </Text>
+            </TouchableOpacity>
+          )}
+          <Text
+  style={[
+    styles.messageText,
+    item.sender_id === userId && { color: '#1A1A1A' } // dark color for sent messages
+  ]}
+>
+  {item.message}
+</Text>
 
-                            console.log('Clicked target:', item.target_type, item.target_id);
-                            
-                            if (item.target_type === 'post') {
-                              navigation.navigate('ViewPost', { postId: item.target_id });
-                            } else if (item.target_type === 'schedule') {
-                              navigation.navigate('ViewTransaction', { offerId: item.target_id });
-                            }
-                          }}
-                        >
-                          <Text style={styles.bannerText}>
-                            📌 In reply to {item.target_type === 'post' ? 'Post' : 'Schedule'}
-                          </Text>
-                        </TouchableOpacity>
-                      )}
-                      <Text style={styles.messageText}>{item.message}</Text>
-                    </View>
-                  )}                  
+        </View>
+      </>
+    )}
+  </View>
+)}
+                 
             />
-            <View style={{ flexDirection: 'row', marginTop: 10 }}>
-                <TextInput
-                    style={{ flex: 1, borderColor: 'gray', borderWidth: 1, marginRight: 5, color: 'white' }}
-                    placeholder='Type a message...'
-                    placeholderTextColor='#999'
-                    value={newMessage}
-                    onChangeText={setNewMessage}
-                />
-                <Button title='Send' onPress={handleSend} />
             </View>
+            <View style={styles.inputWrapper}>
+            <TouchableOpacity style={styles.iconButton}>
+               <Image source={require('@/assets/images/imagebutton.png')} style={styles.iconImage} />
+            </TouchableOpacity>
+
+            <TextInput
+              style={styles.inputField}
+              placeholder="Type your message..."
+              placeholderTextColor="#AAA"
+              multiline
+              value={newMessage}
+              onChangeText={setNewMessage}
+            />
+
+            <TouchableOpacity style={styles.iconButton} onPress={handleSend}>
+              <Image source={require('@/assets/images/paperplane.png')} style={styles.iconImage} />
+            </TouchableOpacity>
+          </View>
 
             <Modal
                 transparent={true}
@@ -391,37 +515,169 @@ const ChatScreen = () => {
         </View>
     );
 };
-
 const styles = StyleSheet.create({
-    container: { flex: 1, padding: 10, backgroundColor: '#004d00' },
-    attachment: { marginBottom: 10, backgroundColor: '#1E592B', padding: 10, borderRadius: 8 },
-    attachmentImage: { height: 100, width: 100, marginBottom: 5, borderRadius: 5 },
-    attachmentText: { color: 'white', fontWeight: 'bold' },
-    userBubble: { alignSelf: 'flex-end', backgroundColor: '#007AFF', padding: 10, borderRadius: 20, marginVertical: 5 },
-    otherBubble: { alignSelf: 'flex-start', backgroundColor: '#E5E5EA', padding: 10, borderRadius: 20, marginVertical: 5 },
-    messageText: { color: 'white' },
-    inputContainer: { flexDirection: 'row', marginTop: 10 },
-    input: { flex: 1, borderColor: 'gray', borderWidth: 1, marginRight: 5, color: 'white', padding: 8, borderRadius: 20 },
-    backButton: { 
-        marginLeft: 10,
-        marginBottom: 10,
+  timestamp: {
+  fontSize: 11,
+  color: '#888',
+  marginHorizontal: 10,
+  marginBottom: 2,
+  alignSelf: 'flex-end',
+},
+
+timestampLeft: {
+  alignSelf: 'flex-start',
+},
+
+    userBubble: {
+  alignSelf: 'flex-end',
+  backgroundColor: '#00FF66',
+  padding: 12,
+  borderRadius: 100,
+  marginVertical: 6,
+  maxWidth: '75%',
+},
+
+otherBubble: {
+  alignSelf: 'flex-start',
+  backgroundColor: '#1E592B',
+  padding: 12,
+  borderRadius: 100,
+  marginVertical: 6,
+  maxWidth: '75%',
+},
+
+messageText: {
+  color: 'white',
+  fontSize: 16,
+},
+
+
+    inputWrapper: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#132718',
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      margin: 10,
+      borderRadius: 18,
     },
-    attachmentBanner: {
-        backgroundColor: '#235F30',
-        paddingVertical: 4,
-        paddingHorizontal: 8,
-        borderRadius: 6,
-        marginBottom: 4,
-        alignSelf: 'flex-start',
-      },
-      
-      bannerText: {
-        color: '#00FF66',
-        fontWeight: 'bold',
-        fontSize: 12,
-        textDecorationLine: 'underline',
-      }
-      
+
+    inputField: {
+      flex: 1,
+      color: 'white',
+      fontSize: 14,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+    },
+
+    iconButton: {
+      padding: 6,
+    },
+
+    iconImage: {
+      width: 22,
+      height: 22,
+      resizeMode: 'contain',
+    },
+
+
+  messagescon: {   
+    flex: 1,
+    paddingHorizontal: 12,
+    backgroundColor: '#004d00',
+  },
+  
+
+avatar: {
+  width: 40,
+  height: 40,
+  borderRadius: 20,
+  marginRight: 12,
+},
+  // 🔷 Layout
+ 
+
+  // 🔷 Header
+  headerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    backgroundColor: '#1A3620',
+    position: 'relative',
+  },
+
+  backButton: {
+    position: 'absolute',
+    left: 2,
+    padding: 10,
+    zIndex: 1,
+  },
+
+  headerTitle: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'regular',
+    textTransform: 'uppercase',
+  },
+
+
+
+  // 🔷 Input Area
+  inputContainer: {
+    flexDirection: 'row',
+    marginTop: 10,
+  
+  },
+
+  input: {
+    flex: 1,
+    borderColor: 'gray',
+    borderWidth: 1,
+    marginRight: 5,
+    color: 'white',
+    padding: 8,
+    borderRadius: 20,
+  },
+
+  // 🔷 Attachments
+  attachment: {
+    marginBottom: 10,
+    backgroundColor: '#1E592B',
+    padding: 10,
+    borderRadius: 8,
+  },
+
+  attachmentImage: {
+    height: 100,
+    width: 100,
+    marginBottom: 5,
+    borderRadius: 5,
+  },
+
+  attachmentText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+
+  // 🔷 Attachment Banner (Reply Reference)
+  attachmentBanner: {
+    backgroundColor: '#235F30',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    marginBottom: 4,
+    alignSelf: 'flex-start',
+  },
+
+  bannerText: {
+    color: '#1A1A1A',
+    fontWeight: 'bold',
+    fontSize: 12,
+    textDecorationLine: 'underline',
+    textTransform: 'uppercase',
+  },
 });
+;
 
 export default ChatScreen;

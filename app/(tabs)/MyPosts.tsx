@@ -5,6 +5,7 @@ import { postsService } from '../../services/postsService';
 import { useNavigation } from '@react-navigation/native';
 import { RootStackParamList } from '../../types/navigation';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { HomeStackParamList, MessagesStackParamList } from '../../types/navigation';
 import { LinearGradient } from 'expo-linear-gradient';
 import meetupIcon from '../../assets/images/meetup.png';
 import pickupIcon from '../../assets/images/pickup.png';
@@ -13,41 +14,7 @@ import paperplaneIcon from '../../assets/images/paperplane.png';
 import messagebubbleIcon from '../../assets/images/messagebubble.png';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { profileService } from '@/services/profileService';
-
-export interface Post {
-  id: string;
-  user_id: string;
-  description: string;
-  kilograms: number;
-  category_id: number;
-  collection_mode_id: number;
-  status: string;
-  created_at: string;
-  photos?: string[];
-  user?: {
-    email: string;
-    name: string;
-    barangay: number;
-    purok: string;
-    first_name: string;
-    last_name: string;
-  };
-  category?: {
-    id: number;
-    name: string;
-  };
-  collection_mode?: {
-    id: number;
-    name: string;
-    icon: string;
-  };
-  post_item_types?: Array<{
-    item_types: {
-      id: number;
-      name: string;
-    };
-  }>;
-}
+import { Post } from '../../services/postsService';
 
 interface Category {
   id: number;
@@ -55,6 +22,8 @@ interface Category {
 }
 
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Main'>;
+type HomeNav = StackNavigationProp<HomeStackParamList, 'HomeMain'>;
+type MessageNav = StackNavigationProp<MessagesStackParamList, 'MessagesMain'>;
 
 function formatTimeAgo(date: string) {
   const now = new Date();
@@ -84,8 +53,10 @@ function formatTimeAgo(date: string) {
   return `${diffInMonths}mo ago`;
 }
 
-export default function HomeScreen() {
+export default function MyPostsScreen() {
   const [posts, setPosts] = useState<Post[]>([]);
+  const homeNavigation = useNavigation<HomeNav>();
+  const messageNavigation = useNavigation<MessageNav>();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
@@ -125,7 +96,7 @@ export default function HomeScreen() {
   };
   
   const handleSendMessage = (post: Post) => {
-    navigation.navigate('ChatScreen', { chatId: post.id, post });
+    messageNavigation.navigate('ChatScreen', { chatId: post.id, post });
   };
 
   const navigateToViewPost = async (post: Post) => {
@@ -133,7 +104,7 @@ export default function HomeScreen() {
       console.log("🚀 Navigating to ViewPost with post:", post);
       await AsyncStorage.setItem('lastViewedPost', JSON.stringify(post));
       
-      navigation.navigate('ViewPost', { post });
+      homeNavigation.navigate('ViewPost', { post });
     } catch (error) {
       console.error("❌ Error saving post:", error);
     }
@@ -286,7 +257,7 @@ export default function HomeScreen() {
             {/* Name and time */}
             <View style={styles.userInfo}>
               <Text style={styles.userName}>
-                {item.user?.name ?? item.user?.email ?? 'Unknown User'}
+                {item.users?.raw_user_meta_data?.first_name ?? item.users?.email ?? 'Unknown User'}
               </Text>
               <Text style={styles.timePosted}>
                 {formatTimeAgo(item.created_at)}
@@ -347,7 +318,7 @@ export default function HomeScreen() {
   
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => navigation.navigate('ViewPost', { post: item })}
+            onPress={() => homeNavigation.navigate('ViewPost', { post: item })}
           >
             <Image source={messagebubbleIcon} style={styles.actionIconImage} />
 

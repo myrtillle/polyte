@@ -19,7 +19,13 @@ export const profileService = {
 
     const { data: userDetails, error: userError } = await supabase
       .from('personal_users')
-      .select('id, first_name, last_name, purok, barangay, created_at')
+      .select(`
+        id, 
+        first_name, 
+        last_name, 
+        purok, 
+        barangays (name), 
+        created_at`)
       .eq('id', userId)
       .single();
     if (userError) throw new Error(userError.message);
@@ -32,9 +38,23 @@ export const profileService = {
 
     const totalPoints = pointsData?.reduce((sum, p) => sum + (p.points || 0), 0);
 
+    // Fetch average rating
+    const { data: reviewsData, error: reviewsError } = await supabase
+      .from('reviews')
+      .select('rating')
+      .eq('reviewed_user_id', userId);
+
+    if (reviewsError) throw new Error(reviewsError.message);
+
+    const averageRating = reviewsData?.length 
+      ? reviewsData.reduce((sum, r) => sum + (r.rating || 0), 0) / reviewsData.length 
+      : 0;
+
     return {
       ...userDetails,
+      barangay: userDetails.barangays?.[0]?.name ?? '',
       totalPoints,
+      averageRating,
     };
   },
 
@@ -68,7 +88,7 @@ export const profileService = {
             first_name,
             last_name,
             purok,
-            barangay
+            barangays ( name )
         )
         `)
         .eq('user_id', userId)
@@ -79,8 +99,15 @@ export const profileService = {
     const formattedPosts = data.map(post => ({
         ...post,
         user: post.personal_users
-            ? { email: post.personal_users.email, name: `${post.personal_users.first_name} ${post.personal_users.last_name}` }
-            : null
+          ? {
+              email: post.personal_users.email,
+              name: `${post.personal_users.first_name ?? ''} ${post.personal_users.last_name ?? ''}`,
+              barangay: post.personal_users.barangays?.[0]?.name ?? '',
+              purok: post.personal_users.purok ?? '',
+              first_name: post.personal_users.first_name ?? '',
+              last_name: post.personal_users.last_name ?? '',
+            }
+          : undefined,
     }));
 
     return formattedPosts;

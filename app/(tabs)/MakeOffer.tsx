@@ -6,13 +6,13 @@ import {
 import { Button,  IconButton } from 'react-native-paper';
 import * as ImagePicker from 'expo-image-picker';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
-import { RootStackParamList } from '../../types/navigation';
+import { HomeStackParamList, RootStackParamList } from '../../types/navigation';
 import { createOffer } from '../../services/offersService'; 
 import { supabase } from '../../services/supabase'; 
 import { notificationService } from '@/services/notificationService';
 import { Offer, offersService } from '../../services/offersService';
 
-type MakeOfferRouteProp = RouteProp<RootStackParamList, 'MakeOffer'>;
+type MakeOfferRouteProp = RouteProp<HomeStackParamList, 'MakeOffer'>;
 
 const MakeOffer = () => {
   const route = useRoute<MakeOfferRouteProp>();
@@ -58,7 +58,12 @@ const MakeOffer = () => {
         Alert.alert('Permission Denied', 'Sorry, we need camera roll permissions to make this work!');
         return;
       }
-  
+      
+      if (images.length >= 5) {
+        Alert.alert("Limit Reached", "You can only upload up to 5 images.");
+        return;
+      }
+
       setUploading(true);
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
@@ -68,26 +73,17 @@ const MakeOffer = () => {
   
       if (!result.canceled) {
         const assets = result.assets || [];
-  
+        const allowedSlots = 5 - images.length;
+        const assetsToUpload = assets.slice(0, allowedSlots);
+        
         const uploadedImages = await Promise.all(
-          assets.map(async (asset) => {
+          assetsToUpload.map(async (asset) => {
             try {
-              console.log("Picked asset (Android):", asset);
-  
-              // Use the uploadImage function from postsService
               const url = await offersService.uploadImage(asset.uri);
-              if (!url) {
-                throw new Error("Image upload returned null or undefined");
-              }
+              if (!url) throw new Error("Image upload returned null");
               return url;
-            } catch (uploadError: unknown) {
-              if (uploadError instanceof Error) {
-                console.error("Error uploading image:", uploadError.message);
-                Alert.alert("Image upload failed", uploadError.message);
-              } else {
-                console.error("Unknown upload error:", uploadError);
-                Alert.alert("Image upload failed", "An unexpected error occurred");
-              }
+            } catch (uploadError) {
+              console.error("Image upload failed:", uploadError);
               return null;
             }
           })
@@ -132,7 +128,26 @@ const MakeOffer = () => {
   //     return null;
   //   }
   // };
+  const removeImage = async (uriToRemove: string) => {
+    const filename = uriToRemove.split('/').pop();
   
+    if (!filename) {
+      console.warn('❌ Could not extract filename from URI:', uriToRemove);
+      return;
+    }
+  
+    const { error } = await supabase.storage.from('offers').remove([filename]);
+  
+    if (error) {
+      console.error('❌ Failed to delete from Supabase:', error.message);
+      Alert.alert("Delete failed", "Could not remove image from storage.");
+    } else {
+      console.log('🗑️ Deleted from Supabase:', filename);
+      setImages(prev => prev.filter(uri => uri !== uriToRemove));
+    }
+  };
+  
+
   const handleSendOffer = async () => {
     if (!currentUser?.id) {
       console.error("Cannot send offer: No authenticated user!");
@@ -143,7 +158,17 @@ const MakeOffer = () => {
       Alert.alert("Missing Fields", "Please fill in all required fields before sending your offer.");
       return;
     }
-  
+
+    if (selectedItems.length === 0) {
+      Alert.alert("Missing Plastic Item Type", "Please select plastic item(s) you would like to offer.");
+      return;
+    }
+    
+    if (offeredWeight > post.kilograms) {
+      Alert.alert("Offer too high", `Offered weight exceeded than the amount needed.`);
+      return;
+    }
+
     const offerData = {
       post_id: post.id,
       user_id: currentUser.id,
@@ -275,13 +300,22 @@ const MakeOffer = () => {
     <Text style={styles.kilogramsTitle}>TOTAL KILOGRAMS</Text>
   </View>
 
-  <TextInput
-    value={offeredWeight.toString()}
-    onChangeText={text => setOfferedWeight(Number(text))}
-    keyboardType="numeric"
-    style={styles.kilogramsInput}
-  
-  />
+  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+    <TextInput
+      value={offeredWeight.toString()}
+      onChangeText={text => {
+        const value = Number(text);
+        if (value > post.kilograms) {
+          Alert.alert("Invalid Input", `You cannot offer more than ${post.kilograms} kg.`);
+          return;
+        }
+        setOfferedWeight(value);
+      }}
+      keyboardType="numeric"
+      style={[styles.kilogramsInput, { minWidth: 80 }]}
+    />
+    <Text style={{ color: '#ccc', fontSize: 12 }}>of {post.kilograms} kg</Text>
+  </View>
 </View>
 
 
@@ -292,7 +326,22 @@ const MakeOffer = () => {
         </TouchableOpacity>
         <View style={styles.imageContainer}>
           {images.map((uri, index) => (
-            <Image key={index} source={{ uri }} style={styles.uploadedImage} />
+            <View key={index} style={{ position: 'relative', marginRight: 10 }}>
+              <Image source={{ uri }} style={styles.uploadedImage} />
+              <TouchableOpacity 
+                onPress={() => removeImage(uri)} 
+                style={{
+                  position: 'absolute',
+                  top: -5,
+                  right: -5,
+                  backgroundColor: 'red',
+                  borderRadius: 10,
+                  paddingHorizontal: 4,
+                }}
+              >
+                <Text style={{ color: 'white', fontSize: 12 }}>✕</Text>
+              </TouchableOpacity>
+            </View>
           ))}
         </View>
 

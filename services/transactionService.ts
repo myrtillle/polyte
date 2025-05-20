@@ -176,7 +176,7 @@ export const transactionService = {
           first_name,
           last_name,
           purok,
-          barangay
+           barangays ( name )
         )
       ),
       personal_users:personal_users!offers_user_id_fkey (  

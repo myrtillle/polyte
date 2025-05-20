@@ -2,13 +2,13 @@
 import React,  { useState, useEffect }  from 'react';
 import { View, Text, StyleSheet, Image, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert  } from 'react-native';
 import { RouteProp, useFocusEffect } from '@react-navigation/native';
-import { RootStackParamList } from '../../types/navigation';
+import { HomeStackParamList, MessagesStackParamList, ProfileStackParamList, RootStackParamList } from '../../types/navigation';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Button, Divider, IconButton } from 'react-native-paper';
 import { commentsService } from '../../services/commentsService';
 import { supabase } from '../../services/supabase';
-import { Post } from '../../types/navigation'; 
+import { Post } from '../../services/postsService';
 import { Comment } from '../../types/navigation'; 
 import { getOffersByPost, offersService } from '../../services/offersService'; 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -18,14 +18,18 @@ import { Offer } from '../../services/offersService';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { notificationService } from '@/services/notificationService';
 import { messagesService } from '@/services/messagesService';
+import Constants from 'expo-constants';
 
 
-type ViewPostRouteProp = RouteProp<RootStackParamList, 'ViewPost'>;
-type viewPostNavigationProp = StackNavigationProp<RootStackParamList, 'ViewPost'>;
+type ViewPostRouteProp = RouteProp<HomeStackParamList, 'ViewPost'>;
+type viewPostNavigationProp = StackNavigationProp<HomeStackParamList, 'ViewPost'>;
 
 const ViewPost = () => {
   const route = useRoute<ViewPostRouteProp>();
-  const navigation = useNavigation<viewPostNavigationProp>();
+  const messagesNavigation = useNavigation<StackNavigationProp<MessagesStackParamList>>();  
+  const homeNavigation = useNavigation<StackNavigationProp<HomeStackParamList>>();
+  const profileNavigation = useNavigation<StackNavigationProp<ProfileStackParamList>>();
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
 
   const { postId } = route.params;
   // Only ONE state for post  
@@ -39,6 +43,7 @@ const ViewPost = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ id: string } | null>(null);
+  const [address, setAddress] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('post');
   const [offers, setOffers] = useState<Offer[]>([]);
   
@@ -72,7 +77,7 @@ const ViewPost = () => {
   const fetchPostAndOffers = async () => {
     try {
       setLoading(true);
-      const postId = post?.id || route.params?.post?.id;
+      const postId = post?.id || route.params?.postId || route.params?.post?.id;
       if (!postId) {
         console.error("❌ No valid post ID!");
         return;
@@ -103,7 +108,7 @@ const ViewPost = () => {
     try {
       const chatId = await messagesService.getOrCreateChatId(currentUser.id, post.user_id);
   
-      navigation.navigate('ChatScreen', {
+      messagesNavigation.navigate('ChatScreen', {
         chatId,
         userId: currentUser.id,
         post,
@@ -129,6 +134,29 @@ const ViewPost = () => {
 
   console.log('coords: ', coords);
 
+  const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.GOOGLE_MAPS_API_KEY || '';
+
+  const reverseGeocode = async (latitude: number, longitude: number) => {
+    console.log('📍 Trying to reverse geocode (Google) lat:', latitude, 'lng:', longitude);
+    console.log("🌍 Sending coords to Google:", latitude, longitude);
+    console.log("Current Google Maps API Key:", GOOGLE_MAPS_API_KEY);
+
+    try {
+      const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${GOOGLE_MAPS_API_KEY}`);
+      const data = await response.json();
+      // console.log('🏠 Google Maps Geocode Response:', data);
+      if (data.status === 'OK' && data.results.length > 0) {
+        return data.results[0].formatted_address;
+      } else {
+        console.warn('⚠️ No address found in Google Maps.');  
+        return null;
+      }
+    } catch (error) {
+      console.error('❌ Error reverse geocoding with Google Maps:', error);
+      return null;
+    }
+  };
+  
   const fetchComments = async (postId: string) => {
     try {
       console.log('🔄 Fetching comments for post ID:', postId);
@@ -263,7 +291,7 @@ const ViewPost = () => {
   };
 
   const handleSeeDetails = (offer: Offer) => {
-    navigation.navigate("ViewTransaction", { offerId: offer.id });
+    profileNavigation.navigate("ViewTransaction", { offerId: offer.id });
   };
 
   const handleInterested = async () => {
@@ -332,9 +360,28 @@ const ViewPost = () => {
         setPost(null);  // Clean up when unfocused
         setOffers([]);  // Clear previous offers
       };
-    }, [route.params?.post])
+    }, [route.params?.post, route.params?.postId])
   );
 
+  useEffect(() => {
+    const getAddress = async () => {
+      if (coords) {
+        console.log('🛰 Fetching readable address for coords:', coords);
+        const addressResult = await reverseGeocode(coords.latitude, coords.longitude);
+        if (addressResult) {
+          console.log('✅ Address received:', addressResult);
+          setAddress(addressResult);
+        } else {
+          console.warn('⚠️ No address found from coords.');
+        }
+      } else {
+        console.warn('⚠️ No coordinates available to reverse geocode.');
+      }
+    };
+    getAddress();
+  }, [coords]);
+  
+  
   // Fetch comments only when a new post is received
   useEffect(() => {
     if (route.params?.post?.id) {
@@ -423,7 +470,7 @@ const ViewPost = () => {
 
   return (
     <View style={styles.container}> 
-      {/* Back Button */}
+      {/* Back Button
       <View style={styles.headerContainer}>
         <IconButton
           icon="arrow-left"
@@ -433,7 +480,7 @@ const ViewPost = () => {
           style={{ position: 'absolute', left: 0 }}
         />
         <Text style={styles.headerTitle}>See Post</Text>
-      </View>
+      </View> */}
 
       {/* Header Tabs */}
       <View style={styles.tabContainer}>
@@ -474,10 +521,10 @@ const ViewPost = () => {
           <Image source={{ uri: 'https://i.pravatar.cc/40' }} style={styles.avatar} />
 
           <View style={{ flex: 1 }}>
-            <Text style={styles.userName}>{post.user?.name}</Text>
+            <Text style={styles.userName}>{post.users?.raw_user_meta_data?.name}</Text>
             <View style={styles.userLocationRow}>
             <Image source={greenMark} style={styles.greenMarkIcon} />
-            <Text style={styles.userLocationText}>{post.user?.barangay}, Purok {post.user?.purok}</Text>
+            <Text style={styles.userLocationText}>{post.users?.barangays?.name}, Purok {post.users?.puroks?.name}</Text>
           </View>
 
           </View>
@@ -510,7 +557,7 @@ const ViewPost = () => {
         {/* meetup locs */}
         {coords && (
           <Text style={styles.userAddress}>
-            📍 Location: {coords.latitude.toFixed(5)}, {coords.longitude.toFixed(5)}
+            📍 {address || `${coords.latitude.toFixed(5)}, ${coords.longitude.toFixed(5)}`}
           </Text>
         )}
 
@@ -596,7 +643,7 @@ const ViewPost = () => {
                         Alert.alert("Error", "Plastic item types are missing.");
                         return;
                       }
-                      navigation.navigate('MakeOffer', { post });
+                      homeNavigation.navigate('MakeOffer', { post });
                     }}
                   >
                     <Image source={require('../../assets/images/trashbag.png')} style={styles.buttonIcon} />
@@ -1228,6 +1275,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 10,
     backgroundColor: '#122C0F',
+    marginTop: 10
   },
   
   tabButton: {

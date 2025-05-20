@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { transactionService } from '@/services/transactionService';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList } from '../../types/navigation';
+import { ProfileStackParamList, MessagesStackParamList, RootStackParamList, HomeStackParamList } from '../../types/navigation';
 import { supabase } from '@/services/supabase';
 import { scheduleService } from '@/services/scheduleService';
 import * as ImagePicker from 'expo-image-picker';
@@ -35,6 +35,9 @@ interface proofImage {
 }
 export default function ViewTransaction() {
   const route = useRoute();
+  const homeNavigation = useNavigation<StackNavigationProp<HomeStackParamList>>();
+  const profileNavigation = useNavigation<StackNavigationProp<ProfileStackParamList>>();
+  const messagesNavigation = useNavigation<StackNavigationProp<MessagesStackParamList>>();    
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const { offerId } = route.params as { offerId: string };
 
@@ -166,7 +169,7 @@ export default function ViewTransaction() {
       );
 
       setConfirmVisible(false);
-      navigation.navigate('TransaCompleted', {
+      profileNavigation.navigate('TransaCompleted', {
         weight: transaction.weight,
         points: transaction.weight * 100,
       });       
@@ -339,7 +342,7 @@ export default function ViewTransaction() {
           icon="arrow-left"
           size={24}
           iconColor="white"
-          onPress={() => navigation.navigate('TransacHist')}
+          onPress={() => profileNavigation.navigate('TransacHist')}
           style={{ position: 'absolute', left: 0 }}
         />
         <Text style={styles.headerTitle}>TRANSACTION DETAILS</Text>
@@ -411,10 +414,11 @@ export default function ViewTransaction() {
                 onPress={async () => {
                   const { data: { user }, error } = await supabase.auth.getUser();
                   if (user) {
-                    navigation.navigate('ChatScreen', {
+                    messagesNavigation.navigate('ChatScreen', {
                       chatId: transaction?.id,
                       userId: user.id,
                       schedule: {
+                        id: transaction?.schedule_id,
                         scheduled_time: transaction?.scheduled_time,
                         scheduled_date: transaction?.scheduled_date,
                         status: transaction?.status,
@@ -602,22 +606,33 @@ export default function ViewTransaction() {
 
         {/* Offerer Button */}
         {((isSellingPost && isOfferer) || (!isSellingPost && isPostOwner)) && ['for_completion', 'completed'].includes(transaction?.status) && (
-          <TouchableOpacity
-            style={[
-              styles.confirmButton,
-              transaction?.status === 'completed' && { backgroundColor: '#888' }
-            ]}
-            disabled={transaction?.status === 'completed'}
-            onPress={() => {
-              if (transaction?.status === 'for_completion') {
-                setConfirmVisible(true);
-              }
-            }}
-          >
-            <Text style={styles.confirmText}>
-              {transaction?.status === 'completed' ? 'TRANSACTION COMPLETED' : 'COMPLETE TRANSACTION'}
-            </Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'center' }}>
+            <TouchableOpacity
+              style={[
+                styles.confirmButton,
+                transaction?.status === 'completed' && { backgroundColor: '#888' }
+              ]}
+              disabled={transaction?.status === 'completed'}
+              onPress={() => {
+                if (transaction?.status === 'for_completion') {
+                  setConfirmVisible(true);
+                }
+              }}
+            >
+              <Text style={styles.confirmText}>
+                {transaction?.status === 'completed' ? 'TRANSACTION COMPLETED' : 'COMPLETE TRANSACTION'}
+              </Text>
+            </TouchableOpacity>
+
+            {transaction?.status === 'completed' && (
+              <TouchableOpacity
+                style={[styles.confirmButton, { backgroundColor: '#FFD700' }]}
+                onPress={() => profileNavigation.navigate('Ratings', { offerId })}
+              >
+                <Text style={[styles.confirmText, { color: '#023F0F' }]}>RATE</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         )}
   
         {/* Complete Transaction Button */}

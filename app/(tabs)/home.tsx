@@ -3,7 +3,7 @@ import { View, Image, StyleSheet, FlatList, RefreshControl, Modal, TouchableOpac
 import { Text, Card, Button, Chip, Searchbar, IconButton, ActivityIndicator } from 'react-native-paper';
 import { postsService } from '../../services/postsService';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
-import { RootStackParamList } from '../../types/navigation';
+import { HomeStackParamList, MessagesStackParamList, RootStackParamList } from '../../types/navigation';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import meetupIcon from '../../assets/images/meetup.png';
@@ -15,43 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/services/supabase';
 import { notificationService } from '@/services/notificationService';
 import { messagesService } from '@/services/messagesService';
-
-export interface Post {
-  id: string;
-  user_id: string;
-  description: string;
-  kilograms: number;
-  price: number;
-  category_id: number;
-  collection_mode_id: number;
-  status: string;
-  created_at: string;
-  photos?: string[];
-  user?: {
-    email: string;
-    name: string;
-    barangay: number;
-    purok: string;
-    first_name: string;
-    last_name: string;
-  };
-  category?: {
-    id: number;
-    name: string;
-  };
-  collection_mode?: {
-    id: number;
-    name: string;
-    icon: string;
-  };
-  post_item_types?: Array<{
-    item_types: {
-      id: number;
-      name: string;
-    };
-  }>;
-}
-
+import { Post } from '../../services/postsService';
 interface Category {
   id: number;
   name: string;
@@ -88,6 +52,10 @@ function formatTimeAgo(date: string) {
 }
 
 export default function HomeScreen() {
+  //navigation
+  const messagesNavigation = useNavigation<StackNavigationProp<MessagesStackParamList>>();
+  const homeNavigation = useNavigation<StackNavigationProp<HomeStackParamList>>();
+  
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -138,7 +106,7 @@ export default function HomeScreen() {
     try {
       const chatId = await messagesService.getOrCreateChatId(senderId, receiverId);
   
-      navigation.navigate('ChatScreen', {
+      messagesNavigation.navigate('ChatScreen', {
         chatId,
         userId: senderId,
         post,
@@ -154,7 +122,7 @@ export default function HomeScreen() {
       console.log("🚀 Navigating to ViewPost with post:", post);
       await AsyncStorage.setItem('lastViewedPost', JSON.stringify(post));
       
-      navigation.navigate('ViewPost', { post });
+      homeNavigation.navigate('ViewPost', { post });
     } catch (error) {
       console.error("❌ Error saving post:", error);
     }
@@ -259,7 +227,7 @@ export default function HomeScreen() {
         </View>
   
         <TouchableOpacity style={styles.notificationWrapper}>
-          <IconButton icon="bell" iconColor="white" size={24} onPress={() => navigation.navigate('Notifications')} />
+          <IconButton icon="bell" iconColor="white" size={24} onPress={() => homeNavigation.navigate('Notifications')} />
           {unreadCount > 0 && showBadge && (
             <View style={{
               position: 'absolute',
@@ -333,8 +301,8 @@ export default function HomeScreen() {
     const matchesCategory = selectedCategory ? post.category_id === selectedCategory : true;
     const matchesSearch = searchQuery
       ? post.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        post.user?.barangay?.toString().includes(searchQuery) ||
-        post.user?.purok?.toString().includes(searchQuery) ||
+        post.users?.barangays?.name?.toString().includes(searchQuery) ||
+        post.users?.puroks?.name?.toString().includes(searchQuery) ||
         post.post_item_types?.some(item =>
           item.item_types?.name?.toLowerCase().includes(searchQuery.toLowerCase())
         )
@@ -355,7 +323,7 @@ export default function HomeScreen() {
                       {/* Name and time */}
                       <View style={styles.userInfo}>
             <Text style={styles.userName}>
-              {item.user?.name ?? item.user?.email ?? 'Unknown User'}
+              {item.users?.raw_user_meta_data?.name ?? item.users?.email ?? 'Unknown User'}
             </Text>
             <Text style={styles.timePosted}>
               {formatTimeAgo(item.created_at)}
@@ -420,7 +388,7 @@ export default function HomeScreen() {
   
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => navigation.navigate('ViewPost', { post: item })}
+            onPress={() => homeNavigation.navigate('ViewPost', { post: item })}
           >
             <Image source={messagebubbleIcon} style={styles.actionIconImage} />
 

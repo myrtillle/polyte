@@ -7,6 +7,16 @@ export interface Location {
   longitude: number;
 }
 
+type RawFetchedPost = Post & {
+  personal_users?: {
+    email: string;
+    first_name: string;
+    last_name: string;
+    purok: string;
+    barangay: string;
+  };
+};
+
 export interface Post {
   id: string;
   user_id: string;
@@ -17,17 +27,20 @@ export interface Post {
   collection_mode_id: number;
   status: string;
   created_at: string;
-  updated_at: string;
+  // updated_at: string;
   photos?: string[];
   location?: string;
   users?: {
-    id: string; 
+    id: string;
     email: string;
     raw_user_meta_data?: {
-      username?: string;
       first_name?: string;
       last_name?: string;
+      username?: string;
+      name?: string;
     };
+    barangays?: { name?: string };
+    puroks?: { name?: string };
   };
   category?: {
     id: number;
@@ -47,56 +60,87 @@ export interface Post {
 } 
 
 // New interface for creating a post
-export interface CreatePostData extends Omit<Post, 'id' | 'created_at' | 'updated_at'> {
+export interface CreatePostData {
+  user_id: string;
+  category_id: number;
   item_type_ids: number[];
-  location: string; 
+  description: string;
+  kilograms: number;
+  collection_mode_id: number;
+  status: string;
+  photos: string[];
+  location: string;
+  price: number;
 }
 
 export const postsService = {
-  async getPosts() {
-    const { data: posts, error: postsError } = await supabase
-      .from('posts')
-      .select(`
-        *,
-        category:categories!posts_category_id_fkey (
-          id,
-          name
-        ),
-        collection_mode:collection_modes!posts_collection_mode_id_fkey (
-          id,
-          name,
-          icon
-        ),
-        post_item_types (
-          item_types (
-            id,
-            name
-          )
-        ),
-        personal_users (
-          id,
-          email,
-          first_name,
-          last_name,
-          purok,
-          barangay
-        )
-      `)
-      .eq('status', 'active')
-      .order('created_at', { ascending: false });
+  // async getPosts() {
+  //   const { data: posts, error: postsError } = await supabase
+  //     .from('posts')
+  //     .select(`
+  //       *,
+  //       category:categories!posts_category_id_fkey (
+  //         id,
+  //         name
+  //       ),
+  //       collection_mode:collection_modes!posts_collection_mode_id_fkey (
+  //         id,
+  //         name,
+  //         icon
+  //       ),
+  //       post_item_types (
+  //         item_types (
+  //           id,
+  //           name
+  //         )
+  //       ),
+  //       personal_users (
+  //         id,
+  //         email,
+  //         first_name,
+  //         last_name,
+  //         purok,
+  //         barangay
+  //       )
+  //     `)
+  //     .eq('status', 'active')
+  //     .order('created_at', { ascending: false });
 
-    if (postsError) throw postsError;
+  //   if (postsError) throw postsError;
     
-    const formattedPosts = posts.map(post => ({
+  //   const formattedPosts = posts.map(post => ({
+  //     ...post,
+  //     user: post.personal_users
+  //       ? { email: post.personal_users.email, name: `${post.personal_users.first_name} ${post.personal_users.last_name}` }
+  //       : null
+  //   }));
+  
+  //   return formattedPosts;
+  // }, 
+  async getPosts() {
+    const { data, error } = await supabase.rpc('get_posts_with_location');
+  
+    if (error) throw error;
+  
+    const posts = (data ?? []) as RawFetchedPost[];
+  
+    const formattedPosts = posts.map((post) => ({
       ...post,
       user: post.personal_users
-        ? { email: post.personal_users.email, name: `${post.personal_users.first_name} ${post.personal_users.last_name}` }
-        : null
+        ? {
+            email: post.personal_users.email,
+            name: `${post.personal_users.first_name ?? ''} ${post.personal_users.last_name ?? ''}`,
+            barangay: post.personal_users.barangay ?? '',
+            purok: post.personal_users.purok ?? '',
+            first_name: post.personal_users.first_name ?? '',
+            last_name: post.personal_users.last_name ?? '',
+          }
+        : undefined,
     }));
   
     return formattedPosts;
-  }, 
-
+  },
+  
   async createPost(postData: CreatePostData) {
     const { item_type_ids, photos, ...post } = postData;
 
@@ -161,12 +205,10 @@ export const postsService = {
 
       let fileData: any;
       if (Platform.OS === 'web') {
-        // Web-specific handling
         const response = await fetch(fileUri);
         const blob = await response.blob();
         fileData = blob;
       } else {
-        // Android and iOS handling
         fileData = {
           uri: fileUri,
           name: fileName,
@@ -178,26 +220,18 @@ export const postsService = {
         .from(bucketName)
         .upload(fileName, fileData);
 
-        console.log("📷 data:", data);
       if (error) {
         console.error("Error uploading image to Supabase:", error.message);
         throw new Error(`Upload failed: ${error.message}`);
       }
 
-      // Generate public URL for the uploaded image
       const { data: urlData } = supabase.storage
         .from(bucketName)
         .getPublicUrl(fileName);
 
-        console.log("📷 publicURL:", fileName);
-
       if (!urlData?.publicUrl) {
         throw new Error("Failed to generate the public URL.");
       }
-
-      console.log("Image uploaded successfully:", urlData.publicUrl);
-
-      console.log("📷 URL:", urlData.publicUrl);
 
       return urlData.publicUrl;
     } catch (error: any) {
@@ -205,18 +239,63 @@ export const postsService = {
       throw new Error(error.message || "Unknown error");
     }
   },
+
+  // Add validation function
+  validatePostData(postData: CreatePostData): { isValid: boolean; errors: string[] } {
+    const errors: string[] = [];
+
+    // Required fields validation
+    if (!postData.category_id) errors.push('Category is required');
+    if (!postData.collection_mode_id) errors.push('Collection mode is required');
+    if (!postData.item_type_ids || postData.item_type_ids.length < 2) {
+      errors.push('Please select at least 2 types of plastics');
+    }
+    if (!postData.description?.trim()) errors.push('Description is required');
+    if (!postData.kilograms || postData.kilograms <= 0) {
+      errors.push('Please enter a valid weight in kilograms');
+    }
+    if (!postData.location) errors.push('Location is required');
+    
+    // Photos validation
+    if (!postData.photos || postData.photos.length === 0) {
+      errors.push('At least one photo is required');
+    } else if (postData.photos.length > 5) {
+      errors.push('Maximum 5 photos allowed');
+    }
+
+    // Price validation for selling category
+    if (postData.category_id === 2) { // Assuming 2 is the ID for selling category
+      if (!postData.price || postData.price <= 0) {
+        errors.push('Please enter a valid price');
+      }
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  },
  
+  // async getUserPosts(userId: string) {
+  //   const { data, error } = await supabase
+  //     .from('posts')
+  //     .select(`
+  //       *, 
+  //     `)
+  //     .eq('user_id', userId)
+  //     .order('created_at', { ascending: false });
+
+  //   if (error) throw error;
+  //   return data;
+  // },
   async getUserPosts(userId: string) {
     const { data, error } = await supabase
-      .from('posts')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-
+      .rpc('get_user_posts_with_location', { uid: userId });
+  
     if (error) throw error;
     return data;
   },
-
+  
   async getAllPosts() {
     const { data, error } = await supabase
       .from('posts')
@@ -258,50 +337,71 @@ export const postsService = {
     return data;
   },
 
+  // async getPostById(postId: string) {
+  //   const { data: post, error } = await supabase
+  //     .from('posts')
+  //     .select(`
+  //       *,
+  //       category:categories!posts_category_id_fkey (
+  //         id,
+  //         name
+  //       ),
+  //       collection_mode:collection_modes!posts_collection_mode_id_fkey (
+  //         id,
+  //         name,
+  //         icon
+  //       ),
+  //       post_item_types (
+  //         item_types (
+  //           id,
+  //           name
+  //         )
+  //       ),
+  //       personal_users (
+  //         id,
+  //         email,
+  //         first_name,
+  //         last_name,
+  //         purok,
+  //         barangay
+  //       )
+  //     `)
+  //     .eq('id', postId)
+  //     .single();
+  
+  //   if (error) throw error;
+    
+  //   console.log("✅ Fetch Result from Supabase:", post);
+    
+  //   return {
+  //     ...post,
+  //     user: post.personal_users
+  //       ? { email: post.personal_users.email, name: `${post.personal_users.first_name} ${post.personal_users.last_name}` }
+  //       : null
+  //   };
+  // },
   async getPostById(postId: string) {
-    const { data: post, error } = await supabase
-      .from('posts')
-      .select(`
-        *,
-        category:categories!posts_category_id_fkey (
-          id,
-          name
-        ),
-        collection_mode:collection_modes!posts_collection_mode_id_fkey (
-          id,
-          name,
-          icon
-        ),
-        post_item_types (
-          item_types (
-            id,
-            name
-          )
-        ),
-        personal_users (
-          id,
-          email,
-          first_name,
-          last_name,
-          purok,
-          barangay
-        )
-      `)
-      .eq('id', postId)
-      .single();
+    const { data, error } = await supabase.rpc('get_post_by_id_with_location', { pid: postId });
   
     if (error) throw error;
-    
-    console.log("✅ Fetch Result from Supabase:", post);
-    
+  
+    const post = ((data ?? [])[0] ?? null) as RawFetchedPost;
+  
     return {
       ...post,
       user: post.personal_users
-        ? { email: post.personal_users.email, name: `${post.personal_users.first_name} ${post.personal_users.last_name}` }
-        : null
-    };
+        ? {
+            email: post.personal_users.email,
+            name: `${post.personal_users.first_name ?? ''} ${post.personal_users.last_name ?? ''}`,
+            barangay: post.personal_users.barangay ?? '',
+            purok: post.personal_users.purok ?? '',
+            first_name: post.personal_users.first_name ?? '',
+            last_name: post.personal_users.last_name ?? '',
+          }
+        : undefined,
+    } as Post;
   },
-
+  
   async updatePost (postId: string, postData: any) {
     const { item_type_ids, ...postFields } = postData;
 
@@ -336,5 +436,4 @@ export const postsService = {
 
     if (error) throw error;
   },
-
 }; 

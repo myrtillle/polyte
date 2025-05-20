@@ -1,14 +1,25 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { Card } from 'react-native-paper';
 import { supabase } from '../../services/supabase';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList } from '../../types/navigation';
+import { HomeStackParamList, ProfileStackParamList, MessagesStackParamList, RootStackParamList } from '../../types/navigation';
 import { profileService } from '@/services/profileService';
 
+const renderStars = (rating: number) => {
+  const fullStars = Math.floor(rating);
+  const hasHalfStar = rating % 1 >= 0.5;
+  return '⭐'.repeat(fullStars) + (hasHalfStar ? '⭐' : '') + '☆'.repeat(5 - fullStars - (hasHalfStar ? 1 : 0));
+};
+
 export default function ProfileScreen() {
+  //navigation
+  const homeNavigation = useNavigation<StackNavigationProp<HomeStackParamList>>();
+  const profileNavigation = useNavigation<StackNavigationProp<ProfileStackParamList>>();
+  const messagesNavigation = useNavigation<StackNavigationProp<MessagesStackParamList>>();
+
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -91,8 +102,19 @@ export default function ProfileScreen() {
     if (error) {
       console.error("❌ Logout Failed:", error.message);
     } else {
-      navigation.replace('Login');
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
     }
+  };
+
+  const handleClaimReward = () => {
+    Alert.alert(
+      "Claim Reward",
+      "This feature is coming soon! Stay tuned for exciting rewards based on your Poly points.",
+      [{ text: "OK" }]
+    );
   };
 
   if (loading) return <ActivityIndicator color="#00D964" size="large" style={{ flex: 1 }} />;
@@ -121,24 +143,30 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.ratingRow} onPress={() => navigation.navigate('Review')}>
-        <View style={styles.ratingSection}>
-          <Text style={styles.rating}>⭐️⭐️⭐️⭐️</Text>
-          <Text style={styles.ratingLabel}>USER RATING AS OF THIS MONTH</Text>
-        </View>
+        <TouchableOpacity style={styles.ratingRow} onPress={() => profileNavigation.navigate('Review')}>
+          <View style={styles.ratingSection}>
+            <Text style={styles.rating}>{renderStars(profile.averageRating)}</Text>
+            <Text style={styles.ratingLabel}>USER RATING AS OF THIS MONTH</Text>
+          </View>
 
-        <View style={styles.polyWrapper}>
-          <Text style={styles.polyCount}>{profile.totalPoints}</Text>
-          <Text style={styles.polyLabel}>POLY COLLECTED</Text>
-        </View>
-      </TouchableOpacity>
+          <View style={styles.polyWrapper}>
+            <Text style={styles.polyCount}>{profile.totalPoints}</Text>
+            <Text style={styles.polyLabel}>POLY COLLECTED</Text>
+          </View>
+        </TouchableOpacity>
 
+        <TouchableOpacity 
+          style={[styles.actionButton, styles.claimRewardButton]} 
+          onPress={handleClaimReward}
+        >
+          <Text style={styles.claimRewardText}>🎁 CLAIM REWARD</Text>
+        </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('MyPosts')}>
+        <TouchableOpacity style={styles.actionButton} onPress={() => profileNavigation.navigate('MyPosts')}>
           <Text style={styles.actionButtonTextMP}>MY POST</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('TransacHist')}>
+        <TouchableOpacity style={styles.actionButton} onPress={() => profileNavigation.navigate('TransacHist')}>
           <Text style={styles.actionButtonTextTH}>VIEW TRANSACTION HISTORY</Text>
         </TouchableOpacity>
 
@@ -351,6 +379,15 @@ const styles = StyleSheet.create({
   },
   logoutButtonText: {
     color: 'white',
+    fontWeight: 'bold',
+  },
+  claimRewardButton: {
+    backgroundColor: '#FFD700',
+    marginBottom: 16,
+  },
+  claimRewardText: {
+    color: '#023F0F',
+    textAlign: 'center',
     fontWeight: 'bold',
   },
 });
