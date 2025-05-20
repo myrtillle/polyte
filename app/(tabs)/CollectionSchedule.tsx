@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet, TextInput, Modal, ActivityIndicator } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { RouteProp } from '@react-navigation/native';
-import { RootStackParamList } from '../../types/navigation';
+import { HomeStackParamList, MessagesStackParamList, ProfileStackParamList, RootStackParamList } from '../../types/navigation';
 import { Button, IconButton } from 'react-native-paper';
 import { offersService, Schedule } from '../../services/offersService';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -10,7 +10,12 @@ import { scheduleService } from '@/services/scheduleService';
 import { supabase } from '@/services/supabase';
 
 const CollectionSchedule = () => {
+  //navigation
+  const homeNavigation = useNavigation<StackNavigationProp<HomeStackParamList>>();
+  const profileNavigation = useNavigation<StackNavigationProp<ProfileStackParamList>>();
+  const messagesNavigation = useNavigation<StackNavigationProp<MessagesStackParamList>>();
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+
   const route = useRoute<RouteProp<RootStackParamList, 'CollectionSchedule'>>();
   const offerId = route.params?.offerID;
   console.log("Received offer ID:", offerId);
@@ -39,7 +44,7 @@ const CollectionSchedule = () => {
     }
     const userId = user.id;
     if (schedule) {
-      navigation.navigate('ChatScreen', {
+      messagesNavigation.navigate('ChatScreen', {
         chatId: offerId,
         userId,
         schedule,

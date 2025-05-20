@@ -2,13 +2,13 @@
 import React,  { useState, useEffect }  from 'react';
 import { View, Text, StyleSheet, Image, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert  } from 'react-native';
 import { RouteProp, useFocusEffect } from '@react-navigation/native';
-import { RootStackParamList } from '../../types/navigation';
+import { HomeStackParamList, MessagesStackParamList, ProfileStackParamList, RootStackParamList } from '../../types/navigation';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { Button, Divider, IconButton } from 'react-native-paper';
 import { commentsService } from '../../services/commentsService';
 import { supabase } from '../../services/supabase';
-import { Post } from '../../types/navigation'; 
+import { Post } from '../../services/postsService';
 import { Comment } from '../../types/navigation'; 
 import { getOffersByPost, offersService } from '../../services/offersService'; 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -21,12 +21,15 @@ import { messagesService } from '@/services/messagesService';
 import Constants from 'expo-constants';
 
 
-type ViewPostRouteProp = RouteProp<RootStackParamList, 'ViewPost'>;
-type viewPostNavigationProp = StackNavigationProp<RootStackParamList, 'ViewPost'>;
+type ViewPostRouteProp = RouteProp<HomeStackParamList, 'ViewPost'>;
+type viewPostNavigationProp = StackNavigationProp<HomeStackParamList, 'ViewPost'>;
 
 const ViewPost = () => {
   const route = useRoute<ViewPostRouteProp>();
-  const navigation = useNavigation<viewPostNavigationProp>();
+  const messagesNavigation = useNavigation<StackNavigationProp<MessagesStackParamList>>();  
+  const homeNavigation = useNavigation<StackNavigationProp<HomeStackParamList>>();
+  const profileNavigation = useNavigation<StackNavigationProp<ProfileStackParamList>>();
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
 
   const { postId } = route.params;
   // Only ONE state for post  
@@ -105,7 +108,7 @@ const ViewPost = () => {
     try {
       const chatId = await messagesService.getOrCreateChatId(currentUser.id, post.user_id);
   
-      navigation.navigate('ChatScreen', {
+      messagesNavigation.navigate('ChatScreen', {
         chatId,
         userId: currentUser.id,
         post,
@@ -288,7 +291,7 @@ const ViewPost = () => {
   };
 
   const handleSeeDetails = (offer: Offer) => {
-    navigation.navigate("ViewTransaction", { offerId: offer.id });
+    profileNavigation.navigate("ViewTransaction", { offerId: offer.id });
   };
 
   const handleInterested = async () => {
@@ -467,7 +470,7 @@ const ViewPost = () => {
 
   return (
     <View style={styles.container}> 
-      {/* Back Button */}
+      {/* Back Button
       <View style={styles.headerContainer}>
         <IconButton
           icon="arrow-left"
@@ -477,7 +480,7 @@ const ViewPost = () => {
           style={{ position: 'absolute', left: 0 }}
         />
         <Text style={styles.headerTitle}>See Post</Text>
-      </View>
+      </View> */}
 
       {/* Header Tabs */}
       <View style={styles.tabContainer}>
@@ -518,10 +521,10 @@ const ViewPost = () => {
           <Image source={{ uri: 'https://i.pravatar.cc/40' }} style={styles.avatar} />
 
           <View style={{ flex: 1 }}>
-            <Text style={styles.userName}>{post.user?.name}</Text>
+            <Text style={styles.userName}>{post.users?.raw_user_meta_data?.name}</Text>
             <View style={styles.userLocationRow}>
             <Image source={greenMark} style={styles.greenMarkIcon} />
-            <Text style={styles.userLocationText}>{post.user?.barangay}, Purok {post.user?.purok}</Text>
+            <Text style={styles.userLocationText}>{post.users?.barangays?.name}, Purok {post.users?.puroks?.name}</Text>
           </View>
 
           </View>
@@ -640,7 +643,7 @@ const ViewPost = () => {
                         Alert.alert("Error", "Plastic item types are missing.");
                         return;
                       }
-                      navigation.navigate('MakeOffer', { post });
+                      homeNavigation.navigate('MakeOffer', { post });
                     }}
                   >
                     <Image source={require('../../assets/images/trashbag.png')} style={styles.buttonIcon} />
@@ -1272,6 +1275,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 10,
     backgroundColor: '#122C0F',
+    marginTop: 10
   },
   
   tabButton: {

@@ -3,12 +3,12 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, Image, StyleSheet, Animated, Dimensions, TouchableOpacity } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList
+import { ProfileStackParamList, RootStackParamList
 
  } from '@/types/navigation';
 const screenHeight = Dimensions.get('window').height;
 
-type NavigationProp = StackNavigationProp<RootStackParamList, 'TransaCompleted'>;
+type NavigationProp = StackNavigationProp<ProfileStackParamList, 'TransaCompleted'>;
 
 export default function TransaCompleted() {
   const navigation = useNavigation<NavigationProp>();

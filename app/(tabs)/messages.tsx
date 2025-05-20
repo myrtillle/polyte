@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet,Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList } from '../../types/navigation';
+import { MessagesStackParamList, RootStackParamList } from '../../types/navigation';
 import { supabase } from '@/services/supabase';
 import { messagesService } from '@/services/messagesService';
 import { LinearGradient } from 'expo-linear-gradient';
 import paperplaneIcon from '../../assets/images/paperplane.png'; // adjust if path is different
 
 
-type MessagesScreenNavProp = StackNavigationProp<RootStackParamList, 'ChatScreen'>;
+type MessagesScreenNavProp = StackNavigationProp<MessagesStackParamList, 'ChatScreen'>;
 
 interface ChatPreview {
   chat_id: string;

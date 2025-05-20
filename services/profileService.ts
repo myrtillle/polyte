@@ -38,10 +38,23 @@ export const profileService = {
 
     const totalPoints = pointsData?.reduce((sum, p) => sum + (p.points || 0), 0);
 
+    // Fetch average rating
+    const { data: reviewsData, error: reviewsError } = await supabase
+      .from('reviews')
+      .select('rating')
+      .eq('reviewed_user_id', userId);
+
+    if (reviewsError) throw new Error(reviewsError.message);
+
+    const averageRating = reviewsData?.length 
+      ? reviewsData.reduce((sum, r) => sum + (r.rating || 0), 0) / reviewsData.length 
+      : 0;
+
     return {
       ...userDetails,
       barangay: userDetails.barangays?.[0]?.name ?? '',
       totalPoints,
+      averageRating,
     };
   },
 

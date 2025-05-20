@@ -2,14 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, TextInput, Button, Image, Modal, StyleSheet, Alert, TouchableOpacity } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useRoute, useNavigation, NavigationProp } from '@react-navigation/native';
 import { messagesService } from '@/services/messagesService';
 import { scheduleService } from '@/services/scheduleService';
 import { supabase } from '@/services/supabase'; 
 import { MaterialIcons } from '@expo/vector-icons';
 import { Chip, Divider, IconButton } from 'react-native-paper';
 import { offersService, Schedule } from '@/services/offersService';
-import { RootStackParamList } from '@/types/navigation';
+import { HomeStackParamList, MessagesStackParamList, ProfileStackParamList  } from '@/types/navigation';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Message } from '@/services/messagesService';
 import { formatTimeAgo } from '@/utils/dateUtils'; 
@@ -35,11 +35,10 @@ interface RouteParams {
     schedule?: Schedule;
 }
 
-type NavigationProp = StackNavigationProp<RootStackParamList, 'ChatScreen'>;
-
 const ChatScreen = () => {
     const route = useRoute();
-    const navigation = useNavigation<NavigationProp>();
+    const homeNavigation = useNavigation<StackNavigationProp<HomeStackParamList>>();
+    const profileNavigation = useNavigation<StackNavigationProp<ProfileStackParamList>>();
 
     const { chatId, userId, post, schedule } = (route.params || {}) as RouteParams;
     const [messages, setMessages] = useState<Message[]>([]);
@@ -355,7 +354,7 @@ const ChatScreen = () => {
                   </Text>
 
                   <TouchableOpacity
-                    onPress={() => navigation.navigate('ViewPost', { postId: post.id })}
+                    onPress={() => homeNavigation.navigate('ViewPost', { postId: post.id })}
                     style={{
                       marginTop: 10,
                       padding: 6,
@@ -391,7 +390,7 @@ const ChatScreen = () => {
 
                     <Button
                     title="Back to Transaction"
-                    onPress={() => navigation.navigate('ViewTransaction', { offerId: schedule.offer_id })}
+                    onPress={() => profileNavigation.navigate('ViewTransaction', { offerId: schedule.offer_id })}
                     color="#888"
                     />
 
@@ -421,8 +420,8 @@ const ChatScreen = () => {
         <View style={styles.otherBubble}>
           {item.target_type && item.target_id && (
             <TouchableOpacity onPress={() => {
-              if (item.target_type === 'post') navigation.navigate('ViewPost', { postId: item.target_id });
-              else if (item.target_type === 'schedule') navigation.navigate('ViewTransaction', { offerId: item.target_id });
+              if (item.target_type === 'post') homeNavigation.navigate('ViewPost', { postId: item.target_id });
+              else if (item.target_type === 'schedule') profileNavigation.navigate('ViewTransaction', { offerId: item.target_id });
             }}>
               <Text style={styles.bannerText}>
                 📌 In reply to {item.target_type === 'post' ? 'Post' : 'Schedule'}
@@ -443,8 +442,8 @@ const ChatScreen = () => {
         <View style={styles.userBubble}>
           {item.target_type && item.target_id && (
             <TouchableOpacity onPress={() => {
-              if (item.target_type === 'post') navigation.navigate('ViewPost', { postId: item.target_id });
-              else if (item.target_type === 'schedule') navigation.navigate('ViewTransaction', { offerId: item.target_id });
+              if (item.target_type === 'post') homeNavigation.navigate('ViewPost', { postId: item.target_id });
+              else if (item.target_type === 'schedule') profileNavigation.navigate('ViewTransaction', { offerId: item.target_id });
             }}>
               <Text style={styles.bannerText}>
                 📌 In reply to this {item.target_type === 'post' ? 'Post' : 'Schedule'}

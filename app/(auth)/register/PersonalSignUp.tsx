@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
 import { View, Image, StyleSheet, ScrollView } from 'react-native';
 import { TextInput, Button, Text } from 'react-native-paper';
-import { router } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '@/types/navigation';
 import { authService } from '../../../services/authService';
 import { Picker } from '@react-native-picker/picker';
 
-export default function PersonalSignupScreen() {
+export default function PersonalSignUp() {
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList, 'Signup'>>();
+
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [username, setUsername] = useState('');
@@ -57,12 +61,10 @@ export default function PersonalSignupScreen() {
 
       if (error) throw error;
 
-      router.push({
-        pathname: '/(auth)/login',
-        params: {
-          message: 'Please check your email to confirm your account before logging in.',
-        },
+      navigation.navigate('Login', {
+        message: 'Please check your email to confirm your account before logging in.',
       });
+      
     } catch (err) {
       setError('Failed to create account');
     } finally {
@@ -125,7 +127,7 @@ export default function PersonalSignupScreen() {
       </Button>
 
       {/* Back Button */}
-      <Button mode="text" onPress={() => router.back()} style={styles.backButton}>
+      <Button mode="text" onPress={() => navigation.goBack()} style={styles.backButton}>
         BACK
       </Button>
     </ScrollView>

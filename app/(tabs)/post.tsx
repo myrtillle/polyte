@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Dimensions, Alert, Platform, KeyboardAvoidingView } from 'react-native';
 import { TextInput, Button, Title, Text, IconButton, SegmentedButtons, Chip } from 'react-native-paper';
-import { router } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { PostStackParamList } from '@/types/navigation'; // adjust if needed
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { postsService, CreatePostData } from '../../services/postsService';
 import * as ImagePicker from 'expo-image-picker';
@@ -73,6 +75,8 @@ export default function PostScreen() {
     latitudeDelta: 0.01,
     longitudeDelta: 0.01,
   };
+
+  const navigation = useNavigation<StackNavigationProp<PostStackParamList, 'PostMain'>>();
 
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -347,7 +351,7 @@ export default function PostScreen() {
             text: "Yes", 
             onPress: () => {
               resetForm();
-              router.replace('/(tabs)/home');
+              navigation.navigate('PostMain');
             }
           }
         ]
@@ -423,7 +427,7 @@ export default function PostScreen() {
       }
 
       await postsService.createPost(postData);
-      router.back();
+      navigation.goBack();
       resetForm();
       Alert.alert("Success", "Post created successfully!");
     } catch (error) {
@@ -513,7 +517,10 @@ export default function PostScreen() {
           text: "Yes", 
           onPress: () => {
             resetForm();
-            router.replace('/(tabs)');
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'PostMain' }],
+            });
           }
         }
       ]

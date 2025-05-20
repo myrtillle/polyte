@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'reac
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { reviewService } from '@/services/reviewService';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList } from '@/types/navigation'; // adjust as needed
+import { ProfileStackParamList } from '@/types/navigation';
 import { supabase } from '@/services/supabase';
 import { transactionService } from '@/services/transactionService';
 
@@ -12,12 +12,12 @@ export default function Ratings() {
   const [comment, setComment] = useState('');
   const [transaction, setTransaction] = useState<any>(null);
   //   const navigation = useNavigation();
-  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+  const navigation = useNavigation<StackNavigationProp<ProfileStackParamList, 'Ratings'>>();
   const { offerId } = useRoute().params as { offerId: string };
 
   useEffect(() => {
     const fetchTransaction = async () => {
-      const data = await transactionService.fetchTransactionDetails(offerId); // ✅ Load related post
+      const data = await transactionService.fetchTransactionDetails(offerId);
       setTransaction(data);
     };
 

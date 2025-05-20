@@ -6,6 +6,10 @@ import ProfileScreen from '../app/(tabs)/profile';
 import MessagesScreen from '@/app/(tabs)/messages';
 import LeaderboardScreen from '@/app/(tabs)/leaderboard';
 import { BottomTabParamList } from '../types/navigation';
+import HomeStack from './HomeStack';
+import ProfileStack from './ProfileStack';
+import MessagesStack from './MessagesStack';
+import { Ionicons } from '@expo/vector-icons';
 
 const Tab = createBottomTabNavigator<BottomTabParamList>();
 
@@ -13,16 +17,21 @@ export function BottomTabNavigator() {
   return (
     <Tab.Navigator
       screenOptions={{
-        tabBarActiveTintColor: '#2e7d32',
-        tabBarInactiveTintColor: 'gray',
+        tabBarActiveTintColor: '#00FF57',
+        tabBarInactiveTintColor: '#ffffff',
+        tabBarStyle: {
+          backgroundColor: '#023F0F',
+          borderTopWidth: 0,
+        },
+        headerShown: false,
       }}
     >
       <Tab.Screen
         name="Home"
-        component={HomeScreen}
+        component={HomeStack}
         options={{
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="home" color={color} size={size} />
+            <Ionicons name="home" size={size} color={color} />
           ),
         }}
       />
@@ -31,7 +40,7 @@ export function BottomTabNavigator() {
         component={LeaderboardScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="star" color={color} size={size} />
+            <Ionicons name="trophy" size={size} color={color} />
           ),
         }}
       />
@@ -40,25 +49,25 @@ export function BottomTabNavigator() {
         component={PostScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="plus-circle" color={color} size={size} />
+            <Ionicons name="add-circle" size={size} color={color} />
           ),
         }}
       />
        <Tab.Screen
         name="Messages"
-        component={MessagesScreen}
+        component={MessagesStack}
         options={{
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="message" color={color} size={size} />
+            <Ionicons name="chatbubbles" size={size} color={color} />
           ),
         }}
       />
       <Tab.Screen
         name="Profile"
-        component={ProfileScreen}
+        component={ProfileStack}
         options={{
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="account" color={color} size={size} />
+            <Ionicons name="person" size={size} color={color} />
           ),
         }}
       />

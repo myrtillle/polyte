@@ -1,16 +1,24 @@
 import React, { useState } from 'react';
 import { View, Image, StyleSheet } from 'react-native';
 import { TextInput, Button, Text } from 'react-native-paper';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { authService } from '../../services/authService';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '@/types/navigation';
+
+type AuthNav = StackNavigationProp<RootStackParamList, 'Login'>;
+
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const params = useLocalSearchParams();
-  const [successMessage, setSuccessMessage] = useState(params.message as string);
+  const navigation = useNavigation<AuthNav>();
+  const route = useRoute();
+  const params = route.params as { message?: string };
+  const [successMessage, setSuccessMessage] = useState(params?.message ?? '');
+
   const [showResend, setShowResend] = useState(false);
 
   const handleLogin = async () => {
@@ -27,7 +35,13 @@ export default function LoginScreen() {
         }
         return;
       }
-      // Auth check will handle redirect
+  
+      // ✅ Redirect to main app screen
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Main' }],
+      });
+  
     } catch (error) {
       console.error('Login failed:', error);
       setError('Login failed. Please check your credentials.');
@@ -36,6 +50,7 @@ export default function LoginScreen() {
       setLoading(false);
     }
   };
+  
 
   const handleResendConfirmation = async () => {
     try {
@@ -116,7 +131,7 @@ export default function LoginScreen() {
       </Button>
       <Button
         mode="text"
-        onPress={() => router.push('/(auth)/ForgotPassword')}
+        onPress={() => navigation.navigate('ForgotPassword')}
         labelStyle={{ color: '#00FF57', fontSize: 12 }}
       >
         Forgot Password?
@@ -125,7 +140,7 @@ export default function LoginScreen() {
         <Text style={styles.signupText}>Don't have an account? </Text>
         <Button
           mode="text"
-          onPress={() => router.push('/(auth)/register')}
+          onPress={() => navigation.navigate('Signup')}
           style={styles.signupButton}
         >
           Sign Up

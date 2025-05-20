@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Transaction, transactionService } from '@/services/transactionService';
 import { Offer } from '@/services/supabase';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList } from '../../types/navigation';
+import { ProfileStackParamList, RootStackParamList } from '../../types/navigation';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { Button, Divider, IconButton } from 'react-native-paper';
 import { Image } from 'react-native';
@@ -17,6 +17,7 @@ import calendarIcon from '../../assets/images/calendar.png';
 
 
 const TransacHist = () => {
+  const profileNavigation = useNavigation<StackNavigationProp<ProfileStackParamList>>();
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const [selectedTab, setSelectedTab] = useState('Pending');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -53,7 +54,7 @@ const TransacHist = () => {
 
   const renderCard = ({ item }: { item: Transaction }) => (
     
-    <TouchableOpacity style={styles.card}onPress={() => navigation.navigate('ViewTransaction', { offerId: item.id })}>
+    <TouchableOpacity style={styles.card}onPress={() => profileNavigation.navigate('ViewTransaction', { offerId: item.id })}>
       <Text style={styles.statusTitle}>
         {item.status.replace(/_/g, ' ').toUpperCase()}
       </Text>
@@ -78,7 +79,7 @@ const TransacHist = () => {
             start={{ x: 0, y: 0 }}
             end={{ x: 0, y: 1 }}
           > 
-          <View style={styles.headerContainer}>
+          {/* <View style={styles.headerContainer}>
               <IconButton
                 icon="arrow-left"
                 size={24}
@@ -87,7 +88,7 @@ const TransacHist = () => {
                 style={{ position: 'absolute', left: 0 }}
               />
               <Text style={styles.headerTitle}>TRANSACTION LIST</Text>
-            </View>
+            </View> */}
           <View style={styles.tabWrapper}>
           {tabs.map((tab) => (
         <TouchableOpacity

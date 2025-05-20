@@ -27,7 +27,7 @@ export interface Post {
   collection_mode_id: number;
   status: string;
   created_at: string;
-  updated_at: string;
+  // updated_at: string;
   photos?: string[];
   location?: string;
   users?: {

@@ -31,6 +31,7 @@ export interface Offer {
 }
 
 export interface Schedule {
+  id: string;
   offer_id: string;
   status: string;
   scheduled_time: string;
@@ -40,7 +41,10 @@ export interface Schedule {
   photoUrl: string;
   purok: string;
   barangay: string;
-  user_id: string;
+  user_id: string; 
+  photo_url?: string;
+  offerer_name?: string;
+  collector_name?: string;
 }
 
 export const createOffer = async (offerData: Offer) => {
@@ -186,7 +190,7 @@ export const offersService = {
     try {
         const { data, error } = await supabase
             .from('offer_schedules')
-            .select('offer_id, status, scheduled_time, scheduled_date, post_id, user_id, offer_id')
+            .select('id, offer_id, status, scheduled_time, scheduled_date, post_id, user_id, offer_id')
             .eq('offer_id', offerId)
             .single();
   
@@ -198,6 +202,7 @@ export const offersService = {
         const photoUrl = postDetails.photos?.[0] ?? '';
   
         return {
+            id: data.id,
             offer_id: data.offer_id,
             status: data.status,
             scheduled_time: data.scheduled_time,

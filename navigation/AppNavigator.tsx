@@ -1,24 +1,14 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { BottomTabNavigator } from './BottomTabNavigator';
-import LoginScreen from '../app/screens/LoginScreen';
-import SignupScreen from '../app/screens/SignupScreen';
-import ViewPost from '../app/(tabs)/ViewPost';  
-import MakeOffer from '../app/(tabs)/MakeOffer';
+import LoginScreen from '@/app/(auth)/login';
+import SignupScreen from '@/app/screens/SignupScreen';
 import { RootStackParamList } from '../types/navigation';
 import EditOffer from '../app/(tabs)/EditOffer';
 import ScheduleOffer from '../app/(tabs)/ScheduleOffer'
 import CollectionSchedule from '../app/(tabs)/CollectionSchedule';
-import ChatScreen from '@/app/(tabs)/ChatScreen';
-import TransacHist from '@/app/(tabs)/TransacHist';
-import ViewTransaction from '@/app/(tabs)/ViewTransaction';
 import ConfirmDelivery from '@/app/(tabs)/ConfirmDelivery';
-import MyPosts from '@/app/(tabs)/MyPosts';
-import Review from '@/app/(tabs)/Review';
-import Notifications from '@/app/(tabs)/Notifications';
-import EditPost from '@/app/(tabs)/EditPost'
-import TransaCompleted from '@/app/(tabs)/TransaCompleted';
-import Ratings from '@/app/(tabs)/Ratings';
+import PersonalSignUp from '@/app/(auth)/register/PersonalSignUp';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -32,22 +22,13 @@ export function AppNavigator() {
       />
       <Stack.Screen 
         name="Signup" 
-        component={SignupScreen}
+        component={PersonalSignUp}
         options={{ headerShown: false }}
       />
       <Stack.Screen 
         name="Main" 
         component={BottomTabNavigator}
         options={{ headerShown: false }} 
-      />
-      <Stack.Screen 
-        name="ViewPost" 
-        component={ViewPost}
-        options={{ title: 'View Post' }} 
-      />
-      <Stack.Screen 
-        name="MakeOffer" 
-        component={MakeOffer} 
       />
       <Stack.Screen 
         name="EditOffer" 
@@ -62,44 +43,8 @@ export function AppNavigator() {
         component={CollectionSchedule}
       />
       <Stack.Screen
-        name="ChatScreen"
-        component={ChatScreen}
-      />
-      <Stack.Screen
-        name="TransacHist"
-        component={TransacHist}
-      />
-      <Stack.Screen
-        name="ViewTransaction"
-        component={ViewTransaction}
-      />
-      <Stack.Screen
         name="ConfirmDelivery"
         component={ConfirmDelivery}
-      />
-      <Stack.Screen
-        name="MyPosts"
-        component={MyPosts}
-      />
-      <Stack.Screen
-        name="Review"
-        component={Review}
-      />
-      <Stack.Screen
-        name="Notifications"
-        component={Notifications}
-      />
-      <Stack.Screen
-        name="EditPost"
-        component={EditPost}
-      />
-       <Stack.Screen
-        name="TransaCompleted"
-        component={TransaCompleted}
-      />
-       <Stack.Screen
-        name="Ratings"
-        component={Ratings}
       />
     </Stack.Navigator>
   );

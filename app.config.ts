@@ -54,10 +54,10 @@ export default {
       }
     },
     plugins: [
-      ['expo-router', {
-        origin: 'https://polytev2.com',
-        asyncRoutes: { enabled: true }
-      }],
+      // ['expo-router', {
+      //   origin: 'https://polytev2.com',
+      //   asyncRoutes: { enabled: true }
+      // }],
       ['expo-location', {
         locationAlwaysAndWhenInUsePermission: 'Allow $(PRODUCT_NAME) to use your location.'
       }]

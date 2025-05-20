@@ -6,13 +6,13 @@ import {
 import { Button,  IconButton } from 'react-native-paper';
 import * as ImagePicker from 'expo-image-picker';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
-import { RootStackParamList } from '../../types/navigation';
+import { HomeStackParamList, RootStackParamList } from '../../types/navigation';
 import { createOffer } from '../../services/offersService'; 
 import { supabase } from '../../services/supabase'; 
 import { notificationService } from '@/services/notificationService';
 import { Offer, offersService } from '../../services/offersService';
 
-type MakeOfferRouteProp = RouteProp<RootStackParamList, 'MakeOffer'>;
+type MakeOfferRouteProp = RouteProp<HomeStackParamList, 'MakeOffer'>;
 
 const MakeOffer = () => {
   const route = useRoute<MakeOfferRouteProp>();
