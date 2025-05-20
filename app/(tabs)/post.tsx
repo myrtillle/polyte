@@ -596,7 +596,7 @@ export default function PostScreen() {
           <View style={styles.itemTypesContainer}>
             <View style={styles.itemTypesHeader}>
               <Text style={styles.itemTypesTitle}>TYPE OF PLASTICS</Text>
-              <Text style={styles.itemTypesInfo}>SELECT AT LEAST 2</Text>
+              <Text style={styles.itemTypesInfo}>SELECT AT LEAST 1</Text>
               <MaterialCommunityIcons name="information-outline" size={18} color="limegreen" />
             </View>
 

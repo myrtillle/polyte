@@ -3,15 +3,6 @@ import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity
 import { supabase } from '@/services/supabase';
 import { notificationService } from '@/services/notificationService';
 import { RouteProp, useFocusEffect, useRoute } from '@react-navigation/native';
-<<<<<<< HEAD
-import { RootStackParamList } from '@/types/navigation';
-import { useNavigation, NavigationProp } from '@react-navigation/native';
-
-type NotificationsRouteProp = RouteProp<RootStackParamList, 'Notifications'>;
-
-export default function Notifications() {
-  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
-=======
 import { StackNavigationProp } from '@react-navigation/stack';
 import { HomeStackParamList, ProfileStackParamList, MessagesStackParamList, RootStackParamList } from '@/types/navigation';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
@@ -23,7 +14,6 @@ export default function Notifications() {
   const homeNavigation = useNavigation<StackNavigationProp<HomeStackParamList>>();
   const profileNavigation = useNavigation<StackNavigationProp<ProfileStackParamList>>();
   const messagesNavigation = useNavigation<StackNavigationProp<MessagesStackParamList>>();
->>>>>>> 99fc23e8bb5b8e9dd5a541c7654fc1136b2c100c
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
@@ -123,17 +113,10 @@ export default function Notifications() {
         return;
       }
 
-<<<<<<< HEAD
-      navigation.navigate('ViewPost', { post });
-  
-      } else if (type === 'offer_accepted' || 'transaction_completed' || 'payment_send') {
-        navigation.navigate('ViewTransaction', { offerId: notif.target_id });
-=======
       homeNavigation.navigate('ViewPost', { post });
   
       } else if (type === 'offer_accepted' || 'transaction_completed' || 'payment_send') {
         profileNavigation.navigate('ViewTransaction', { offerId: notif.target_id });
->>>>>>> 99fc23e8bb5b8e9dd5a541c7654fc1136b2c100c
   
       } else {
         console.warn("Unhandled notification type:", type);

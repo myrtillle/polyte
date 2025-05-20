@@ -521,7 +521,11 @@ const ViewPost = () => {
           <Image source={{ uri: 'https://i.pravatar.cc/40' }} style={styles.avatar} />
 
           <View style={{ flex: 1 }}>
-            <Text style={styles.userName}>{post.users?.raw_user_meta_data?.name}</Text>
+            <Text style={styles.userName}>
+  {post.users?.raw_user_meta_data?.name ??
+   `${post.users?.raw_user_meta_data?.first_name ?? ''} ${post.users?.raw_user_meta_data?.last_name ?? ''}`.trim()}
+</Text>
+
             <View style={styles.userLocationRow}>
             <Image source={greenMark} style={styles.greenMarkIcon} />
             <Text style={styles.userLocationText}>{post.users?.barangays?.name}, Purok {post.users?.puroks?.name}</Text>
