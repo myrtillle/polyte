@@ -14,9 +14,7 @@ import { rewardsService } from '@/services/rewardsService';
 import { Button } from 'react-native-paper';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { HomeStackParamList, MessagesStackParamList, ProfileStackParamList, RootStackParamList } from '../../types/navigation';
-
-const profileNavigation = useNavigation<StackNavigationProp<ProfileStackParamList>>();    
+import { HomeStackParamList, MessagesStackParamList, ProfileStackParamList, RootStackParamList } from '../../types/navigation';  
 
 export default function RedeemRewards() {
   const [rewards, setRewards] = useState<any[]>([]);
@@ -26,6 +24,8 @@ export default function RedeemRewards() {
   const [history, setHistory] = useState<any[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [userId, setUserId] = useState<string>('');
+  
+  const profileNavigation = useNavigation<StackNavigationProp<ProfileStackParamList>>();  
 
   useEffect(() => {
     loadData();

@@ -8,11 +8,6 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { HomeStackParamList, ProfileStackParamList, MessagesStackParamList, RootStackParamList } from '../../types/navigation';
 import { profileService } from '@/services/profileService';
 
-const renderStars = (rating: number) => {
-  const fullStars = Math.floor(rating);
-  const hasHalfStar = rating % 1 >= 0.5;
-  return '⭐'.repeat(fullStars) + (hasHalfStar ? '⭐' : '') + '☆'.repeat(5 - fullStars - (hasHalfStar ? 1 : 0));
-};
 
 export default function ProfileScreen() {
   //navigation
@@ -27,6 +22,12 @@ export default function ProfileScreen() {
   const [userId, setUserId] = useState<string | null>(null);
 
   const co2Saved = collectionStats.donated * 1.5;
+
+  const renderStars = (rating: number) => {
+    const fullStars = Math.floor(rating);
+    const hasHalfStar = rating % 1 >= 0.5;
+    return '⭐'.repeat(fullStars) + (hasHalfStar ? '⭐' : '') + '☆'.repeat(5 - fullStars - (hasHalfStar ? 1 : 0));
+  };
 
   const monthsSinceJoined = profile?.created_at
     ? Math.max(
@@ -67,35 +68,7 @@ export default function ProfileScreen() {
   useEffect(() => {
     loadProfile();
     
-  }, []);
-
-  useEffect(() => {
-    if (!userId) return;
-  
-    const subscription = supabase
-      .channel('user_polys')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'user_polys',
-          filter: `user_id=eq.${userId}`,
-        },
-        (payload) => {
-          const newPoints = payload.new.points;
-          console.log('🟢 New points earned:', newPoints);
-  
-
-          loadProfile();
-        }
-      )
-      .subscribe();
-  
-    return () => {
-      supabase.removeChannel(subscription);
-    };
-  }, [userId]);  
+  }, []); 
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -110,7 +83,7 @@ export default function ProfileScreen() {
   };
 
   const handleClaimReward = () => {
-    profileNavigation.navigate('RedeemRewards');
+    // profileNavigation.navigate('RedeemRewards');
   };
 
   if (loading) return <ActivityIndicator color="#00D964" size="large" style={{ flex: 1 }} />;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { createStackNavigator } from '@react-navigation/stack';
 import { BottomTabNavigator } from './BottomTabNavigator';
 import LoginScreen from '@/app/(auth)/login';
 import SignupScreen from '@/app/screens/SignupScreen';
@@ -10,25 +10,27 @@ import CollectionSchedule from '../app/(tabs)/CollectionSchedule';
 import ConfirmDelivery from '@/app/(tabs)/ConfirmDelivery';
 import PersonalSignUp from '@/app/(auth)/register/PersonalSignUp';
 
-const Stack = createNativeStackNavigator<RootStackParamList>();
+const Stack = createStackNavigator<RootStackParamList>();
 
 export function AppNavigator() {
   return (
-    <Stack.Navigator initialRouteName="Login">
+    <Stack.Navigator 
+      initialRouteName="Login"
+      screenOptions={{
+        headerShown: false
+      }}
+    >
       <Stack.Screen 
         name="Login" 
         component={LoginScreen}
-        options={{ headerShown: false }}
       />
       <Stack.Screen 
         name="Signup" 
         component={PersonalSignUp}
-        options={{ headerShown: false }}
       />
       <Stack.Screen 
         name="Main" 
         component={BottomTabNavigator}
-        options={{ headerShown: false }} 
       />
       <Stack.Screen 
         name="EditOffer" 
@@ -48,6 +50,6 @@ export function AppNavigator() {
       />
     </Stack.Navigator>
   );
-};
+}
 
 export default AppNavigator;
