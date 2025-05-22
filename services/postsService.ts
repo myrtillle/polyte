@@ -8,7 +8,8 @@ export interface Location {
 }
 
 type RawFetchedPost = Post & {
-  personal_users?: {
+  post_user?: {
+    username: string;
     email: string;
     first_name: string;
     last_name: string;
@@ -27,37 +28,36 @@ export interface Post {
   collection_mode_id: number;
   status: string;
   created_at: string;
-  // updated_at: string;
   photos?: string[];
   location?: string;
-  users?: {
-    id: string;
+
+  // Fetched via join from personal_users
+  user?: {
     email: string;
-    raw_user_meta_data?: {
-      first_name?: string;
-      last_name?: string;
-      username?: string;
-      name?: string;
-    };
-    barangays?: { name?: string };
-    puroks?: { name?: string };
+    first_name: string;
+    last_name: string;
+    full_name: string;
+    barangay: string;
+    purok: string;
+    username: string;
   };
+
   category?: {
     id: number;
     name: string;
   };
+
   collection_mode?: {
     id: number;
     name: string;
     icon: string;
   };
+
   post_item_types?: Array<{
-    item_types: {
-      id: number;
-      name: string;
-    };
+    id: number;
+    name: string;
   }>;
-} 
+}
 
 // New interface for creating a post
 export interface CreatePostData {
@@ -117,28 +117,50 @@ export const postsService = {
   
   //   return formattedPosts;
   // }, 
-  async getPosts() {
-    const { data, error } = await supabase.rpc('get_posts_with_location');
   
+  // for home screen
+  async getPosts() {
+    const { data, error } = await supabase.rpc('get_active_posts');
     if (error) throw error;
   
     const posts = (data ?? []) as RawFetchedPost[];
   
-    const formattedPosts = posts.map((post) => ({
+    return posts.map((post) => ({
       ...post,
-      user: post.personal_users
+      user: post.post_user
         ? {
-            email: post.personal_users.email,
-            name: `${post.personal_users.first_name ?? ''} ${post.personal_users.last_name ?? ''}`,
-            barangay: post.personal_users.barangay ?? '',
-            purok: post.personal_users.purok ?? '',
-            first_name: post.personal_users.first_name ?? '',
-            last_name: post.personal_users.last_name ?? '',
+            username: post.post_user.username ?? '',
+            email: post.post_user.email,
+            first_name: post.post_user.first_name ?? '',
+            last_name: post.post_user.last_name ?? '',
+            full_name: `${post.post_user.first_name ?? ''} ${post.post_user.last_name ?? ''}`.trim(),
+            barangay: post.post_user.barangay ?? '',
+            purok: post.post_user.purok ?? '',
           }
         : undefined,
     }));
+  },
   
-    return formattedPosts;
+  async getPostById(postId: string) {
+    const { data, error } = await supabase.rpc('get_post_by_id_with_location', { pid: postId });
+    if (error) throw error;
+  
+    const post = ((data ?? [])[0] ?? null) as RawFetchedPost;
+  
+    return {
+      ...post,
+      user: post.post_user
+        ? {
+            username: post.post_user.username ?? '',
+            email: post.post_user.email,
+            first_name: post.post_user.first_name ?? '',
+            last_name: post.post_user.last_name ?? '',
+            full_name: `${post.post_user.first_name ?? ''} ${post.post_user.last_name ?? ''}`.trim(),
+            barangay: post.post_user.barangay ?? '',
+            purok: post.post_user.purok ?? '',
+          }
+        : undefined,
+    } as Post;
   },
   
   async createPost(postData: CreatePostData) {
@@ -296,6 +318,7 @@ export const postsService = {
     return data;
   },
   
+  //unused
   async getAllPosts() {
     const { data, error } = await supabase
       .from('posts')
@@ -380,27 +403,7 @@ export const postsService = {
   //       : null
   //   };
   // },
-  async getPostById(postId: string) {
-    const { data, error } = await supabase.rpc('get_post_by_id_with_location', { pid: postId });
-  
-    if (error) throw error;
-  
-    const post = ((data ?? [])[0] ?? null) as RawFetchedPost;
-  
-    return {
-      ...post,
-      user: post.personal_users
-        ? {
-            email: post.personal_users.email,
-            name: `${post.personal_users.first_name ?? ''} ${post.personal_users.last_name ?? ''}`,
-            barangay: post.personal_users.barangay ?? '',
-            purok: post.personal_users.purok ?? '',
-            first_name: post.personal_users.first_name ?? '',
-            last_name: post.personal_users.last_name ?? '',
-          }
-        : undefined,
-    } as Post;
-  },
+
   
   async updatePost (postId: string, postData: any) {
     const { item_type_ids, ...postFields } = postData;

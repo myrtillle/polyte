@@ -5,7 +5,7 @@ import { RouteProp, useFocusEffect } from '@react-navigation/native';
 import { HomeStackParamList, MessagesStackParamList, ProfileStackParamList, RootStackParamList } from '../../types/navigation';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { Button, Divider, IconButton } from 'react-native-paper';
+import { Button, Chip, Divider, IconButton } from 'react-native-paper';
 import { commentsService } from '../../services/commentsService';
 import { supabase } from '../../services/supabase';
 import { Post } from '../../services/postsService';
@@ -522,14 +522,13 @@ const ViewPost = () => {
 
           <View style={{ flex: 1 }}>
             <Text style={styles.userName}>
-  {post.users?.raw_user_meta_data?.name ??
-   `${post.users?.raw_user_meta_data?.first_name ?? ''} ${post.users?.raw_user_meta_data?.last_name ?? ''}`.trim()}
-</Text>
-
+              {post.user?.username || 'Anonymous User'}
+            </Text>
+{/* 
             <View style={styles.userLocationRow}>
-            <Image source={greenMark} style={styles.greenMarkIcon} />
-            <Text style={styles.userLocationText}>{post.users?.barangays?.name}, Purok {post.users?.puroks?.name}</Text>
-          </View>
+              <Image source={greenMark} style={styles.greenMarkIcon} />
+              <Text style={styles.userLocationText}>{post.user?.purok}, {post.user?.barangay}</Text>
+            </View> */}
 
           </View>
 
@@ -537,58 +536,83 @@ const ViewPost = () => {
             <Text style={styles.timeText}> {formatTimeAgo(post.created_at)}</Text>
           </View>
         </View>
-          
-        {post.collection_mode?.name && (
-          <View style={styles.modeContainer}>
-            {(() => {
-              const mode = getModeData(post.collection_mode.name);
-              return (
-                <>
-                  <Image
-                    source={mode.icon}
-                    style={[styles.modeIcon, { tintColor: mode.color }]}
-                    resizeMode="contain"
-                  />
-                  <Text style={[styles.modeText, { color: mode.color }]}>
-                    {post.collection_mode.name}
-                  </Text>
-                </>
-              );
-            })()}
-          </View>
-        )}
 
         {/* meetup locs */}
-        {coords && (
+        {/* {coords && (
           <Text style={styles.userAddress}>
             📍 {address || `${coords.latitude.toFixed(5)}, ${coords.longitude.toFixed(5)}`}
           </Text>
-        )}
+        )} */}
 
         {/* Post Description */}
         <Text style={styles.description}>{post.description}</Text>
 
-        {/* Post Description */}
-        <Text style={styles.description}>{post.kilograms}</Text>
-        
+        {/* Important Details Section */}
+        <View style={styles.detailsContainer}>
+          {/* collection mode */}        
+          {post.collection_mode?.name && (
+            <View style={styles.modeContainer}>
+              {(() => {
+                const mode = getModeData(post.collection_mode.name);
+                return (
+                  <>
+                    <Image
+                      source={mode.icon}
+                      style={[styles.modeIcon, { tintColor: mode.color }]}
+                      resizeMode="contain"
+                    />
+                    <Text style={[styles.modeText, { color: mode.color }]}>
+                      {post.collection_mode.name}
+                    </Text>
+                  </>
+                );
+              })()}
+            </View>
+          )}
 
-        {/* Post Description */}
-        {isSellingPost && (
-          <View>
-            <Text style={styles.description}>Price: {post.price || 0}</Text>
-            {/* <Text style={styles.description}>{post.price || 0}</Text> */}
+          {/* Location */}
+          <View style={styles.detailRow}>
+            <MaterialIcons name="location-on" size={20} color="#00FF57" />
+            <View style={styles.detailTextContainer}>
+              <Text style={styles.detailLabel}>Location</Text>
+              <Text style={styles.detailValue}>
+                {coords ? (address || `${coords.latitude.toFixed(5)}, ${coords.longitude.toFixed(5)}`) : 'No location specified'}
+              </Text>
+            </View>
           </View>
-        )}
 
-        {/* Item Types */}
-        <View style={styles.itemList}>
-          {post.post_item_types?.map((item, index) => (
-            <TouchableOpacity key={index} style={styles.itemChip}>
-              <Text style={styles.itemChipText}>{item.item_types.name}</Text>
-            </TouchableOpacity>
-          ))}
+          {/* Weight */}
+          <View style={styles.detailRow}>
+            <MaterialIcons name="scale" size={20} color="#00FF57" />
+            <View style={styles.detailTextContainer}>
+              <Text style={styles.detailLabel}>Weight</Text>
+              <Text style={styles.detailValue}>{post.kilograms} kg</Text>
+            </View>
+          </View>
+
+          {/* Price - Only show for selling posts */}
+          {isSellingPost && (
+            <View style={styles.detailRow}>
+              <MaterialIcons name="payments" size={20} color="#00FF57" />
+              <View style={styles.detailTextContainer}>
+                <Text style={styles.detailLabel}>Price</Text>
+                <Text style={styles.detailValue}>₱{post.price?.toFixed(2) || '0.00'}</Text>
+              </View>
+            </View>
+          )}
         </View>
 
+        {/* Plastic Item Types */}
+        <View style={styles.itemTypesContainer}>
+          <Text style={styles.itemTypesTitle}>Plastic Items</Text>
+          <View style={styles.itemList}>
+            {post.post_item_types?.map((type, index) => (
+              <View key={index} style={styles.itemChip}>
+                <Text style={styles.itemChipText}>{type?.name ?? 'Unknown'}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
 
         {/* Post Image */}
         {post.photos && post.photos.length > 0 && (
@@ -1360,7 +1384,7 @@ const styles = StyleSheet.create({
     color: 'gray' 
   },
   description: { 
-    fontSize: 12, 
+    fontSize: 14, 
     color: 'white', 
     marginBottom: 5 
   },
@@ -1531,7 +1555,40 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   
-
+  detailsContainer: {
+    backgroundColor: '#1E3D28',
+    borderRadius: 10,
+    padding: 15,
+    marginVertical: 15,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  detailTextContainer: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  detailLabel: {
+    color: '#A0A0A0',
+    fontSize: 12,
+    marginBottom: 2,
+  },
+  detailValue: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  itemTypesContainer: {
+    marginVertical: 15,
+  },
+  itemTypesTitle: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
 });
 
 export default ViewPost;

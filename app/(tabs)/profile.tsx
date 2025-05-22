@@ -2,11 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { Card } from 'react-native-paper';
 import { supabase } from '../../services/supabase';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { HomeStackParamList, ProfileStackParamList, MessagesStackParamList, RootStackParamList } from '../../types/navigation';
 import { profileService } from '@/services/profileService';
+import { Profile } from '../../services/profileService';
+import { MaterialIcons } from '@expo/vector-icons';
 
 
 export default function ProfileScreen() {
@@ -49,26 +51,36 @@ export default function ProfileScreen() {
   }, []);
   
   const loadProfile = async () => {
+    console.log('🔄 Loading profile data...');
     try {
+      setLoading(true);
       const data = await profileService.fetchCurrentUserDetails();
+      console.log('✅ Profile data loaded:', {
+        name: `${data.first_name} ${data.last_name}`,
+        points: data.totalPoints,
+        rating: data.averageRating
+      });
       setProfile(data);
 
       if (data?.id) {
         const stats = await profileService.fetchUserCollection(data.id);
+        console.log('✅ Collection stats loaded:', stats);
         setCollectionStats(stats);
-        
       }
     } catch (err) {
-      console.error(err);
+      console.error('❌ Error loading profile:', err);
+      Alert.alert('Error', 'Failed to load profile data');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadProfile();
-    
-  }, []); 
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('🎯 Profile screen focused');
+      loadProfile();
+    }, [])
+  );
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -83,7 +95,13 @@ export default function ProfileScreen() {
   };
 
   const handleClaimReward = () => {
-    // profileNavigation.navigate('RedeemRewards');
+    profileNavigation.navigate('RedeemRewards');
+  };
+
+  const handleEditProfile = () => {
+    if (profile) {
+      profileNavigation.navigate('EditProfile', { profile });
+    }
   };
 
   if (loading) return <ActivityIndicator color="#00D964" size="large" style={{ flex: 1 }} />;
@@ -101,29 +119,42 @@ export default function ProfileScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.headerWrapper}>
-          <Image
-            source={{ uri: 'https://i.pravatar.cc/100' }}
-            style={styles.profileImage}
-          />
+          <TouchableOpacity onPress={handleEditProfile}>
+            <Image
+              source={{ 
+                uri: profile?.profile_photo_url || 'https://i.pravatar.cc/100'
+              }}
+              style={styles.profileImage}
+              onError={(e) => {
+                console.error('❌ Image loading error:', e.nativeEvent.error);
+                console.log('📸 Attempted to load image from:', profile?.profile_photo_url);
+              }}
+            />
+            <View style={styles.editIconContainer}>
+              <MaterialIcons name="edit" size={20} color="#93a267" />
+            </View>
+          </TouchableOpacity>
           <View style={styles.headerTextContainer}>
             <Text style={styles.profileName}>{profile.first_name} {profile.last_name}</Text>
-            <Text style={styles.profileLocation}>Purok {profile.purok}, {profile.barangay}</Text>
+            <Text style={styles.profileLocation}> {profile.purok}, {profile.barangay}</Text>
             <Text style={styles.memberSince}>Member Since: {new Date(profile.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</Text>
           </View>
         </View>
 
         <View style={styles.ratingRow}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={styles.rating}>{renderStars(profile.averageRating)}</Text>
-            <TouchableOpacity onPress={() => profileNavigation.navigate('Review')}>
-              <Text style={styles.viewLink}> View</Text>
-            </TouchableOpacity>
+          <View style={styles.ratingSection}>
+            <View style={styles.ratingValueContainer}>
+              <Text style={styles.rating}>{renderStars(profile.averageRating)}</Text>
+              <TouchableOpacity onPress={() => profileNavigation.navigate('Review')}>
+                <Text style={styles.viewLink}>View</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.ratingLabel}>USER RATING</Text>
           </View>
-          <Text style={styles.ratingLabel}>USER RATING AS OF THIS MONTH</Text>
 
-          <View style={styles.polyWrapper}>
+          <View style={styles.polySection}>
             <Text style={styles.polyCount}>{profile.totalPoints}</Text>
-            <Text style={styles.polyLabel}>POLY COLLECTED</Text>
+            <Text style={styles.polyLabel}>TOTAL POLYS</Text>
           </View>
         </View>
 
@@ -131,15 +162,15 @@ export default function ProfileScreen() {
           style={[styles.actionButton, styles.claimRewardButton]} 
           onPress={handleClaimReward}
         >
-          <Text style={styles.claimRewardText}>🎁 CLAIM REWARD</Text>
+          <Text style={styles.claimRewardText}>Redeem Rewards</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.actionButton} onPress={() => profileNavigation.navigate('MyPosts')}>
-          <Text style={styles.actionButtonTextMP}>MY POST</Text>
+          <Text style={styles.actionButtonTextMP}>My Posts</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.actionButton} onPress={() => profileNavigation.navigate('TransacHist')}>
-          <Text style={styles.actionButtonTextTH}>VIEW TRANSACTION HISTORY</Text>
+          <Text style={styles.actionButtonTextTH}>Transaction History</Text>
         </TouchableOpacity>
 
         <View style={styles.allTimeStatsContainer}>
@@ -202,31 +233,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   ratingSection: {
-    flexShrink: 1,
+    flex: 1,
+    alignItems: 'flex-start',
+  },
+  ratingValueContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
   },
   rating: {
     fontSize: 16,
     color: '#00FF66',
-    marginVertical:2,
   },
   ratingLabel: {
     color: '#aaa',
     fontSize: 12,
-    flexWrap: 'wrap',
   },
   viewLink: {
-  fontSize: 13,
-  color: '#00FF66',
-  marginLeft: 6,
-  textDecorationLine: 'underline',
-},
-  polyWrapper: {
+    fontSize: 13,
+    color: '#00FF66',
+    marginLeft: 6,
+    textDecorationLine: 'underline',
+  },
+  polySection: {
+    flex: 1,
     alignItems: 'flex-end',
   },
   polyCount: {
     fontSize: 20,
     fontWeight: 'bold',
     color: '#00FF66',
+    marginBottom: 4,
   },
   polyLabel: {
     color: '#aaa',
@@ -366,6 +403,16 @@ const styles = StyleSheet.create({
     color: '#023F0F',
     textAlign: 'center',
     fontWeight: 'bold',
+  },
+  editIconContainer: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 4,
+    borderWidth: 2,
+    borderColor: '#93a267',
   },
 });
 

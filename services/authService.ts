@@ -100,9 +100,9 @@ export const authService = {
     if (error) throw error;
   },
   
-  async forgotPassword(email: string) {
+  async forgotPassword(email: string, options?: { redirectTo?: string }) {
     return await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: 'polyte://reset-password',
+      redirectTo: options?.redirectTo || 'polyte://reset-password',
     });
   },
 

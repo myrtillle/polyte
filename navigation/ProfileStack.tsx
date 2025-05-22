@@ -8,7 +8,7 @@ import EditPost from '@/app/(tabs)/EditPost';
 import TransaCompleted from '@/app/(tabs)/TransaCompleted';
 import Ratings from '@/app/(tabs)/Ratings';
 import RedeemRewards from '@/app/(tabs)/RedeemRewards';
-
+import EditProfileScreen from '@/app/(tabs)/EditProfile';
 const Stack = createNativeStackNavigator();
 
 export default function ProfileStack() {
@@ -34,11 +34,12 @@ export default function ProfileStack() {
       />
       <Stack.Screen name="ViewTransaction" component={ViewTransaction} />
       <Stack.Screen name="Review" component={Review} />
-      <Stack.Screen name="MyPostsScreen" component={MyPostsScreen} />
+      <Stack.Screen name="MyPosts" component={MyPostsScreen} />
       <Stack.Screen name="EditPost" component={EditPost} />
       <Stack.Screen name="TransaCompleted" component={TransaCompleted} />
       <Stack.Screen name="Ratings" component={Ratings} />
       <Stack.Screen name="RedeemRewards" component={RedeemRewards} />
+      <Stack.Screen name="EditProfile" component={EditProfileScreen} />
     </Stack.Navigator>
   );
 }

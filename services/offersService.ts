@@ -17,11 +17,9 @@ export interface Offer {
   message?: string;
   images: string[];
   status?: string;
-  post_item_types?: Array<{ // ✅ Add this property
-    item_types: {
-      id: number;
-      name: string;
-    };
+  post_item_types?: Array<{
+    id: number;
+    name: string;
   }>;
   created_at: string;
   personal_users?: {

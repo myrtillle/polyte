@@ -1,9 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Image, StyleSheet, ScrollView } from 'react-native';
 import { TextInput, Button, Text } from 'react-native-paper';
-import { router } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '@/types/navigation';
 import { authService } from '../../../services/authService';
+import { locationService, Barangay, Purok } from '../../../services/locationService';
 import { Picker } from '@react-native-picker/picker';
+
+type AuthNav = StackNavigationProp<RootStackParamList, 'Signup'>;
 
 export default function PersonalSignupScreen() {
   const [firstName, setFirstName] = useState('');
@@ -12,31 +17,86 @@ export default function PersonalSignupScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [barangay, setBarangay] = useState('');
-  const [purok, setPurok] = useState('');
+  const [barangayId, setBarangayId] = useState<number | null>(null);
+  const [purokId, setPurokId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [barangays, setBarangays] = useState<Barangay[]>([]);
+  const [puroks, setPuroks] = useState<Purok[]>([]);
+  const [loadingLocations, setLoadingLocations] = useState(true);
+  const navigation = useNavigation<AuthNav>();
 
-  // Define Puroks available for each Barangay
-  const PUROKS: { [key: string]: string[] } = {
-    Bankerohan: ['1', '2', '3', '4', '5'],
-    Matina: ['1', '2', '3', '4', '5', '6'],
-    Agdao: ['1', '2', '3', '4'],
+  useEffect(() => {
+    loadBarangays();
+  }, []);
+
+  useEffect(() => {
+    if (barangayId) {
+      loadPuroks(barangayId);
+    } else {
+      setPuroks([]);
+      setPurokId(null);
+    }
+  }, [barangayId]);
+
+  const loadBarangays = async () => {
+    try {
+      setLoadingLocations(true);
+      const data = await locationService.getBarangays();
+      setBarangays(data);
+    } catch (err) {
+      setError('Failed to load barangays. Please try again.');
+    } finally {
+      setLoadingLocations(false);
+    }
   };
 
-  // Function to get available Puroks based on Barangay
-  const getPuroks = () => {
-    return PUROKS[barangay] || [];
+  const loadPuroks = async (barangayId: number) => {
+    try {
+      setLoadingLocations(true);
+      const data = await locationService.getPuroksByBarangay(barangayId);
+      setPuroks(data);
+    } catch (err) {
+      setError('Failed to load puroks. Please try again.');
+    } finally {
+      setLoadingLocations(false);
+    }
+  };
+
+  const validatePassword = (password: string) => {
+    const errors = [];
+    if (password.length < 8) {
+      errors.push('Password must be at least 8 characters long');
+    }
+    if (!/[A-Z]/.test(password)) {
+      errors.push('Password must contain at least one uppercase letter');
+    }
+    if (!/[a-z]/.test(password)) {
+      errors.push('Password must contain at least one lowercase letter');
+    }
+    if (!/[0-9]/.test(password)) {
+      errors.push('Password must contain at least one number');
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+      errors.push('Password must contain at least one special character');
+    }
+    return errors;
   };
 
   const handleSignup = async () => {
+    if (!firstName || !lastName || !username || !email || !password || !confirmPassword || !barangayId || !purokId) {
+      setError('Please fill in all required fields');
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError('Passwords do not match');
       return;
     }
 
-    if (!firstName || !lastName || !username || !barangay || !purok) {
-      setError('Please fill in all required fields');
+    const passwordErrors = validatePassword(password);
+    if (passwordErrors.length > 0) {
+      setError(passwordErrors.join('\n'));
       return;
     }
 
@@ -50,21 +110,18 @@ export default function PersonalSignupScreen() {
         first_name: firstName,
         last_name: lastName,
         username,
-        barangay,
-        purok,
+        barangay: barangayId.toString(),
+        purok: purokId.toString(),
         account_type: 'personal',
       });
 
       if (error) throw error;
 
-      router.push({
-        pathname: '/(auth)/login',
-        params: {
-          message: 'Please check your email to confirm your account before logging in.',
-        },
+      navigation.navigate('Login', {
+        message: 'Please check your email to confirm your account before logging in.'
       });
     } catch (err) {
-      setError('Failed to create account');
+      setError('Failed to create account. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -79,34 +136,96 @@ export default function PersonalSignupScreen() {
       </View>
 
       {/* Input Fields */}
-      <TextInput label="Surname" value={lastName}  theme={inputTheme} onChangeText={setLastName} mode="outlined" style={styles.input} outlineStyle={{ borderRadius: 25 }}/>
-      <TextInput label="Firstname" value={firstName}  theme={inputTheme}onChangeText={setFirstName} mode="outlined" style={styles.input} outlineStyle={{ borderRadius: 25 }}/>
-      <TextInput label="Username" value={username} theme={inputTheme} onChangeText={setUsername} mode="outlined" style={styles.input} autoCapitalize="none" outlineStyle={{ borderRadius: 25 }}/>
-      <TextInput label="Email" value={email}  theme={inputTheme} onChangeText={setEmail} mode="outlined" style={styles.input} autoCapitalize="none" outlineStyle={{ borderRadius: 25 }}/>
+      <TextInput 
+        label="Surname" 
+        value={lastName}  
+        theme={inputTheme} 
+        onChangeText={setLastName} 
+        mode="outlined" 
+        style={styles.input} 
+        outlineStyle={{ borderRadius: 25 }}
+      />
+      <TextInput 
+        label="Firstname" 
+        value={firstName}  
+        theme={inputTheme}
+        onChangeText={setFirstName} 
+        mode="outlined" 
+        style={styles.input} 
+        outlineStyle={{ borderRadius: 25 }}
+      />
+      <TextInput 
+        label="Username" 
+        value={username} 
+        theme={inputTheme} 
+        onChangeText={setUsername} 
+        mode="outlined" 
+        style={styles.input} 
+        autoCapitalize="none" 
+        outlineStyle={{ borderRadius: 25 }}
+      />
+      <TextInput 
+        label="Email" 
+        value={email}  
+        theme={inputTheme} 
+        onChangeText={setEmail} 
+        mode="outlined" 
+        style={styles.input} 
+        autoCapitalize="none" 
+        outlineStyle={{ borderRadius: 25 }}
+      />
 
       {/* Password Fields */}
-      <TextInput label="Password" value={password}  theme={inputTheme} onChangeText={setPassword} mode="outlined" style={styles.input} secureTextEntry outlineStyle={{ borderRadius: 25 }}/>
-      <TextInput label="Confirm Password" value={confirmPassword}  theme={inputTheme} onChangeText={setConfirmPassword} mode="outlined" style={styles.input} secureTextEntry outlineStyle={{ borderRadius: 25 }}/>
+      <TextInput 
+        label="Password" 
+        value={password}  
+        theme={inputTheme} 
+        onChangeText={setPassword} 
+        mode="outlined" 
+        style={styles.input} 
+        secureTextEntry 
+        outlineStyle={{ borderRadius: 25 }}
+      />
+      <TextInput 
+        label="Confirm Password" 
+        value={confirmPassword}  
+        theme={inputTheme} 
+        onChangeText={setConfirmPassword} 
+        mode="outlined" 
+        style={styles.input} 
+        secureTextEntry 
+        outlineStyle={{ borderRadius: 25 }}
+      />
 
       {/* Barangay Selection */}
       <Text style={styles.label}>Select Address</Text>
       <View style={styles.pickerContainer}>
-        <Picker selectedValue={barangay} onValueChange={(itemValue: string) => setBarangay(itemValue)}  theme={inputTheme}style={styles.picker}>
-          <Picker.Item label="Select a Barangay" value="" />
-          {Object.keys(PUROKS).map((barangay) => (
-            <Picker.Item key={barangay} label={barangay} value={barangay} />
-            
+        <Picker 
+          selectedValue={barangayId} 
+          onValueChange={(itemValue: number) => setBarangayId(itemValue)}  
+          theme={inputTheme}
+          style={styles.picker}
+          enabled={!loadingLocations}
+        >
+          <Picker.Item label="Select a Barangay" value={null} />
+          {barangays.map((barangay) => (
+            <Picker.Item key={barangay.id} label={barangay.name} value={barangay.id} />
           ))}
         </Picker>
       </View>
 
       {/* Purok Selection (Appears Only After Selecting Barangay) */}
-      {barangay ? (
+      {barangayId ? (
         <View style={styles.pickerContainer}>
-          <Picker selectedValue={purok} onValueChange={(itemValue: string) => setPurok(itemValue)} style={styles.picker}>
-            <Picker.Item label="Select a Purok" value="" />
-            {getPuroks().map((purok) => (
-              <Picker.Item key={purok} label={`Purok ${purok}`} value={purok} />
+          <Picker 
+            selectedValue={purokId} 
+            onValueChange={(itemValue: number) => setPurokId(itemValue)} 
+            style={styles.picker}
+            enabled={!loadingLocations}
+          >
+            <Picker.Item label="Select a Purok" value={null} />
+            {puroks.map((purok) => (
+              <Picker.Item key={purok.id} label={purok.purok_name} value={purok.id} />
             ))}
           </Picker>
         </View>
@@ -120,12 +239,25 @@ export default function PersonalSignupScreen() {
       ) : null}
 
       {/* Sign Up Button */}
-      <Button mode="contained" onPress={handleSignup} loading={loading} style={styles.button} labelStyle={styles.buttonText}>
+      <Button 
+        mode="contained" 
+        onPress={handleSignup} 
+        loading={loading} 
+        style={styles.button} 
+        labelStyle={styles.buttonText}
+        disabled={loading || loadingLocations}
+      >
         SIGN UP
       </Button>
 
       {/* Back Button */}
-      <Button mode="text" onPress={() => router.back()} style={styles.backButton}>
+      <Button 
+        mode="text" 
+        onPress={() => navigation.goBack()} 
+        style={styles.backButton}
+        labelStyle={styles.backButtonText}
+        disabled={loading || loadingLocations}
+      >
         BACK
       </Button>
     </ScrollView>
@@ -134,8 +266,8 @@ export default function PersonalSignupScreen() {
 
 const inputTheme = {
   colors: {
-    outline: '#237A36',
-    primary: '#00FF57',
+    outline: '#93a267',
+    primary: '#485935',
   },
 };
 
@@ -143,13 +275,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    backgroundColor: '#023F0F',
+    backgroundColor: '#fbfbfb',
   },
   logoContainer: {
     alignItems: 'flex-start',
     paddingLeft: 10,
     marginBottom: 20,
-    marginTop:90,
+    marginTop: 90,
   },
   logo: {
     width: 150,
@@ -158,60 +290,56 @@ const styles = StyleSheet.create({
   },
   signUpText: {
     fontSize: 20,
-    color: '#FFFFFF',
+    color: '#485935',
     marginTop: 2,
+    fontWeight: 'bold',
   },
   input: {
-    backgroundColor: '#237A36',
+    backgroundColor: '#fbfbfb',
     paddingHorizontal: 10,
     height: 55,
     fontSize: 12,
-    color: '#023F0F',
+    color: '#485935',
     textAlignVertical: 'center',
     marginBottom: 20,
   },
   pickerContainer: {
-    backgroundColor: '#237A36', // Dark green background
+    backgroundColor: '#fbfbfb',
     borderRadius: 30,
     marginBottom: 16,
     paddingHorizontal: 15,
     paddingVertical: 8,
     justifyContent: 'center',
-    borderWidth: 0,
+    borderWidth: 1,
+    borderColor: '#93a267',
     overflow: 'hidden',
   },
-  
   picker: {
-    color: '#fff', // White text for selected item
+    color: '#485935',
     fontSize: 14,
     width: '100%',
     height: 50,
     backgroundColor: 'transparent',
     borderWidth: 0,
   },
-  
-  // **New Styles for the Dropdown Menu**
-  pickerDropdown: {
-    backgroundColor: '#145C2C', // Dark green background for dropdown items
-    color: '#fff', // White text for options
-  },
-  
   label: {
-    color: '#fff',
+    color: '#485935',
     marginBottom: 5,
-    textAlignVertical:'center',
+    textAlignVertical: 'center',
+    fontSize: 14,
+    fontWeight: '500',
   },
   button: {
     marginTop: 24,
-    backgroundColor: '#00FF57',
+    backgroundColor: '#93a267',
     borderRadius: 25,
     height: 55,
     justifyContent: 'center',
   },
   buttonText: {
     fontSize: 12,
-    fontWeight: 'thin',
-    color: '#023F0F',
+    fontWeight: 'bold',
+    color: '#fbfbfb',
     textTransform: 'uppercase',
   },
   errorContainer: {
@@ -221,7 +349,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   error: {
-    color: 'red',
+    color: '#485935',
     fontSize: 12,
     textAlign: 'center',
     alignSelf: 'center',
@@ -229,11 +357,11 @@ const styles = StyleSheet.create({
   },
   backButton: {
     marginTop: 10,
-    backgroundColor: '#237A36',
-    borderRadius: 25,
-    height: 55,
-    justifyContent: 'center',
   },
-  
+  backButtonText: {
+    color: '#93a267',
+    fontSize: 12,
+    fontWeight: '500',
+  },
 });
 

@@ -132,7 +132,7 @@ export default function LoginScreen() {
       <Button
         mode="text"
         onPress={() => navigation.navigate('ForgotPassword')}
-        labelStyle={{ color: '#00FF57', fontSize: 12 }}
+        labelStyle={{ color: '#93a267', fontSize: 12 }}
       >
         Forgot Password?
       </Button>
@@ -141,7 +141,7 @@ export default function LoginScreen() {
         <Button
           mode="text"
           onPress={() => navigation.navigate('Signup')}
-          style={styles.signupButton}
+          labelStyle={{ color: '#93a267', fontSize: 12, marginLeft: -8 }}
         >
           Sign Up
         </Button>
@@ -151,52 +151,46 @@ export default function LoginScreen() {
 }
 const inputTheme = {
   colors: {
-    outline: '#237A36', // Default border color (red-orange)
-    primary: '#00FF57', // Focused border color (neon green)
+    outline: '#93a267', // Medium green for input borders
+    primary: '#485935', // Dark green for focused state
   },
 };
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    backgroundColor: '#023F0F',
+    backgroundColor: '#fbfbfb', // Off-white background
     justifyContent: 'center',
-
-
-
   },
   logoContainer: {
-    alignItems: 'flex-start', // Align logo and text to the left
-    paddingLeft: 10, // Adjust left padding
-    marginBottom: 20, // Space below logo
+    alignItems: 'flex-start',
+    paddingLeft: 10,
+    marginBottom: 20,
   },
   logo: {
-    width: 150, // Adjust width as needed
-    height: 40, // Adjust height as needed
-    resizeMode: 'contain', // Keep aspect ratio
+    width: 150,
+    height: 40,
+    resizeMode: 'contain',
   },
   loginText: {
-    fontSize: 20, // Match "LOGIN" text size
-    color: '#FFFFFF', // White text
-    marginTop: 2, // Space between logo and text
+    fontSize: 20,
+    color: '#485935', // Dark green text
+    marginTop: 2,
   },
-
-
-
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 24,
-    color: '#fff',
+    color: '#485935', // Dark green text
     textAlign: 'center',
   },
   input: {
-    backgroundColor: '#237A36', // Dark gray background
-    paddingHorizontal:10, // Padding for better spacing
-    height:55, // Normal input height
-    fontSize: 12, // Increase text size
-    color: '#023F0F', // White text color
-    textAlignVertical: 'center', // Centers text inside input
+    backgroundColor: '#fbfbfb', // Off-white background
+    paddingHorizontal: 10,
+    height: 55,
+    fontSize: 12,
+    color: '#485935', // Dark green text
+    textAlignVertical: 'center',
     marginBottom: 20,
   },
   labelSmall: {
@@ -205,26 +199,25 @@ const styles = StyleSheet.create({
   },
   button: {
     marginTop: 24,
-    backgroundColor: '#00FF57', // Neon green button color
-    borderRadius: 25, // Fully rounded button
-    height: 55, // Match button height
-    justifyContent: 'center', // Ensure text is centered
+    backgroundColor: '#93a267', // Medium green button
+    borderRadius: 25,
+    height: 55,
+    justifyContent: 'center',
   },
   buttonText: {
-    fontSize: 12, // Larger text size
-    fontWeight: 'thin', // Make it bold
-    color: '#023F0F', // Dark green text
-    textTransform: 'uppercase', // Force uppercase text
+    fontSize: 12,
+    fontWeight: 'thin',
+    color: '#fbfbfb', // Off-white text
+    textTransform: 'uppercase',
   },
   error: {
-    color: 'red',
-    fontSize: 12, // Smaller font size
-    marginBottom: 0, // Reduce bottom margin
-    textAlign: 'center', // Center text and prevent it from stretching
-    alignSelf: 'center', // Ensures it stays compact
-    maxWidth: '100%', // Prevents it from expanding too much
+    color: '#485935', // Dark green for errors
+    fontSize: 12,
+    marginBottom: 0,
+    textAlign: 'center',
+    alignSelf: 'center',
+    maxWidth: '100%',
   },
-
   signupContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -232,13 +225,13 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   signupText: {
-    color: '#fff',
+    color: '#485935', // Dark green text
   },
   signupButton: {
     marginLeft: -8,
   },
   signupButtonText: {
-    color: '#00FF57',
+    color: '#93a267', // Medium green for links
   },
   messageContainer: {
     padding: 16,
@@ -246,17 +239,17 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   successMessage: {
-    color: '#00FF57',
+    color: '#93a267', // Medium green for success messages
     textAlign: 'center',
   },
   resendButton: {
     marginTop: 16,
-    backgroundColor: '#00FF57',
+    backgroundColor: '#cadbb7', // Light green for secondary buttons
   },
   errorContainer: {
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    marginBottom: 8, // Reduced to avoid extra spacing
-    paddingHorizontal:10, // Keeps text compact
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+    paddingHorizontal: 10,
   },
 }); 

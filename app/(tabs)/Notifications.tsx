@@ -89,35 +89,36 @@ export default function Notifications() {
       console.log("📌 Post ID:", notif.post_id);
 
       if (type === 'new_offer' || type === 'new_comment') {
-
         // First get the offer using target_id
         const { data: offer, error: offerError } = await supabase
-        .from('posts')
-        .select('id')
-        .eq('id', notif.target_id)
-        .single();
+          .from('posts')
+          .select('id')
+          .eq('id', notif.target_id)
+          .single();
 
-      if (!offer || offerError) {
-        // Alert.alert('Error', 'Offer not found.');
-        return;
-      }
+        if (!offer || offerError) {
+          return;
+        }
 
-      const { data: post, error: postError } = await supabase
-        .from('posts')
-        .select('*, post_item_types(item_types(*)), personal_users(*)')
-        .eq('id', offer.id)
-        .single();
+        const { data: post, error: postError } = await supabase
+          .from('posts')
+          .select('*, post_item_types(item_types(*)), personal_users(*)')
+          .eq('id', offer.id)
+          .single();
 
-      if (!post || postError) {
-        Alert.alert('Error', 'Post not found.');
-        return;
-      }
+        if (!post || postError) {
+          Alert.alert('Error', 'Post not found.');
+          return;
+        }
 
-      homeNavigation.navigate('ViewPost', { post });
+        homeNavigation.navigate('ViewPost', { post });
   
-      } else if (type === 'offer_accepted' || 'transaction_completed' || 'payment_send') {
+      } else if (type === 'offer_accepted' || type === 'transaction_completed' || type === 'payment_send') {
         profileNavigation.navigate('ViewTransaction', { offerId: notif.target_id });
   
+      } else if (type === 'reward_approved' || type === 'reward_rejected') {
+        // Navigate to RedeemRewards screen
+        profileNavigation.navigate('RedeemRewards');
       } else {
         console.warn("Unhandled notification type:", type);
       }

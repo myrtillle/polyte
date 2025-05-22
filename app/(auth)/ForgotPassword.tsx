@@ -2,27 +2,66 @@ import React, { useState } from 'react';
 import { View, StyleSheet, Alert } from 'react-native';
 import { TextInput, Button, Text } from 'react-native-paper';
 import { authService } from '../../services/authService';
-import { router } from 'expo-router';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '@/types/navigation';
+
+type AuthNav = StackNavigationProp<RootStackParamList, 'ForgotPassword'>;
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const navigation = useNavigation<AuthNav>();
+
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
 
   const handleResetPassword = async () => {
-    if (!email) {
+    // Clear previous messages
+    setSuccessMessage('');
+
+    // Validate email
+    if (!email.trim()) {
       Alert.alert('Missing email', 'Please enter your email address.');
       return;
     }
 
-    setLoading(true);
-    const { error } = await authService.forgotPassword(email);
-    setLoading(false);
+    if (!validateEmail(email)) {
+      Alert.alert('Invalid email', 'Please enter a valid email address.');
+      return;
+    }
 
-    if (error) {
-      Alert.alert('Error', error.message || 'Failed to send reset email.');
-    } else {
-      setSuccessMessage('Reset link sent. Check your inbox.');
+    try {
+      setLoading(true);
+      const { error } = await authService.forgotPassword(email, {
+        redirectTo: 'polyte://reset-password?type=recovery'
+      });
+
+      if (error) {
+        if (error.message.includes('rate limit')) {
+          Alert.alert('Too many attempts', 'Please wait a few minutes before trying again.');
+        } else {
+          Alert.alert('Error', 'Failed to send reset email. Please try again later.');
+        }
+        return;
+      }
+
+      setSuccessMessage('Password reset instructions have been sent to your email. Please check your inbox.');
+      
+      // Optional: Navigate back to login after a delay
+      setTimeout(() => {
+        navigation.navigate('Login', { 
+          message: 'Please check your email for password reset instructions.' 
+        });
+      }, 3000);
+
+    } catch (err) {
+      Alert.alert('Error', 'An unexpected error occurred. Please try again later.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -40,7 +79,8 @@ export default function ForgotPasswordScreen() {
         mode="outlined"
         style={styles.input}
         autoCapitalize="none"
-        theme={{ colors: { primary: '#00FF57', outline: '#237A36' } }}
+        outlineStyle={{ borderRadius: 25 }}
+        theme={{ colors: { primary: '#485935', outline: '#93a267' } }}
       />
 
       <Button
@@ -50,10 +90,15 @@ export default function ForgotPasswordScreen() {
         style={styles.button}
         labelStyle={styles.buttonText}
       >
-        SEND RESET LINK
+        Send reset link
       </Button>
 
-      <Button onPress={() => router.back()} mode="text" style={styles.backButton}>
+      <Button 
+        onPress={() => navigation.navigate('Login')} 
+        mode="text" 
+        style={styles.backButton}
+        labelStyle={styles.backButtonText}
+      >
         Back to Login
       </Button>
     </View>
@@ -64,34 +109,42 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 24,
-    backgroundColor: '#023F0F',
+    backgroundColor: '#fbfbfb',
     justifyContent: 'center',
   },
   title: {
     fontSize: 18,
-    color: '#fff',
+    color: '#485935',
     marginBottom: 16,
     textAlign: 'center',
   },
   success: {
-    color: '#00FF57',
+    color: '#93a267',
     textAlign: 'center',
     marginBottom: 16,
   },
   input: {
     marginBottom: 16,
-    backgroundColor: '#1A3620',
+    backgroundColor: '#fbfbfb',
+    height: 55,
   },
   button: {
-    backgroundColor: '#00FF57',
+    backgroundColor: '#93a267',
     borderRadius: 25,
     paddingVertical: 6,
+    height: 55,
   },
   buttonText: {
-    color: '#023F0F',
+    color: '#fbfbfb',
     fontWeight: 'bold',
+    fontSize: 12,
+    textTransform: 'uppercase',
   },
   backButton: {
     marginTop: 20,
+  },
+  backButtonText: {
+    color: '#93a267',
+    fontSize: 12,
   },
 });

@@ -2,6 +2,7 @@ import { NavigatorScreenParams } from '@react-navigation/native';
 import { Schedule } from '@/services/offersService';
 import { Post } from '@/services/postsService';
 import { Offer } from '@/services/offersService';
+import { Profile } from '@/services/profileService';
 // 🧱 Reusable types
 // export interface Post {
 //   id: string;
@@ -94,11 +95,11 @@ export type ProfileStackParamList = {
   Ratings: { offerId: string };
   TransaCompleted: { weight: number; points: number };
   RedeemRewards: undefined;
+  EditProfile: { profile: Profile };
 };
 
 export type PostStackParamList = {
   PostMain: undefined;
-
 };
 
 export type MessagesStackParamList = {
@@ -125,6 +126,7 @@ export type RootStackParamList = {
   Login: { message: string; } | undefined;
   Signup: undefined;
   ForgotPassword: undefined;
+  ResetPassword: undefined;
   Main: undefined;
   ConfirmDelivery: {
     scheduleId: string;

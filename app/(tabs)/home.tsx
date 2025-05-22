@@ -16,6 +16,8 @@ import { supabase } from '@/services/supabase';
 import { notificationService } from '@/services/notificationService';
 import { messagesService } from '@/services/messagesService';
 import { Post } from '../../services/postsService';
+import Constants from 'expo-constants';
+
 interface Category {
   id: number;
   name: string;
@@ -69,6 +71,7 @@ export default function HomeScreen() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [showBadge, setShowBadge] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [address, setAddress] = useState<string | null>(null);
 
   const getModeIcon = (modeName: string) => {
     switch (modeName.toLowerCase()) {
@@ -96,6 +99,7 @@ export default function HomeScreen() {
     } finally {
       setLoading(false);
       setRefreshing(false);
+      // console.log('🔄 Fetched posts:', posts);
     }
   };
   
@@ -301,10 +305,10 @@ export default function HomeScreen() {
     const matchesCategory = selectedCategory ? post.category_id === selectedCategory : true;
     const matchesSearch = searchQuery
       ? post.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        post.users?.barangays?.name?.toString().includes(searchQuery) ||
-        post.users?.puroks?.name?.toString().includes(searchQuery) ||
+      post.user?.barangay?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      post.user?.purok?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         post.post_item_types?.some(item =>
-          item.item_types?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+          item.name?.toLowerCase().includes(searchQuery.toLowerCase())
         )
       : true;
     return isNotMyPost && matchesCategory && matchesSearch;
@@ -322,17 +326,17 @@ export default function HomeScreen() {
                     <View style={styles.infoWrapper}>
                       {/* Name and time */}
                       <View style={styles.userInfo}>
-            <Text style={styles.userName}>
-              {item.users?.raw_user_meta_data?.name ?? item.users?.email ?? 'Unknown User'}
-            </Text>
-            <Text style={styles.timePosted}>
-              {formatTimeAgo(item.created_at)}
-            </Text>
-            </View>
+                      <Text style={styles.userName}>
+                        { item.user?.username || 'Anonymous User' }
+                      </Text>
+                      <Text style={styles.timePosted}>
+                        {formatTimeAgo(item.created_at)}
+                      </Text>
+                      </View>
 
-                    <Text style={styles.description}>
-            {item.description || 'No description provided.'}
-            </Text>
+            {/* <Text style={styles.description}>
+              {item.description || 'No description provided.'}
+            </Text> */}
             
             {/* Mode label (yellow icon + text) */}
             <View style={styles.labelRow}>
@@ -355,15 +359,24 @@ export default function HomeScreen() {
       
             {/* Item labels */}
             <View style={styles.itemList}>
-            {(item.post_item_types ?? []).map((type, index) => (
-              <Chip
-                key={index}
-                style={styles.itemChip}
-                textStyle={styles.itemChipText}
-              >
-                {type?.item_types?.name ?? 'Unknown'}
-              </Chip>
-            ))}
+              {(item.post_item_types ?? []).slice(0, 2).map((type, index) => (
+                <Chip
+                  key={index}
+                  style={styles.itemChip}
+                  textStyle={styles.itemChipText}
+                >
+                  {type?.name ?? 'Unknown'}
+                </Chip>
+              ))}
+              {(item.post_item_types && item.post_item_types.length > 2) && (
+                <Chip
+                  key="more"
+                  style={styles.itemChip}
+                  textStyle={styles.itemChipText}
+                >
+                  +{item.post_item_types.length - 2}
+                </Chip>
+              )}
             </View>
           </View>
 
