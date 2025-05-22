@@ -326,12 +326,18 @@ export default function HomeScreen() {
                     <View style={styles.infoWrapper}>
                       {/* Name and time */}
                       <View style={styles.userInfo}>
-                      <Text style={styles.userName}>
-                        { item.user?.username || 'Anonymous User' }
-                      </Text>
-                      <Text style={styles.timePosted}>
-                        {formatTimeAgo(item.created_at)}
-                      </Text>
+                        <View style={styles.userInfoLeft}>
+                          <Image 
+                            source={{ uri: item.user?.profile_photo_url || 'https://i.pravatar.cc/40' }} 
+                            style={styles.userAvatar} 
+                          />
+                          <Text style={styles.userName}>
+                            { item.user?.username || 'Anonymous User' }
+                          </Text>
+                        </View>
+                        <Text style={styles.timePosted}>
+                          {formatTimeAgo(item.created_at)}
+                        </Text>
                       </View>
 
             {/* <Text style={styles.description}>
@@ -699,6 +705,18 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   
+  userInfoLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+
+  userAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+  },
+
   userName: {
     fontWeight: 'bold',
     color: '#fff',

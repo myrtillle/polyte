@@ -178,17 +178,17 @@ export default function ProfileScreen() {
 
           <View style={styles.statBox}>
           <View style={styles.statLabelRow}>
-          <Text style={styles.statLabel}>CARBON EMISSION SAVED</Text>
+          <Text style={styles.statLabel}>You helped save</Text>
           <Text style={styles.statIcon}>♻️</Text>
         </View>
 
             
-            <Text style={styles.statValue}>{co2Saved.toFixed(2)} kg of CO2</Text>
+            <Text style={styles.statValue}>{co2Saved.toFixed(2)} KG of CO2!</Text>
           </View>
 
           <View style={styles.statBox}>
           <View style={styles.statLabelRow}>
-          <Text style={styles.statLabel}>KG OF TRASH</Text>
+          <Text style={styles.statLabel}>Plastic Waste Recycling Status</Text>
           <Text style={styles.statIcon}>🧺</Text>
         </View>
             <View style={styles.statRowSplit}>

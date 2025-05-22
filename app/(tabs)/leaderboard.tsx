@@ -6,14 +6,13 @@ import { Ionicons } from '@expo/vector-icons';
 
 interface LeaderboardEntry {
   name: string;
-  totalPoints: number;
-   
+  totalValue: number;
 }
 
 export default function LeaderboardScreen() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'ALL' | 'BY_DONATIONS'>('ALL');
+  const [activeMetric, setActiveMetric] = useState<'points' | 'weight'>('points');
   const [viewType, setViewType] = useState<'user' | 'purok'>('user');
   const [timeFilter, setTimeFilter] = useState<'ALL TIME' | 'THIS MONTH' | 'THIS YEAR' | 'THIS WEEK'>('ALL TIME');
   const [viewDropdownVisible, setViewDropdownVisible] = useState(false);
@@ -23,33 +22,33 @@ export default function LeaderboardScreen() {
   const formattedDate = now.toLocaleString('default', { month: 'long', year: 'numeric' });
 
   useEffect(() => {
-    const loadLeaderboard = async () => {
-      setLoading(true);
-      const data = viewType === 'purok'
-        ? await leaderboardService.fetchLeaderboardByPurok(timeFilter)
-        : await leaderboardService.fetchLeaderboardByUsers(timeFilter);
-      setLeaderboard(data);
-      setLoading(false);
-    };
-
     loadLeaderboard();
-  }, [viewType]);
+  }, [viewType, activeMetric, timeFilter]);
 
+  const loadLeaderboard = async () => {
+    setLoading(true);
+    const data = viewType === 'purok'
+      ? await leaderboardService.fetchLeaderboardByPurok(timeFilter, activeMetric)
+      : await leaderboardService.fetchLeaderboardByUsers(timeFilter, activeMetric);
+    setLeaderboard(data);
+    setLoading(false);
+  };
 
   const renderItem = ({ item, index }: { item: LeaderboardEntry; index: number }) => (
     <View style={[styles.itemRow, index === 0 ? styles.topPurok : styles.regularPurok]}>
-  <View style={styles.itemNameWrapper}>
-    <Text style={[styles.purokName, index === 0 && styles.topText]} numberOfLines={1}>
-      {item.name}
-    </Text>
-  </View>
-  <View style={styles.itemPointsWrapper}>
-    <Text style={[styles.points, index === 0 && styles.topscore]}>
-      {item.totalPoints.toLocaleString()}
-    </Text>
-  </View>
-</View>
-
+      <View style={styles.itemNameWrapper}>
+        <Text style={[styles.purokName, index === 0 && styles.topText]} numberOfLines={1}>
+          {item.name}
+        </Text>
+      </View>
+      <View style={styles.itemPointsWrapper}>
+        <Text style={[styles.points, index === 0 && styles.topscore]}>
+          {activeMetric === 'points' 
+            ? item.totalValue.toLocaleString() 
+            : `${item.totalValue.toLocaleString()} kg`}
+        </Text>
+      </View>
+    </View>
   );
 
   return (
@@ -60,28 +59,31 @@ export default function LeaderboardScreen() {
         <Ionicons name="notifications" size={20} color="#00FF66" style={{ marginRight: 12 }} />
       </View> */}
       <View style={styles.headerBar}>
-  <Text style={styles.headerTitle}>LEADERBOARDS</Text>
-</View>
+        <Text style={styles.headerTitle}>LEADERBOARDS</Text>
+      </View>
 
-     
-        <TouchableOpacity style={styles.dropdownBox} onPress={() => setViewDropdownVisible(true)}>
-          <View style={styles.dropdownLeft}>
-            <Text style={styles.dropdownTitle}>
-              {viewType === 'user' ? 'USER LEADERBOARDS' : 'PUROK LEADERBOARDS'}
-            </Text>
-            <Text style={styles.dropdownSubtitle}>As of {formattedDate}</Text>
-          </View>
-          <Ionicons name="chevron-down" size={20} color="white" />
-        </TouchableOpacity>
-
-
+      <TouchableOpacity style={styles.dropdownBox} onPress={() => setViewDropdownVisible(true)}>
+        <View style={styles.dropdownLeft}>
+          <Text style={styles.dropdownTitle}>
+            {viewType === 'user' ? 'Users' : 'Puroks'}
+          </Text>
+          <Text style={styles.dropdownSubtitle}>As of {formattedDate}</Text>
+        </View>
+        <Ionicons name="chevron-down" size={20} color="white" />
+      </TouchableOpacity>
 
       <View style={styles.filterTabs}>
-        <TouchableOpacity style={[styles.tab, activeTab === 'ALL' && styles.activeTab]}>
-          <Text style={[styles.tabText, activeTab === 'ALL' && styles.activeTabText]}>ALL</Text>
+        <TouchableOpacity 
+          style={[styles.tab, activeMetric === 'points' && styles.activeTab]}
+          onPress={() => setActiveMetric('points')}
+        >
+          <Text style={[styles.tabText, activeMetric === 'points' && styles.activeTabText]}>POLY POINTS</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.tab, activeTab === 'BY_DONATIONS' && styles.activeTab]}>
-          <Text style={[styles.tabText, activeTab === 'BY_DONATIONS' && styles.activeTabText]}>BY DONATIONS</Text>
+        <TouchableOpacity 
+          style={[styles.tab, activeMetric === 'weight' && styles.activeTab]}
+          onPress={() => setActiveMetric('weight')}
+        >
+          <Text style={[styles.tabText, activeMetric === 'weight' && styles.activeTabText]}>KG COLLECTED</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.dropdownFilter} onPress={() => setTimeDropdownVisible(true)}>
@@ -92,6 +94,10 @@ export default function LeaderboardScreen() {
 
       {loading ? (
         <ActivityIndicator size="large" color="#00FF66" style={{ marginTop: 40 }} />
+      ) : leaderboard.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>No hero recyclers for this time period!</Text>
+        </View>
       ) : (
         <FlatList
           data={leaderboard}
@@ -106,8 +112,8 @@ export default function LeaderboardScreen() {
         <TouchableOpacity style={styles.modalBackdrop} onPress={() => setViewDropdownVisible(false)}>
           <View style={styles.modalDropdown}>
             {[
-              { label: 'USER LEADERBOARDS', value: 'user' },
-              { label: 'PUROK LEADERBOARDS', value: 'purok' },
+              { label: 'Users', value: 'user' },
+              { label: 'Puroks', value: 'purok' },
             ].map((option) => (
               <TouchableOpacity
                 key={option.value}
@@ -134,13 +140,11 @@ export default function LeaderboardScreen() {
         </TouchableOpacity>
       </Modal>
 
-
       {/* Time Filter Dropdown */}
-
       <Modal transparent visible={timeDropdownVisible} animationType="fade">
         <TouchableOpacity style={styles.modalBackdrop} onPress={() => setTimeDropdownVisible(false)}>
           <View style={styles.modalDropdown}>
-            {['ALL TIME', 'THIS MONTH', 'THIS YEAR', 'THIS WEEK'].map((range) => (
+            {['All time', 'This month', 'This year', 'This week'].map((range) => (
               <TouchableOpacity
                 key={range}
                 onPress={() => {
@@ -165,73 +169,65 @@ export default function LeaderboardScreen() {
           </View>
         </TouchableOpacity>
       </Modal>
-
-   
     </LinearGradient>
-    
   );
-  
 }
 
 const styles = StyleSheet.create({
   dropdownBox: {
-  backgroundColor: '#1A3620',
-  borderRadius: 12,
-  marginHorizontal: 16,
-  paddingHorizontal: 14,
-  paddingVertical: 20,
-  marginBottom: 12,
-  marginTop: 20,
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-},
+    backgroundColor: '#1A3620',
+    borderRadius: 12,
+    marginHorizontal: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 20,
+    marginBottom: 12,
+    marginTop: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
 
-dropdownLeft: {
-  flex: 1,
-},
+  dropdownLeft: {
+    flex: 1,
+  },
 
   dropdownItem: {
-  paddingVertical: 10,
-  paddingHorizontal: 12,
-  borderRadius: 6,
-  
-},
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+  },
 
-dropdownItemActive: {
-  backgroundColor: '#E0FFE0',
-},
+  dropdownItemActive: {
+    backgroundColor: '#E0FFE0',
+  },
 
-dropdownOptionActive: {
-  fontWeight: 'bold',
-  color: '#023F0F',
-},
+  dropdownOptionActive: {
+    fontWeight: 'bold',
+    color: '#023F0F',
+  },
 
   itemNameWrapper: {
-  flex: 1,
-  paddingRight: 10,
-},
+    flex: 1,
+    paddingRight: 10,
+  },
 
-itemPointsWrapper: {
-  minWidth: 80,
-  alignItems: 'flex-end',
-},
-  
+  itemPointsWrapper: {
+    minWidth: 80,
+    alignItems: 'flex-end',
+  },
+
   dropdownTitle: {
     color: '#FFFFFF',
     fontWeight: 'bold',
-    fontSize: 14,
-    textTransform: 'uppercase',
+    fontSize: 18,
+    // textTransform: 'uppercase',
   },
-  
+
   dropdownSubtitle: {
     color: '#CCCCCC',
-    fontSize: 10,
-    
+    fontSize: 12,
   },
-  
 
-  
   sectionWrapper: {
     backgroundColor: '#1A3620',
     marginHorizontal: 16,
@@ -240,20 +236,17 @@ itemPointsWrapper: {
     marginTop: 14,
     marginBottom: 12,
   },
-  
-  
-  container: { flex: 1,},
+
+  container: { flex: 1, },
 
   headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-
     backgroundColor: '#1A3620',
     position: 'relative',
     paddingVertical: 18,
     paddingHorizontal: 10,
-
   },
   headerTitle: {
     color: 'white',
@@ -328,25 +321,25 @@ itemPointsWrapper: {
     fontWeight: 'bold',
   },
   itemRow: {
-  backgroundColor: '#1A3620',
-  paddingVertical: 14,
-  paddingHorizontal: 16,
-  borderRadius: 10,
-  marginBottom: 8,
-  flexDirection: 'row',
-  alignItems: 'center',
-},
+    backgroundColor: '#1A3620',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
 
   topPurok: {
-  backgroundColor: '#D4FF6D', // bright highlight color
-  borderWidth: 1.5,
-  borderColor: '#D4FF6D',
-  shadowColor: '#D4FF6D',
-  shadowOffset: { width: 0, height: 0 },
-  shadowOpacity: 0.8,
-  shadowRadius: 10,
-  elevation: 8,
-},
+    backgroundColor: '#D4FF6D', // bright highlight color
+    borderWidth: 1.5,
+    borderColor: '#D4FF6D',
+    shadowColor: '#D4FF6D',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 10,
+    elevation: 8,
+  },
 
   regularPurok: {
     backgroundColor: '#1A3620',
@@ -362,18 +355,17 @@ itemPointsWrapper: {
     fontSize: 13,
   },
   topText: {
-  color: '#023F0F',
-  fontWeight: 'bold',
-  fontSize:16,
-  },
-   
-  topscore:{
     color: '#023F0F',
     fontWeight: 'bold',
-    fontSize:18,
-  
-  }
-,
+    fontSize: 16,
+  },
+
+  topscore: {
+    color: '#023F0F',
+    fontWeight: 'bold',
+    fontSize: 18,
+  },
+
   modalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',
@@ -382,7 +374,7 @@ itemPointsWrapper: {
   },
   modalDropdown: {
     backgroundColor: '#fff',
-    borderRadius:10,
+    borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 20,
     minWidth: 325,
@@ -392,6 +384,18 @@ itemPointsWrapper: {
     fontSize: 14,
     paddingVertical: 8,
     color: '#023F0F',
-    
+  },
+
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  emptyText: {
+    color: '#fff',
+    fontSize: 16,
+    textAlign: 'center',
+    opacity: 0.7,
   },
 });

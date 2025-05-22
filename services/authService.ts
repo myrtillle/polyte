@@ -102,7 +102,7 @@ export const authService = {
   
   async forgotPassword(email: string, options?: { redirectTo?: string }) {
     return await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: options?.redirectTo || 'polyte://reset-password',
+      redirectTo: options?.redirectTo || 'polyte://reset-password?type=recovery',
     });
   },
 

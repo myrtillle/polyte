@@ -15,6 +15,7 @@ type RawFetchedPost = Post & {
     last_name: string;
     purok: string;
     barangay: string;
+    profile_photo_url: string;
   };
 };
 
@@ -30,6 +31,10 @@ export interface Post {
   created_at: string;
   photos?: string[];
   location?: string;
+  views?: number;
+  offers_count?: number;
+  comments_count?: number;
+  last_activity?: string;
 
   // Fetched via join from personal_users
   user?: {
@@ -40,6 +45,7 @@ export interface Post {
     barangay: string;
     purok: string;
     username: string;
+    profile_photo_url: string;
   };
 
   category?: {
@@ -71,6 +77,17 @@ export interface CreatePostData {
   photos: string[];
   location: string;
   price: number;
+}
+
+interface UpdatePostData {
+  category_id: number;
+  description: string;
+  kilograms: number;
+  photos: string[];
+  location: string;
+  collection_mode_id: number;
+  item_type_ids: number[];
+  price?: number;
 }
 
 export const postsService = {
@@ -129,6 +146,7 @@ export const postsService = {
       ...post,
       user: post.post_user
         ? {
+            profile_photo_url: post.post_user.profile_photo_url ?? '',
             username: post.post_user.username ?? '',
             email: post.post_user.email,
             first_name: post.post_user.first_name ?? '',
@@ -405,30 +423,52 @@ export const postsService = {
   // },
 
   
-  async updatePost (postId: string, postData: any) {
-    const { item_type_ids, ...postFields } = postData;
+  async updatePost(postId: string, postData: UpdatePostData) {
+    try {
+      const { item_type_ids, ...postFields } = postData;
 
-    // Update main post
-    const { error: updateError } = await supabase
-      .from('posts')
-      .update(postFields)
-      .eq('id', postId);
-    if (updateError) throw updateError;
-  
-    // Remove existing item types
-    await supabase.from('post_item_types').delete().eq('post_id', postId);
-  
-    // Add new ones
-    const inserts = item_type_ids.map((id: number) => ({
-      post_id: postId,
-      item_type_id: id,
-    }));
-  
-    const { error: insertError } = await supabase
-      .from('post_item_types')
-      .insert(inserts);
-  
-    if (insertError) throw insertError;  
+      // Update main post
+      const { error: updateError } = await supabase
+        .from('posts')
+        .update(postFields)
+        .eq('id', postId);
+
+      if (updateError) {
+        console.error('Error updating post:', updateError);
+        throw new Error('Failed to update post details');
+      }
+
+      // Remove existing item types
+      const { error: deleteError } = await supabase
+        .from('post_item_types')
+        .delete()
+        .eq('post_id', postId);
+
+      if (deleteError) {
+        console.error('Error deleting existing item types:', deleteError);
+        throw new Error('Failed to update item types');
+      }
+
+      // Add new item types
+      const inserts = item_type_ids.map((id: number) => ({
+        post_id: postId,
+        item_type_id: id,
+      }));
+
+      const { error: insertError } = await supabase
+        .from('post_item_types')
+        .insert(inserts);
+
+      if (insertError) {
+        console.error('Error inserting new item types:', insertError);
+        throw new Error('Failed to update item types');
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error in updatePost:', error);
+      throw error;
+    }
   },
 
   async deletePost (postId: string) {
