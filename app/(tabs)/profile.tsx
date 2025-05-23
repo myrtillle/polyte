@@ -169,11 +169,37 @@ export default function ProfileScreen() {
           style={[styles.actionButton, styles.claimRewardButton, styles.glowButton]} 
           onPress={handleClaimReward}
         >
+<<<<<<< HEAD
           <View style={styles.fullWidthRow}>
             <Text style={styles.claimRewardText}>Redeem Rewards</Text>
+=======
+          <Text style={styles.claimRewardText}>Redeem Rewards</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.actionButton} onPress={() => profileNavigation.navigate('MyPosts')}>
+          <Text style={styles.actionButtonTextMP}>My Posts</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.actionButton} onPress={() => profileNavigation.navigate('TransacHist')}>
+          <Text style={styles.actionButtonTextTH}>Transaction History</Text>
+        </TouchableOpacity>
+
+        <View style={styles.allTimeStatsContainer}>
+          <Text style={styles.sectionTitle}>ALL TIME STATS</Text>
+
+          <View style={styles.statBox}>
+          <View style={styles.statLabelRow}>
+          <Text style={styles.statLabel}>You helped save</Text>
+          <Text style={styles.statIcon}>♻️</Text>
+        </View>
+
+            
+            <Text style={styles.statValue}>{co2Saved.toFixed(2)} KG of CO2!</Text>
+>>>>>>> 1de81be926400ae9c2643749c5327c4ea525204a
           </View>
         </TouchableOpacity>
 
+<<<<<<< HEAD
         <View style={styles.rowButtonsContainer}>
           <TouchableOpacity style={[styles.actionButton, styles.myPostsButton, styles.halfButton]} onPress={() => profileNavigation.navigate('MyPosts')}>
             <Text style={styles.actionButtonTextMP}>My Posts</Text>
@@ -182,6 +208,12 @@ export default function ProfileScreen() {
           <TouchableOpacity style={[styles.actionButton, styles.transacHistButton, styles.halfButton]} onPress={() => profileNavigation.navigate('TransacHist')}>
             <Text style={styles.actionButtonTextTH}>Transaction History</Text>
           </TouchableOpacity>
+=======
+          <View style={styles.statBox}>
+          <View style={styles.statLabelRow}>
+          <Text style={styles.statLabel}>Plastic Waste Recycling Status</Text>
+          <Text style={styles.statIcon}>🧺</Text>
+>>>>>>> 1de81be926400ae9c2643749c5327c4ea525204a
         </View>
 
         <View style={styles.allTimeStatsOuterContainer}>

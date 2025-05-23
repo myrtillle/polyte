@@ -315,6 +315,7 @@ export default function HomeScreen() {
 
 
   const renderPost = ({ item }: { item: Post }) => (
+<<<<<<< HEAD
     <Card style={[
       styles.card,
       item.category_id === 2 && { backgroundColor: '#172B1F' } // Darker for SEEKING
@@ -337,6 +338,30 @@ export default function HomeScreen() {
               {formatTimeAgo(item.created_at)}
             </Text>
             </View>
+=======
+              <Card style={[
+                styles.card,
+                item.category_id === 2 && { backgroundColor: '#172B1F' } // Darker for SEEKING
+              ]}>
+                <Card.Content>
+                  <View style={styles.cardWrapper}>
+                    <View style={styles.infoWrapper}>
+                      {/* Name and time */}
+                      <View style={styles.userInfo}>
+                        <View style={styles.userInfoLeft}>
+                          <Image 
+                            source={{ uri: item.user?.profile_photo_url || 'https://i.pravatar.cc/40' }} 
+                            style={styles.userAvatar} 
+                          />
+                          <Text style={styles.userName}>
+                            { item.user?.username || 'Anonymous User' }
+                          </Text>
+                        </View>
+                        <Text style={styles.timePosted}>
+                          {formatTimeAgo(item.created_at)}
+                        </Text>
+                      </View>
+>>>>>>> 1de81be926400ae9c2643749c5327c4ea525204a
 
             {/* Mode label (yellow icon + text) */}
             <View style={styles.labelRow}>
@@ -721,6 +746,18 @@ badgeDot: {
     marginBottom: 6,
   },
   
+  userInfoLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+
+  userAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+  },
+
   userName: {
     fontWeight: 'bold',
     color: '#fff',
