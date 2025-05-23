@@ -111,56 +111,27 @@ export const profileService = {
     const { data: session } = await supabase.auth.getUser();
     if (!session?.user) throw new Error('User not found');
     const userId = session.user.id;
-
+  
     const { data, error } = await supabase
-        .from('posts')
-        .select(`
-        *,
-        category:categories!posts_category_id_fkey (
-            id,
-            name
-        ),
-        collection_mode:collection_modes!posts_collection_mode_id_fkey (
-            id,
-            name,
-            icon
-        ),
-        post_item_types (
-            item_types (
-            id,
-            name
-            )
-        ),
-        personal_users (
-            id,
-            email,
-            first_name,
-            last_name,
-            purok,
-            barangays ( name )
-        )
-        `)
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
-
+      .rpc('get_my_posts_with_details', { uid: userId });
+  
     if (error) throw error;
-    
-    const formattedPosts = data.map(post => ({
+  
+    return (data ?? []).map((json: any) => {
+      const post = json as any;
+      return {
         ...post,
-        user: post.personal_users
-          ? {
-              email: post.personal_users.email,
-              name: `${post.personal_users.first_name ?? ''} ${post.personal_users.last_name ?? ''}`,
-              barangay: post.personal_users.barangays?.[0]?.name ?? '',
-              purok: post.personal_users.purok ?? '',
-              first_name: post.personal_users.first_name ?? '',
-              last_name: post.personal_users.last_name ?? '',
-            }
-          : undefined,
-    }));
-
-    return formattedPosts;
-  }, 
+        user: post.user ?? {
+          email: '',
+          username: '',
+          first_name: '',
+          last_name: '',
+          barangay: '',
+          purok: '',
+        },
+      };
+    });
+  },   
 
   async fetchUserCollection(userId: string) {
     try {

@@ -257,7 +257,7 @@ export default function MyPostsScreen() {
             {/* Name and time */}
             <View style={styles.userInfo}>
               <Text style={styles.userName}>
-                {item.users?.raw_user_meta_data?.first_name ?? item.users?.email ?? 'Unknown User'}
+                {item.user?.username ?? 'Unknown User'}
               </Text>
               <Text style={styles.timePosted}>
                 {formatTimeAgo(item.created_at)}
@@ -285,15 +285,24 @@ export default function MyPostsScreen() {
       
             {/* Item labels */}
             <View style={styles.itemList}>
-            {(item.post_item_types ?? []).map((type, index) => (
-              <Chip
-                key={index}
-                style={styles.itemChip}
-                textStyle={styles.itemChipText}
-              >
-                {type?.item_types?.name ?? 'Unknown'}
-              </Chip>
-            ))}
+              {(item.post_item_types ?? []).slice(0, 2).map((type, index) => (
+                <Chip
+                  key={index}
+                  style={styles.itemChip}
+                  textStyle={styles.itemChipText}
+                >
+                  {type?.name ?? 'Unknown'}
+                </Chip>
+              ))}
+              {(item.post_item_types && item.post_item_types.length > 2) && (
+                <Chip
+                  key="more"
+                  style={styles.itemChip}
+                  textStyle={styles.itemChipText}
+                >
+                  +{item.post_item_types.length - 2}
+                </Chip>
+              )}
             </View>
           </View>
 

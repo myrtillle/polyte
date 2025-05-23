@@ -817,6 +817,15 @@ const ViewPost = () => {
                             </TouchableOpacity>
                           </>
                         )}
+
+                        {/* New case: Neither post owner nor offer owner - just show status */}
+                        {!isUserPostOwner && !isUserOfferOwner && (
+                          <View style={[styles.fullGreenButton, { backgroundColor: '#6c757d' }]}>
+                            <Text style={[styles.fullButtonTextinoffers, { color: '#ccc' }]}>
+                              {offer?.status?.toUpperCase()}
+                            </Text>
+                          </View>
+                        )}
                       </View>
                     </View>
                   );
@@ -893,6 +902,15 @@ const ViewPost = () => {
                             <Text style={styles.moreOptionsText}>⋮</Text>
                           </TouchableOpacity>
                         </>
+                      )}
+
+                      {/* New case: Neither post owner nor offer owner - just show status */}
+                      {!isUserPostOwner && !isUserOfferOwner && (
+                        <View style={[styles.fullGreenButton, { backgroundColor: '#6c757d' }]}>
+                          <Text style={[styles.fullButtonTextinoffers, { color: '#ccc' }]}>
+                            {offer?.status?.toUpperCase()}
+                          </Text>
+                        </View>
                       )}
                     </View>
                   </View>

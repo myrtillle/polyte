@@ -6,14 +6,33 @@ import * as ImagePicker from 'expo-image-picker';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { postsService } from '../../services/postsService';
 import { supabase } from '../../services/supabase';
-import { Post } from '../../types/navigation';
+import { Post } from '../../services/postsService';
 import { ItemType, CollectionMode } from '../../types/postTypes';
+import { RootStackParamList } from '../../types/navigation';
+import { StackNavigationProp } from '@react-navigation/stack';
 
 const { width, height } = Dimensions.get('window');
 
+type EditPostRouteProp = RouteProp<RootStackParamList, 'EditPost'>;
+type EditPostNavigationProp = StackNavigationProp<RootStackParamList, 'EditPost'>;
+
+interface FormData {
+  category_id: number;
+  item_type_ids: number[];
+  description: string;
+  kilograms: string;
+  collection_mode_id: number;
+  photos: string[];
+  location: {
+    latitude: number;
+    longitude: number;
+  };
+  price?: number;
+}
+
 const EditPost = () => {
-  const route = useRoute<RouteProp<{ params: { post: Post } }, 'params'>>();
-  const navigation = useNavigation();
+  const route = useRoute<EditPostRouteProp>();
+  const navigation = useNavigation<EditPostNavigationProp>();
   const { post } = route.params;
 
   const mapRef = useRef<MapView>(null);
@@ -34,14 +53,18 @@ const EditPost = () => {
 
   const { latitude, longitude } = parseWKT(post.location || '');
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     category_id: post.category_id,
-    item_type_ids: post.post_item_types?.map(pt => pt.item_types.id) || [],
+    item_type_ids: post.post_item_types?.map((pt: { id: number; name: string }) => pt.id) || [],
     description: post.description,
-    kilograms: String(post.kilograms),
+    kilograms: post.kilograms.toString(),
     collection_mode_id: post.collection_mode_id,
     photos: post.photos || [],
-    location: { latitude, longitude }
+    location: {
+      latitude: post.location ? parseFloat(post.location.split(' ')[1].replace(')', '')) : 0,
+      longitude: post.location ? parseFloat(post.location.split(' ')[0].replace('POINT(', '')) : 0,
+    },
+    price: post.price
   });
 
   useEffect(() => {
@@ -50,12 +73,13 @@ const EditPost = () => {
   
       setFormData({
         category_id: post.category_id,
-        item_type_ids: post.post_item_types?.map(pt => pt.item_types.id) || [],
+        item_type_ids: post.post_item_types?.map((pt: { id: number; name: string }) => pt.id) || [],
         description: post.description,
-        kilograms: String(post.kilograms),
+        kilograms: post.kilograms.toString(),
         collection_mode_id: post.collection_mode_id,
         photos: post.photos || [],
         location: { latitude, longitude },
+        price: post.price
       });
     }
   }, [post]);
@@ -84,12 +108,12 @@ const EditPost = () => {
     fetchModes();
   }, []);
 
-  const toggleItemType = (typeId: number) => {
+  const toggleItemType = (id: number) => {
     setFormData(prev => ({
       ...prev,
-      item_type_ids: prev.item_type_ids.includes(typeId)
-        ? prev.item_type_ids.filter(id => id !== typeId)
-        : [...prev.item_type_ids, typeId]
+      item_type_ids: prev.item_type_ids.includes(id)
+        ? prev.item_type_ids.filter(itemId => itemId !== id)
+        : [...prev.item_type_ids, id]
     }));
   };
   
@@ -116,31 +140,66 @@ const EditPost = () => {
     }
   };
 
-  const handleRemoveImage = (uri: string) => {
+  const handleRemovePhoto = (photo: string) => {
     setFormData(prev => ({
       ...prev,
-      photos: prev.photos.filter(photo => photo !== uri),
+      photos: prev.photos.filter(p => p !== photo)
     }));
   };
   
   const formatLocationToWKT = (lat: number, lon: number): string => `POINT(${lon} ${lat})`;
 
+  const validateForm = () => {
+    if (!formData.description.trim()) {
+      Alert.alert('Error', 'Please enter a description');
+      return false;
+    }
+    if (parseFloat(formData.kilograms) <= 0) {
+      Alert.alert('Error', 'Please enter a valid weight');
+      return false;
+    }
+    if (!formData.item_type_ids.length) {
+      Alert.alert('Error', 'Please select at least one plastic type');
+      return false;
+    }
+    if (!formData.collection_mode_id) {
+      Alert.alert('Error', 'Please select a collection mode');
+      return false;
+    }
+    if (!formData.location) {
+      Alert.alert('Error', 'Please select a location');
+      return false;
+    }
+    if (formData.category_id === 2 && (!formData.price || formData.price <= 0)) {
+      Alert.alert('Error', 'Please enter a valid price for selling posts');
+      return false;
+    }
+    return true;
+  };
+
   const handleUpdate = async () => {
+    if (!validateForm()) return;
+
     try {
       setLoading(true);
-
       const postData = {
         ...formData,
-        kilograms: parseFloat(formData.kilograms),
+        kilograms: parseFloat(formData.kilograms.toString()),
         location: formatLocationToWKT(formData.location.latitude, formData.location.longitude)
       };
 
       await postsService.updatePost(post.id, postData);
-      Alert.alert("Success", "Post updated successfully");
-      navigation.goBack();
+      Alert.alert(
+        "Success", 
+        "Post updated successfully",
+        [{ text: "OK", onPress: () => navigation.goBack() }]
+      );
     } catch (err) {
-      console.error(err);
-      Alert.alert("Error", "Failed to update post");
+      console.error('Error updating post:', err);
+      Alert.alert(
+        "Error", 
+        err instanceof Error ? err.message : "Failed to update post. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -208,21 +267,13 @@ const EditPost = () => {
         <Text style={styles.label}>Images</Text>
         <View style={styles.imageRow}>
             {formData.photos.map((uri, i) => (
-                <View key={i} style={{ position: 'relative' }}>
-                    <Image source={{ uri }} style={styles.image} />
+                <View key={i} style={styles.photoContainer}>
+                    <Image source={{ uri }} style={styles.photo} />
                     <TouchableOpacity
-                    onPress={() => handleRemoveImage(uri)}
-                    style={{
-                        position: 'absolute',
-                        top: 0,
-                        right: 0,
-                        backgroundColor: 'rgba(0,0,0,0.6)',
-                        borderRadius: 10,
-                        padding: 2,
-                        zIndex: 10,
-                    }}
+                    style={styles.removePhotoButton}
+                    onPress={() => handleRemovePhoto(uri)}
                     >
-                    <Text style={{ color: 'white', fontSize: 12 }}>✕</Text>
+                    <Text style={styles.removePhotoText}>×</Text>
                     </TouchableOpacity>
                 </View>
             ))}
@@ -338,10 +389,26 @@ const styles = StyleSheet.create({
     gap: 10,
     marginVertical: 10,
   },
-  image: {
+  photoContainer: {
+    position: 'relative',
+  },
+  photo: {
     width: 80,
     height: 80,
     borderRadius: 5,
+  },
+  removePhotoButton: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    borderRadius: 10,
+    padding: 2,
+    zIndex: 10,
+  },
+  removePhotoText: {
+    color: 'white',
+    fontSize: 12,
   },
 });
 
