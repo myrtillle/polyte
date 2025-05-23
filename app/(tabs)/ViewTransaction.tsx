@@ -254,7 +254,7 @@ export default function ViewTransaction() {
     // setPaid(false);
 
   }, [offerId]);
-  
+
   useEffect(() => {
     console.log('🧩 canComplete status:', canComplete);
     console.log('🖼️ Has proof?', hasProof);
@@ -647,13 +647,23 @@ export default function ViewTransaction() {
           </View>
 
         {/* Offerer Button */}
-        {((isSellingPost && isOfferer) || (!isSellingPost && isPostOwner)) && transaction?.status === 'for_completion' && (
+        {((isSellingPost && isOfferer) || (!isSellingPost && isPostOwner)) && ['for_completion', 'completed'].includes(transaction?.status) && (
           <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'center' }}>
             <TouchableOpacity
-              style={styles.confirmButton}
-              onPress={() => setConfirmVisible(true)}
+              style={[
+                styles.confirmButton,
+                transaction?.status === 'completed' && { backgroundColor: '#888' }
+              ]}
+              disabled={transaction?.status === 'completed'}
+              onPress={() => {
+                if (transaction?.status === 'for_completion') {
+                  setConfirmVisible(true);
+                }
+              }}
             >
-              <Text style={styles.confirmText}>COMPLETE TRANSACTION</Text>
+              <Text style={styles.confirmText}>
+                {transaction?.status === 'completed' ? 'TRANSACTION COMPLETED' : 'COMPLETE TRANSACTION'}
+              </Text>
             </TouchableOpacity>
           </View>
         )}
