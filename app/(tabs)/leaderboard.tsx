@@ -59,7 +59,6 @@ export default function LeaderboardScreen() {
         <Ionicons name="notifications" size={20} color="#00FF66" style={{ marginRight: 12 }} />
       </View> */}
       <View style={styles.headerBar}>
-<<<<<<< HEAD
   <Text style={styles.headerTitle}>LEADERBOARDS</Text>
 </View>
 
@@ -78,20 +77,6 @@ export default function LeaderboardScreen() {
           </View>
           <Ionicons name="chevron-down" size={20} color="white" />
         </TouchableOpacity>
-=======
-        <Text style={styles.headerTitle}>LEADERBOARDS</Text>
-      </View>
-
-      <TouchableOpacity style={styles.dropdownBox} onPress={() => setViewDropdownVisible(true)}>
-        <View style={styles.dropdownLeft}>
-          <Text style={styles.dropdownTitle}>
-            {viewType === 'user' ? 'Users' : 'Puroks'}
-          </Text>
-          <Text style={styles.dropdownSubtitle}>As of {formattedDate}</Text>
-        </View>
-        <Ionicons name="chevron-down" size={20} color="white" />
-      </TouchableOpacity>
->>>>>>> 1de81be926400ae9c2643749c5327c4ea525204a
 
       <View style={styles.filterTabs}>
         <TouchableOpacity 
@@ -378,21 +363,9 @@ const styles = StyleSheet.create({
   topText: {
     color: '#023F0F',
     fontWeight: 'bold',
-<<<<<<< HEAD
     fontSize:18,
   
   },
-=======
-    fontSize: 16,
-  },
-
-  topscore: {
-    color: '#023F0F',
-    fontWeight: 'bold',
-    fontSize: 18,
-  },
-
->>>>>>> 1de81be926400ae9c2643749c5327c4ea525204a
   modalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',

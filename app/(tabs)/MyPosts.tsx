@@ -162,30 +162,27 @@ export default function MyPostsScreen() {
   const renderHeader = () => (
     <View style={styles.headerWrapper}>
       <View style={styles.headerBox}>
-        <Image 
-          source={require('../../assets/images/polyte-logo.png')} 
-          style={styles.logo} 
-        />
-  
         <View style={styles.searchWrapper}>
           <Searchbar
-          placeholder="PLASTIC, OBRERO USEP"
-          placeholderTextColor="#888E96" // 👈 makes placeholder not red
-          onChangeText={setSearchQuery}
-          value={searchQuery}
-          style={styles.searchBar}
-          inputStyle={{
-            color: '#888E96',         // user input text color
-            fontWeight: '100',        // super thin
-            letterSpacing: 0.5,
-            fontSize:10,
-          }}
-          iconColor="white"
-        />
+            placeholder="PLASTIC, OBRERO USEP"
+            placeholderTextColor="#888E96"
+            onChangeText={setSearchQuery}
+            value={searchQuery}
+            style={[styles.searchBar, { alignItems: 'center', height: 44 }]}
+            inputStyle={{
+              color: '#CCCCCC',
+              fontWeight: '400',
+              fontSize: 12,
+              textAlign: 'center',
+              paddingHorizontal: 20,
+              marginRight: 26,
+              lineHeight: 44,
+            }}
+            iconColor="#888E96"
+          />
         </View>
-  
         <View style={styles.notificationWrapper}>
-          <IconButton icon="bell" iconColor="white" size={24} onPress={() => {}} />
+          <IconButton icon="bell" iconColor="#00FF57" size={24} onPress={() => {}} />
         </View>
       </View>
     </View>
@@ -382,7 +379,7 @@ export default function MyPostsScreen() {
               source={require('../../assets/images/empty.png')} // replace with your placeholder image
               style={styles.emptyImage}
             /> */}
-            <Text style={styles.emptyText}>You haven’t posted anything yet.</Text>
+            <Text style={styles.emptyText}>You haven't posted anything yet.</Text>
             <Text style={styles.emptySubText}>Click the + button to get started!</Text>
           </View>
         }        
@@ -589,13 +586,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  logo: {
-    width: 100,
-    height: 24,
-    resizeMode: 'contain',
-    marginRight: 8,
-  },
-
   searchWrapper: {
     flex: 1,
     marginHorizontal: 8,
@@ -604,8 +594,9 @@ const styles = StyleSheet.create({
   searchBar: {
     backgroundColor: '#1A3620',
     borderRadius: 16,
-    height: 40,
+    height: 44,
     justifyContent: 'center',
+    alignItems: 'center',
   },
 
   notificationWrapper: {

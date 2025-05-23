@@ -33,8 +33,34 @@ export default function ProfileStack() {
         }}
       />
       <Stack.Screen name="ViewTransaction" component={ViewTransaction} />
-      <Stack.Screen name="Review" component={Review} />
-      <Stack.Screen name="MyPosts" component={MyPostsScreen} />
+      <Stack.Screen name="Review" component={Review} 
+        options={{
+          headerShown: true,
+          title: 'REVIEW',
+          headerStyle: {
+            backgroundColor: '#235F30',
+          },
+          headerTintColor: '#fff',
+          headerTitleStyle: {
+            fontWeight: 'bold',
+            fontSize: 16,
+          }
+        }}
+      />
+      <Stack.Screen name="MyPosts" component={MyPostsScreen} 
+        options={{
+          headerShown: true,
+          title: 'MY POSTS',
+          headerStyle: {
+            backgroundColor: '#235F30',
+          },
+          headerTintColor: '#fff',
+          headerTitleStyle: {
+            fontWeight: 'bold',
+            fontSize: 16,
+          }
+        }}
+      />
       <Stack.Screen name="EditPost" component={EditPost} />
       <Stack.Screen name="TransaCompleted" component={TransaCompleted} />
       <Stack.Screen name="Ratings" component={Ratings} />

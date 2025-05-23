@@ -9,6 +9,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   ScrollView,
+  Image,
 } from 'react-native';
 import { supabase } from '@/services/supabase';
 import { rewardsService } from '@/services/rewardsService';
@@ -18,6 +19,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { HomeStackParamList, MessagesStackParamList, ProfileStackParamList, RootStackParamList } from '../../types/navigation';
 import { MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import polysSymbol from '../../assets/images/polys_symbol.png';
 
 export default function RedeemRewards() {
   const [rewards, setRewards] = useState<any[]>([]);
@@ -96,7 +98,7 @@ export default function RedeemRewards() {
           </Text>
         </View>
         <View style={styles.pointsContainer}>
-          <MaterialIcons name="stars" size={24} color="#FFD700" />
+          <Image source={polysSymbol} style={{ width: 20, height: 20, resizeMode: 'contain', marginRight: 4 }} />
           <Text style={styles.rewardPoints}>{item.poly_points_required}</Text>
         </View>
       </View>
@@ -116,7 +118,7 @@ export default function RedeemRewards() {
         {/* Points Display */}
         <View style={styles.pointsCard}>
           <View style={styles.pointsHeader}>
-            <MaterialIcons name="stars" size={32} color="#FFD700" />
+            <Image source={polysSymbol} style={{ width: 28, height: 28, resizeMode: 'contain' }} />
             <Text style={styles.pointsTitle}>Available Polys</Text>
           </View>
           <Text style={styles.pointsValue}>{availablePoints}</Text>
@@ -165,14 +167,14 @@ export default function RedeemRewards() {
               <View style={styles.modalPointsRow}>
                 <Text style={styles.modalPointsLabel}>Cost:</Text>
                 <View style={styles.modalPointsValue}>
-                  <MaterialIcons name="stars" size={20} color="#FFD700" />
+                  <MaterialIcons name="stars" size={20} color="#00FF57" />
                   <Text style={styles.modalPointsText}>{selectedReward?.poly_points_required}</Text>
                 </View>
               </View>
               <View style={styles.modalPointsRow}>
                 <Text style={styles.modalPointsLabel}>Your Points:</Text>
                 <View style={styles.modalPointsValue}>
-                  <MaterialIcons name="stars" size={20} color="#FFD700" />
+                  <MaterialIcons name="stars" size={20} color="#00FF57" />
                   <Text style={styles.modalPointsText}>{availablePoints}</Text>
                 </View>
               </View>
@@ -247,7 +249,7 @@ export default function RedeemRewards() {
                   </Text>
                   <View style={styles.historyItemFooter}>
                     <View style={styles.historyItemPoints}>
-                      <MaterialIcons name="stars" size={16} color="#FFD700" />
+                      <Image source={polysSymbol} style={{ width: 16, height: 16, resizeMode: 'contain', marginRight: 4 }} />
                       <Text style={styles.historyItemPointsText}>{item.points_spent} Polys</Text>
                     </View>
                     <Text style={styles.historyItemDate}>
@@ -308,7 +310,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   pointsValue: {
-    color: '#FFD700',
+    color: '#00FF57',
     fontSize: 48,
     fontWeight: 'bold',
   },
@@ -358,7 +360,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   rewardPoints: {
-    color: '#FFD700',
+    color: '#00FF57',
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 4,
@@ -422,7 +424,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalPointsText: {
-    color: '#FFD700',
+    color: '#00FF57',
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 4,
@@ -501,7 +503,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   historyItemPointsText: {
-    color: '#FFD700',
+    color: '#00FF57',
     fontSize: 14,
     fontWeight: '600',
     marginLeft: 4,
