@@ -37,7 +37,7 @@ export default function ForgotPasswordScreen() {
     try {
       setLoading(true);
       const { error } = await authService.forgotPassword(email, {
-        redirectTo: 'polyte://reset-password?type=recovery'
+        redirectTo: 'polyte://reset-password'
       });
 
       if (error) {

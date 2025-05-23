@@ -17,6 +17,7 @@ export default function PersonalSignUp() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [contactNum, setContactNum] = useState('');
   const [barangayId, setBarangayId] = useState<number | null>(null);
   const [purokId, setPurokId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
@@ -41,9 +42,12 @@ export default function PersonalSignUp() {
   const loadBarangays = async () => {
     try {
       setLoadingLocations(true);
+      console.log('🔄 Fetching barangays...');
       const data = await locationService.getBarangays();
+      console.log('✅ Barangays fetched:', data);
       setBarangays(data);
     } catch (err) {
+      console.error('❌ Error loading barangays:', err);
       setError('Failed to load barangays. Please try again.');
     } finally {
       setLoadingLocations(false);
@@ -89,9 +93,44 @@ export default function PersonalSignUp() {
     return errors;
   };
 
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validateContactNumber = (number: string) => {
+    // Philippine mobile number format: 09XXXXXXXXX (11 digits)
+    const phoneRegex = /^09\d{9}$/;
+    return phoneRegex.test(number);
+  };
+
   const handleSignup = async () => {
-    if (!firstName || !lastName || !username || !email || !password || !confirmPassword || !barangayId || !purokId) {
-      setError('Please fill in all required fields');
+    // Check for empty fields with specific messages
+    const emptyFields = [];
+    if (!firstName) emptyFields.push('First name');
+    if (!lastName) emptyFields.push('Last name');
+    if (!username) emptyFields.push('Username');
+    if (!email) emptyFields.push('Email');
+    if (!password) emptyFields.push('Password');
+    if (!confirmPassword) emptyFields.push('Confirm password');
+    if (!contactNum) emptyFields.push('Contact number');
+    if (!barangayId) emptyFields.push('Barangay');
+    if (!purokId) emptyFields.push('Purok');
+
+    if (emptyFields.length > 0) {
+      setError(`Please fill in the following fields: ${emptyFields.join(', ')}`);
+      return;
+    }
+
+    // Validate email format
+    if (!validateEmail(email)) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
+    // Validate contact number format
+    if (!validateContactNumber(contactNum)) {
+      setError('Please enter a valid contact number (e.g., 09123456789)');
       return;
     }
 
@@ -116,19 +155,29 @@ export default function PersonalSignUp() {
         first_name: firstName,
         last_name: lastName,
         username,
-        barangay: barangayId.toString(),
-        purok: purokId.toString(),
+        contact_num: contactNum,
+        barangay: barangayId!.toString(),
+        purok: purokId!.toString(),
         account_type: 'personal',
       });
 
-      if (error) throw error;
+      if (error) {
+        // Handle specific error cases
+        if (error.message?.toLowerCase().includes('email already registered')) {
+          setError('This email is already registered. Please use a different email or try logging in.');
+        } else {
+          throw error;
+        }
+        return;
+      }
 
       navigation.navigate('Login', {
         message: 'Please check your email to confirm your account before logging in.',
       });
       
-    } catch (err) {
-      setError('Failed to create account. Please try again.');
+    } catch (err: any) {
+      console.error('Signup error:', err);
+      setError(err.message || 'Failed to create account. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -139,13 +188,14 @@ export default function PersonalSignUp() {
       style={styles.container}
       contentContainerStyle={styles.contentContainer}
     >
-      {/* 🔹 Logo & Header */}
+      {/* Logo & Header */}
       <View style={styles.logoContainer}>
         <Image source={require('../../../assets/images/polyte-logo.png')} style={styles.logo} />
         <Text style={styles.signUpText}>SIGN UP</Text>
       </View>
 
-      {/* Input Fields */}
+      {/* Personal Information Section */}
+      <Text style={styles.sectionTitle}>Personal Information</Text>
       <TextInput 
         label="Surname" 
         value={lastName}  
@@ -164,6 +214,20 @@ export default function PersonalSignUp() {
         style={styles.input} 
         outlineStyle={{ borderRadius: 25 }}
       />
+      <TextInput 
+        label="Contact Number" 
+        value={contactNum}  
+        theme={inputTheme} 
+        onChangeText={setContactNum} 
+        mode="outlined" 
+        style={styles.input} 
+        keyboardType="phone-pad"
+        placeholder="09XXXXXXXXX"
+        outlineStyle={{ borderRadius: 25 }}
+      />
+
+      {/* Account Credentials Section */}
+      <Text style={styles.sectionTitle}>Account Credentials</Text>
       <TextInput 
         label="Username" 
         value={username} 
@@ -184,8 +248,6 @@ export default function PersonalSignUp() {
         autoCapitalize="none" 
         outlineStyle={{ borderRadius: 25 }}
       />
-
-      {/* Password Fields */}
       <TextInput 
         label="Password" 
         value={password}  
@@ -207,8 +269,8 @@ export default function PersonalSignUp() {
         outlineStyle={{ borderRadius: 25 }}
       />
 
-      {/* Barangay Selection */}
-      <Text style={styles.label}>Select Address</Text>
+      {/* Address Information Section */}
+      <Text style={styles.sectionTitle}>Address Information</Text>
       <View style={styles.pickerContainer}>
         <Picker 
           selectedValue={barangayId} 
@@ -224,7 +286,6 @@ export default function PersonalSignUp() {
         </Picker>
       </View>
 
-      {/* Purok Selection (Appears Only After Selecting Barangay) */}
       {barangayId ? (
         <View style={styles.pickerContainer}>
           <Picker 
@@ -305,6 +366,14 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontWeight: 'bold',
   },
+  sectionTitle: {
+    fontSize: 16,
+    color: '#485935',
+    marginTop: 20,
+    marginBottom: 10,
+    fontWeight: '600',
+    paddingLeft: 10,
+  },
   input: {
     backgroundColor: '#fbfbfb',
     paddingHorizontal: 10,
@@ -332,13 +401,6 @@ const styles = StyleSheet.create({
     height: 50,
     backgroundColor: 'transparent',
     borderWidth: 0,
-  },
-  label: {
-    color: '#485935',
-    marginBottom: 5,
-    textAlignVertical: 'center',
-    fontSize: 14,
-    fontWeight: '500',
   },
   button: {
     marginTop: 24,

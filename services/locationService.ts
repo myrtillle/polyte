@@ -13,13 +13,24 @@ export interface Purok {
 
 export const locationService = {
   async getBarangays(): Promise<Barangay[]> {
-    const { data, error } = await supabase
-      .from('barangays')
-      .select('id, name')
-      .order('name');
-    
-    if (error) throw error;
-    return data || [];
+    console.log('🔄 locationService: Fetching barangays from Supabase...');
+    try {
+      const { data, error } = await supabase
+        .from('barangays')
+        .select('id, name')
+        .order('name');
+      
+      if (error) {
+        console.error('❌ locationService: Error fetching barangays:', error);
+        throw error;
+      }
+
+      console.log('✅ locationService: Barangays fetched successfully:', data);
+      return data || [];
+    } catch (error) {
+      console.error('❌ locationService: Exception in getBarangays:', error);
+      throw error;
+    }
   },
 
   async getPuroksByBarangay(barangayId: number): Promise<Purok[]> {

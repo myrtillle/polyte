@@ -5,6 +5,7 @@ import { notificationService } from './notificationService';
 import { Platform } from 'react-native';
 // import { Transaction } from '@/app/(tabs)/TransacHist';
 
+
 type RawTransactionData = {
   id: string;
   user_id: string;
@@ -22,6 +23,7 @@ type RawTransactionData = {
   }[];
   posts: {
     category_id: number;
+    location_text: string;
     collection_modes: {
       name: string;
     };
@@ -29,8 +31,8 @@ type RawTransactionData = {
       id: string;
       first_name: string;
       last_name: string;
-      purok: number;
-      barangay: string;
+      barangays?: [{ name: string }];
+      puroks?: [{ purok_name: string }];
     };
   };
   personal_users: {
@@ -44,7 +46,7 @@ type TransactionDetail = {
   scheduled_time: string;
   status: string;
   method: string;
-  purok: number;
+  purok: string;
   barangay: string;
   offerer_id: string;
   collector_id: string;
@@ -57,6 +59,7 @@ type TransactionDetail = {
   price: number;
   schedule_id: string;
   category_id: number;
+  location: string;
 };
 
 export type Transaction = {
@@ -119,37 +122,48 @@ export const transactionService = {
   // },
 
   async fetchAllTransactions(): Promise<Transaction[]> {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      console.error('❌ Could not get current user:', userError?.message);
+      return [];
+    }
+  
     const { data, error } = await supabase
       .from('offers')
       .select(`
         id,
         offered_items,
+        user_id,
         offer_schedules (
           status,
           scheduled_date,
           scheduled_time
+        ),
+        posts (
+          user_id
         )
       `);
-      
-      
+  
     if (error) {
       console.error("❌ Failed to fetch transactions:", error.message);
       return [];
     }
   
-    return (data || []).map((offer: any) => {
-      const schedule = offer.offer_schedules?.[0] || {};
-      console.log('📦 Schedule:', schedule);
-  
+    const filtered = (data || []).filter((offer: any) =>
+      offer.user_id === user.id || offer.posts?.user_id === user.id
+    );
+    
+    return filtered.map((offer: any) => {
+      const schedule = Array.isArray(offer.offer_schedules) ? offer.offer_schedules[0] : {};
       return {
         id: offer.id,
         offered_items: offer.offered_items || [],
-        status: schedule.status || 'unknown',
-        scheduled_date: schedule.scheduled_date || '',
-        scheduled_time: schedule.scheduled_time || '',
+        status: schedule?.status || 'unknown',
+        scheduled_date: schedule?.scheduled_date || '',
+        scheduled_time: schedule?.scheduled_time || '',
       };
     });
-  },
+  },  
 
   async fetchTransactionDetails(offerId: string) {
     console.log('📦 fetchTransactionDetails() called with:', offerId);
@@ -166,17 +180,16 @@ export const transactionService = {
       offered_weight,
       price,
       offer_schedules (*),
-      posts (
+      posts:posts_with_text_location (
         category_id,
-        collection_modes:collection_modes!posts_collection_mode_id_fkey (
-          name
-        ),
+        location_text,
+        collection_modes:collection_modes!posts_collection_mode_id_fkey ( name ),
         personal_users:personal_users!posts_personal_user_fkey (
           id,
           first_name,
           last_name,
-          purok,
-           barangays ( name )
+          barangays!barangay_id ( name ),
+          puroks!purok_id ( purok_name )
         )
       ),
       personal_users:personal_users!offers_user_id_fkey (  
@@ -209,8 +222,8 @@ export const transactionService = {
       scheduled_time: schedule?.scheduled_time,
       status: schedule?.status,
       method: collectionMode || 'Unknown',
-      purok: collector?.purok,
-      barangay: collector?.barangay,
+      purok: collector?.puroks?.[0]?.purok_name || 'Unknown',
+      barangay: collector?.barangays?.[0]?.name || 'Unknown',
       offerer_id: data.user_id, // this is the offerer's ID from the offers table
       offerer_name: `${offerer?.first_name ?? ''} ${offerer?.last_name ?? ''}`.trim(),
       collector_id: collector?.id,
@@ -221,6 +234,7 @@ export const transactionService = {
       weight: data.offered_weight ?? 0,
       price: data.price ?? 0,
       category_id: post?.category_id ?? 1,
+      location: post?.location_text ?? null,
     };
 
     console.log('✅ Returning flattened transaction result:', result);

@@ -5,7 +5,24 @@ import Constants from 'expo-constants';
 const supabaseUrl = Constants.expoConfig?.extra?.supabaseUrl ?? '';
 const supabaseAnonKey = Constants.expoConfig?.extra?.supabaseAnonKey ?? '';
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Log configuration (without exposing the full key)
+console.log('🔧 Supabase Config:', {
+  url: supabaseUrl ? '✅ URL is set' : '❌ URL is missing',
+  key: supabaseAnonKey ? '✅ Key is set' : '❌ Key is missing',
+  fullConfig: Constants.expoConfig?.extra
+});
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('❌ Supabase configuration is missing. Please check your app.config.ts and environment variables.');
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true
+  }
+});
 
 // Types for our database tables
 export interface User {

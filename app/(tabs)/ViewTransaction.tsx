@@ -16,6 +16,7 @@ import meetupIcon from '../../assets/images/meetup.png';
 import cashIcon from '../../assets/images/cash.png';
 import proofIcon from '../../assets/images/images3d.png';
 import { Button, Divider, IconButton } from 'react-native-paper';
+import Constants from 'expo-constants';
 
 
 const getModeData = (modeName: string) => {
@@ -52,6 +53,7 @@ export default function ViewTransaction() {
   const [proofImage, setProofImage] = useState<proofImage>({
     photo: ''
   });
+  const [address, setAddress] = useState<string | null>(null);
   // console.log('🔍 Navigated with offerId:', offerId);
   console.log('📦 ViewTransaction received offerId:', offerId);
   
@@ -59,25 +61,6 @@ export default function ViewTransaction() {
 
   const paid = transaction?.status === 'awaiting_payment' || transaction?.status === 'for_completion' || transaction?.status === 'completed';
 
-  useEffect(() => {
-    const fetchTransactDetails = async () => {
-      setLoading(true);
-      setTransaction(null); 
-      const data = await transactionService.fetchTransactionDetails(offerId);
-      console.log('📄 Data returned from transactionService:', data);
-
-      setTransaction(data);
-      setLoading(false);
-    };
-    
-    if (offerId) {
-      fetchTransactDetails(); 
-    }
-    
-    setConfirmVisible(false);
-    // setPaid(false);
-
-  }, [offerId]);
   
   useEffect(() => {
     const channel = supabase
@@ -212,6 +195,66 @@ export default function ViewTransaction() {
       setUploading(false);
   };
 
+  const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.GOOGLE_MAPS_API_KEY || '';
+  // console.log("🔑 Google Maps Key:", GOOGLE_MAPS_API_KEY);
+
+  const reverseGeocode = async (latitude: number, longitude: number) => {
+    try {
+      const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${GOOGLE_MAPS_API_KEY}`);
+      const data = await response.json();
+      if (data.status === 'OK' && data.results.length > 0) {
+        return data.results[0].formatted_address;
+      } else {
+        console.warn('⚠️ No address found from Google Maps.');
+        return null;
+      }
+    } catch (error) {
+      console.error('❌ Error reverse geocoding:', error);
+      return null;
+    }
+  };
+
+  const extractCoords = (pointStr: string) => {
+    const match = pointStr.match(/POINT\(([-\d.]+) ([-\d.]+)\)/);
+    if (!match) return null;
+    return {
+      longitude: parseFloat(match[1]),
+      latitude: parseFloat(match[2]),
+    };
+  };
+
+  
+  useEffect(() => {
+    const fetchTransactDetails = async () => {
+      setLoading(true);
+      setTransaction(null); 
+      const data = await transactionService.fetchTransactionDetails(offerId);
+      console.log('📄 Data returned from transactionService:', data);
+
+      setTransaction(data);
+
+      if (data?.location) {
+        const coords = extractCoords(data.location);
+        console.log('🔍 Coords:', coords);
+        if (coords) {
+          const result = await reverseGeocode(coords.latitude, coords.longitude);
+          console.log('🔍 Result:', result);
+          setAddress(result || null);
+        }
+      }
+      
+      setLoading(false);
+    };
+    
+    if (offerId) {
+      fetchTransactDetails(); 
+    }
+    
+    setConfirmVisible(false);
+    // setPaid(false);
+
+  }, [offerId]);
+  
   useEffect(() => {
     console.log('🧩 canComplete status:', canComplete);
     console.log('🖼️ Has proof?', hasProof);
@@ -286,7 +329,6 @@ export default function ViewTransaction() {
     }
   };
   
-
   const handleAgreeToSchedule = async () => {
     const success = await scheduleService.agreeToSchedule(offerId);
 
@@ -459,13 +501,13 @@ export default function ViewTransaction() {
         </View>
 
           <Text style={styles.subLabel}>SETTLED AT</Text>
-          <View style={styles.addressRow}>
-          <Image source={locationIcon} style={styles.locationIcon} resizeMode="contain" />
-          <Text style={styles.subValue}>
-            {transaction?.purok}, {transaction?.barangay}
-          </Text>
-        </View>
-
+          <Text style={styles.subLabel}>SETTLED AT</Text>
+            <View style={styles.addressRow}>
+              <Image source={locationIcon} style={styles.locationIcon} resizeMode="contain" />
+              <Text style={styles.subValue}>
+                {address ?? 'Loading location...'}
+              </Text>
+            </View>
 
         <Text style={styles.subLabel}>IN METHOD OF</Text>
         <View style={styles.modeRow}>
@@ -605,46 +647,28 @@ export default function ViewTransaction() {
           </View>
 
         {/* Offerer Button */}
-        {((isSellingPost && isOfferer) || (!isSellingPost && isPostOwner)) && ['for_completion', 'completed'].includes(transaction?.status) && (
+        {((isSellingPost && isOfferer) || (!isSellingPost && isPostOwner)) && transaction?.status === 'for_completion' && (
           <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'center' }}>
             <TouchableOpacity
-              style={[
-                styles.confirmButton,
-                transaction?.status === 'completed' && { backgroundColor: '#888' }
-              ]}
-              disabled={transaction?.status === 'completed'}
-              onPress={() => {
-                if (transaction?.status === 'for_completion') {
-                  setConfirmVisible(true);
-                }
-              }}
+              style={styles.confirmButton}
+              onPress={() => setConfirmVisible(true)}
             >
-              <Text style={styles.confirmText}>
-                {transaction?.status === 'completed' ? 'TRANSACTION COMPLETED' : 'COMPLETE TRANSACTION'}
-              </Text>
+              <Text style={styles.confirmText}>COMPLETE TRANSACTION</Text>
             </TouchableOpacity>
-
-            {transaction?.status === 'completed' && (
-              <TouchableOpacity
-                style={[styles.confirmButton, { backgroundColor: '#FFD700' }]}
-                onPress={() => profileNavigation.navigate('Ratings', { offerId })}
-              >
-                <Text style={[styles.confirmText, { color: '#023F0F' }]}>RATE</Text>
-              </TouchableOpacity>
-            )}
           </View>
         )}
-  
-        {/* Complete Transaction Button */}
-        {/* {isPostOwner && (
-          <TouchableOpacity
-            style={[styles.confirmButton, !canComplete && { backgroundColor: '#888' }]}
-            disabled={!canComplete}
-            onPress={() => setConfirmVisible(true)}
-          >
-            <Text style={styles.confirmText}>COMPLETE TRANSACTION</Text>
-          </TouchableOpacity>
-        )} */}
+
+        {/* Rate Button for Both Users when Completed */}
+        {transaction?.status === 'completed' && (
+          <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'center', marginTop: 10 }}>
+            <TouchableOpacity
+              style={[styles.confirmButton, { backgroundColor: '#FFD700' }]}
+              onPress={() => profileNavigation.navigate('Ratings', { offerId })}
+            >
+              <Text style={[styles.confirmText, { color: '#023F0F' }]}>Rate {isOfferer ? 'Seeker' : 'Offerer'}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
 
         {/* {currentUser === transaction?.offerer_id ? (

@@ -17,6 +17,7 @@ export const authService = {
     first_name?: string;
     last_name?: string;
     username?: string;
+    contact_num?: string;
     barangay?: string;
     purok?: string;
     account_type: 'personal' | 'barangay';
@@ -31,6 +32,7 @@ export const authService = {
             first_name: data.first_name,
             last_name: data.last_name,
             username: data.username,
+            contact_num: data.contact_num,
             barangay: data.barangay,
             purok: data.purok,
             account_type: data.account_type
@@ -51,6 +53,7 @@ export const authService = {
               last_name: data.last_name,
               username: data.username,
               email: data.email,
+              contact_num: data.contact_num,
               barangay: data.barangay,
               purok: data.purok,
               account_type: data.account_type,
@@ -62,6 +65,7 @@ export const authService = {
             .insert([{
               id: authData.user.id,
               email: data.email,
+              contact_num: data.contact_num,
               barangay: data.barangay,
               purok: data.purok,
               account_type: data.account_type,
@@ -102,7 +106,7 @@ export const authService = {
   
   async forgotPassword(email: string, options?: { redirectTo?: string }) {
     return await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: options?.redirectTo || 'polyte://reset-password?type=recovery',
+      redirectTo: options?.redirectTo || 'polyte://reset-password',
     });
   },
 

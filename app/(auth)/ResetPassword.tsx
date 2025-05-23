@@ -19,19 +19,16 @@ export default function ResetPasswordScreen() {
     const handleDeepLink = async (url: string) => {
       console.log('🔗 Deep link URL:', url);
       try {
-        // Handle both polyte:// and https:// URLs
         const urlObj = new URL(url);
-        const params = new URLSearchParams(urlObj.search);
+        // Get the access token from the URL hash
+        const hashParams = new URLSearchParams(urlObj.hash.substring(1));
+        const accessToken = hashParams.get('access_token');
         
-        // Check for both token and access_token (Supabase uses access_token)
-        const token = params.get('token') || params.get('access_token');
-        console.log('🔑 Reset token:', token);
-        
-        if (token) {
-          setResetToken(token);
+        if (accessToken) {
+          setResetToken(accessToken);
           // Set the session with the token
           const { error } = await supabase.auth.setSession({
-            access_token: token,
+            access_token: accessToken,
             refresh_token: '',
           });
           
@@ -41,7 +38,7 @@ export default function ResetPasswordScreen() {
             navigation.navigate('Login');
           }
         } else {
-          console.log('❌ No token found in URL');
+          console.log('❌ No access token found in URL');
           Alert.alert('Error', 'Invalid reset link. Please request a new one.');
           navigation.navigate('Login');
         }
