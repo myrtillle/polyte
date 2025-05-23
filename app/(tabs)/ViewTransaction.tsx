@@ -30,7 +30,6 @@ const getModeData = (modeName: string) => {
   }
 };
 
-
 interface proofImage {
   photo: string;
 }
@@ -376,6 +375,68 @@ export default function ViewTransaction() {
     );
   }
 
+  const goToChat = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+  
+    const offerId = transaction?.offer_id;
+  
+    // Step 1: Try to find an existing chat
+    let { data: chat, error } = await supabase
+      .from('chats')
+      .select('id')
+      .eq('offer_id', offerId)
+      .single();
+  
+    // Step 2: If not found, create a new one
+    if (!chat) {
+      const { data: newChat, error: createError } = await supabase
+        .from('chats')
+        .insert({
+          offer_id: offerId,
+          user1_id: user.id,
+          user2_id: transaction?.collector_id === user.id
+            ? transaction?.offerer_id
+            : transaction?.collector_id,
+        })
+        .select()
+        .single();
+  
+      if (createError || !newChat) {
+        console.error("❌ Failed to create chat:", createError?.message);
+        Alert.alert("Error", "Failed to start chat.");
+        return;
+      }
+  
+      chat = newChat;
+    }
+  
+    // Step 3: Navigate to ChatScreen with the correct chatId
+    navigation.navigate('Main', {
+      screen: 'Messages',
+      params: {
+        screen: 'ChatScreen',
+        params: {
+          chatId: chat?.id,
+          userId: user.id,
+          schedule: {
+            id: transaction?.schedule_id,
+            scheduled_time: transaction?.scheduled_time,
+            scheduled_date: transaction?.scheduled_date,
+            status: transaction?.status,
+            collectorName: transaction?.collector_name,
+            offererName: transaction?.offerer_name,
+            photoUrl: transaction?.photo_url,
+            purok: transaction?.purok,
+            barangay: transaction?.barangay,
+            user_id: transaction?.collector_id,
+            offer_id: offerId,
+          },
+        },
+      },
+    });
+  };
+  
   return (
     <LinearGradient colors={['#023F0F', '#05A527']} style={{ flex: 1 }}>
   {/* Header outside the padding container */}
@@ -453,28 +514,7 @@ export default function ViewTransaction() {
                   borderRadius: 20,
                 }}
                 disabled={hasAgreed}
-                onPress={async () => {
-                  const { data: { user }, error } = await supabase.auth.getUser();
-                  if (user) {
-                    messagesNavigation.navigate('ChatScreen', {
-                      chatId: transaction?.id,
-                      userId: user.id,
-                      schedule: {
-                        id: transaction?.schedule_id,
-                        scheduled_time: transaction?.scheduled_time,
-                        scheduled_date: transaction?.scheduled_date,
-                        status: transaction?.status,
-                        collectorName: transaction?.collector_name,
-                        offererName: transaction?.offerer_name,
-                        photoUrl: transaction?.photo_url,
-                        purok: transaction?.purok,
-                        barangay: transaction?.barangay,
-                        user_id: transaction?.collector_id, // correct owner
-                        offer_id: offerId
-                      }
-                    });
-                  }
-                }}
+                onPress={goToChat}
               >
                 <Text style={{
                   color: 'white',

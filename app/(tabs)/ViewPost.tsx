@@ -259,8 +259,38 @@ const ViewPost = () => {
   };    
   
   const handleDeclineOffer = async (offerId: string) => {
-    console.log("Declining offer ID:", offerId);
-    // logic 
+    try {
+      const { error } = await supabase
+        .from("offers")
+        .update({ status: 'declined' })
+        .eq("id", offerId);
+
+      if (error) throw error;
+
+      console.log("✅ Offer declined successfully");
+      setOffers((prev) => prev.map((offer) => 
+        offer.id === offerId ? { ...offer, status: 'declined' } : offer
+      ));
+
+      // Send notification to the offerer
+      const declinedOffer = offers.find(o => o.id === offerId);
+      if (declinedOffer) {
+        await notificationService.sendNotification(
+          declinedOffer.user_id,
+          'Offer Declined',
+          'Your offer has been declined by the post owner.',
+          'offer_declined',
+          {
+            type: 'offer',
+            id: offerId
+          }
+        );
+      }
+
+    } catch (error) {
+      console.error("❌ Error declining offer:", error);
+      Alert.alert("Error", "Failed to decline offer. Please try again.");
+    }
   };
   
   const handleAcceptOffer = async (offer: Offer) => {
@@ -274,10 +304,27 @@ const ViewPost = () => {
     navigation.navigate("ScheduleOffer", { offer, post });
   };
   
-  const handleChatWithUser = (userId: string) => {
-    console.log("Chatting with user ID:", userId);
-    // Navigate to chat screen
-    // navigation.navigate("Messages", { userId });
+  const handleChatWithUser = async (userId: string) => {
+    if (!currentUser?.id || !post) {
+      Alert.alert("Error", "Cannot start chat: Missing required information.");
+      return;
+    }
+
+    try {
+      const chatId = await messagesService.getOrCreateChatId(currentUser.id, userId);
+
+      // Get the offer details for this user
+      const userOffer = offers.find(offer => offer.user_id === userId);
+      
+      messagesNavigation.navigate('ChatScreen', {
+        chatId,
+        userId: currentUser.id,
+        post,
+      });
+    } catch (err) {
+      console.error("❌ Failed to navigate to ChatScreen:", err);
+      Alert.alert("Error", "Failed to start chat.");
+    }
   };    
 
   const isOfferOwner = (offer: Offer) => {

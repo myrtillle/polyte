@@ -40,50 +40,76 @@ export const messagesService = {
     },  
 
     async getUserChats(userId: string) {
-        const { data: chats, error } = await supabase
-            .from('chats')
-            .select('*')
-            .or(`user1_id.eq.${userId},user2_id.eq.${userId}`);
-      
-        if (error) throw error;
-      
-        const previews = [];
-      
-        for (const chat of chats ?? []) {
-          const otherUserId = chat.user1_id === userId ? chat.user2_id : chat.user1_id;
-      
-          const { data: messages, error: msgError } = await supabase
-            .from('messages')
-            .select('*')
-            .eq('chat_id', chat.id)
-            .order('timestamp', { ascending: false })
-            .limit(1);
+        try {
+            const { data: chats, error } = await supabase
+                .from('chats')
+                .select('*')
+                .or(`user1_id.eq.${userId},user2_id.eq.${userId}`);
+          
+            if (error) {
+                console.error('❌ Error fetching chats:', error.message);
+                throw error;
+            }
+          
+            const previews = [];
+          
+            for (const chat of chats ?? []) {
+                try {
+                    const otherUserId = chat.user1_id === userId ? chat.user2_id : chat.user1_id;
+            
+                    // Get the latest message for this chat
+                    const { data: messages, error: msgError } = await supabase
+                        .from('messages')
+                        .select('*')
+                        .eq('chat_id', chat.id)
+                        .order('timestamp', { ascending: false })
+                        .limit(1);
 
-            if (msgError) throw msgError;
+                    if (msgError) {
+                        console.error('❌ Error fetching messages:', msgError.message);
+                        continue;
+                    }
 
-            const lastMsg = messages?.[0];
-            if (!lastMsg) continue;
-      
-          if (!lastMsg) continue;
-      
-          const { data: profile } = await supabase
-            .from('personal_users')
-            .select('first_name, last_name')
-            .eq('id', otherUserId)
-            .single();
-      
-          previews.push({
-            chat_id: chat.id,
-            otherUserId,
-            otherUserName: profile ? `${profile.first_name} ${profile.last_name}` : 'Unknown User',
-            lastMessage: lastMsg.message,
-            lastTimestamp: lastMsg.timestamp,
-            seen: lastMsg.seen && lastMsg.receiver_id === userId,
-          });
+                    const lastMsg = messages?.[0];
+                    if (!lastMsg) continue;
+            
+                    // Get the other user's profile
+                    const { data: profile, error: profileError } = await supabase
+                        .from('personal_users')
+                        .select('first_name, last_name, profile_photo_url')
+                        .eq('id', otherUserId)
+                        .single();
+
+                    if (profileError) {
+                        console.error('❌ Error fetching profile:', profileError.message);
+                        continue;
+                    }
+            
+                    previews.push({
+                        chat_id: chat.id,
+                        otherUserId,
+                        otherUserName: profile ? `${profile.first_name} ${profile.last_name}` : 'Unknown User',
+                        lastMessage: lastMsg.message,
+                        lastTimestamp: lastMsg.timestamp,
+                        seen: lastMsg.seen && lastMsg.receiver_id === userId,
+                        photo_url: profile?.profile_photo_url
+                    });
+                } catch (err) {
+                    console.error('❌ Error processing chat:', err);
+                    continue; // Skip this chat if there's an error
+                }
+            }
+          
+            // Sort previews by timestamp in descending order (newest first)
+            return previews.sort((a, b) => 
+                new Date(b.lastTimestamp).getTime() - new Date(a.lastTimestamp).getTime()
+            );
+        } catch (err) {
+            console.error('❌ Network error in getUserChats:', err);
+            // Return empty array instead of throwing to prevent app crash
+            return [];
         }
-      
-        return previews;
-      },         
+    },         
 
     async fetchMessages(chatId: string) {
         try {

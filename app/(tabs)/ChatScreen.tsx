@@ -16,6 +16,8 @@ import { formatTimeAgo } from '@/utils/dateUtils';
 import { Post } from '@/types/Post';
 import Constants from 'expo-constants';
 import paperplaneIcon from '../../assets/images/paperplane.png';
+import { notificationService } from '@/services/notificationService';
+import { transactionService } from '@/services/transactionService';
 
 // interface Schedule {
 //     status: string;
@@ -40,6 +42,7 @@ const ChatScreen = () => {
     const homeNavigation = useNavigation<StackNavigationProp<HomeStackParamList>>();
     const profileNavigation = useNavigation<StackNavigationProp<ProfileStackParamList>>();
 
+    const { offerId } = route.params as { offerId: string };
     const { chatId, userId, post, schedule } = (route.params || {}) as RouteParams;
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState<string>('');
@@ -48,7 +51,8 @@ const ChatScreen = () => {
     const [newDate, setNewDate] = useState<string>(schedule?.scheduled_date || '');
     const [receiverName, setReceiverName] = useState<string>('');
     const [address, setAddress] = useState<string | null>(null);
-
+    const [loading, setLoading] = useState(false);
+    const [transaction, setTransaction] = useState<any>(null);
 
     useEffect(() => {
         if (chatId && userId) {
@@ -78,7 +82,8 @@ const ChatScreen = () => {
               .single();
           
             const otherUserId = chat?.user1_id === userId ? chat.user2_id : chat?.user1_id;
-          
+            
+            console.log('🔍 Other user ID:', otherUserId);
             const { data: profile } = await supabase
               .from('personal_users')
               .select('first_name, last_name')
@@ -94,6 +99,23 @@ const ChatScreen = () => {
         }
     }, [chatId, userId]);
     
+    useEffect(() => {
+      const fetchTransactDetails = async () => {
+        setLoading(true);
+        setTransaction(null); 
+        const data = await transactionService.fetchTransactionDetails(offerId);
+        console.log('📄 Data returned from transactionService:', data);
+  
+        setTransaction(data);
+        setLoading(false);
+      };
+      
+      if (offerId) {
+        fetchTransactDetails(); 
+      }
+  
+    }, [offerId]);
+
     const handleSend = async () => {
     console.log("Send button clicked");
     console.log("chatId:", chatId, "userId:", userId, "newMessage:", newMessage);
@@ -195,29 +217,85 @@ const ChatScreen = () => {
     const isOfferer = userId !== schedule?.user_id;
 
     const handleEditSchedule = async () => {
-        if (chatId && schedule) {
-            await scheduleService.updateSchedule(chatId, newTime, newDate);
-            setModalVisible(false);
+        if (!chatId || !schedule) {
+            Alert.alert("Error", "Missing schedule information");
+            return;
+        }
+
+        try {
+            const { error } = await supabase
+                .from('offer_schedules')
+                .update({
+                    scheduled_time: newTime,
+                    scheduled_date: newDate
+                })
+                .eq('offer_id', chatId);
+
+            if (error) throw error;
+
+            // Update local state
             schedule.scheduled_time = newTime;
             schedule.scheduled_date = newDate;
+
+            // Send notification to the other user
+            const otherUserId = schedule.user_id === userId ? transaction.offerer_id : schedule.user_id;
+            await notificationService.sendNotification(
+                otherUserId,
+                'Schedule Updated',
+                'The schedule has been updated. Please check the new details.',
+                'schedule_updated',
+                {
+                    type: 'transaction',
+                    id: schedule.offer_id
+                }
+            );
+
+            Alert.alert("Success", "Schedule updated successfully!");
+            setModalVisible(false);
+        } catch (error) {
+            console.error("Error updating schedule:", error);
+            Alert.alert("Error", "Failed to update schedule. Please try again.");
         }
     };
 
     const handleAgree = async () => {
         try {
-          const { error } = await supabase
-            .from('offer_schedules')
-            .update({ status: 'for_collection' }) 
-            .eq('offer_id', chatId);
-      
-          if (error) throw error;
-      
-          Alert.alert("Agreed", "You have agreed to the schedule.");
+            const { error } = await supabase
+                .from('offer_schedules')
+                .update({ status: 'for_collection' })
+                .eq('offer_id', chatId);
+
+            if (error) throw error;
+
+            // Send notification to the post owner
+            await notificationService.sendNotification(
+                transaction.collector_id,
+                'Schedule Agreed! 🎉',
+                'Great news! The schedule has been agreed upon. Time to make our planet greener! 🌱',
+                'schedule_agreed',
+                {
+                    type: 'transaction',
+                    id: transaction?.offer_id
+                }
+            );
+
+            Alert.alert(
+                "Schedule Agreed! 🎉",
+                "Awesome! You've agreed to the schedule. Let's make our planet greener together! 🌱\n\nRedirecting to transaction details...",
+                [{ text: "OK" }]
+            );
+
+            // Wait for 2 seconds before navigating
+            setTimeout(() => {
+                profileNavigation.navigate('ViewTransaction', { offerId: transaction?.offer_id });
+            }, 2000);
+
         } catch (error) {
-          console.error("Error agreeing to schedule:", error);
-          Alert.alert("Error", "Failed to agree on the schedule.");
+            console.error("Error agreeing to schedule:", error);
+            Alert.alert("Error", "Failed to agree on the schedule. Please try again.");
         }
-      };
+    };
+
     const extractCoords = (pointStr: string) => {
       const match = pointStr.match(/POINT\(([-\d.]+) ([-\d.]+)\)/);
       if (!match) return null;
@@ -367,7 +445,8 @@ const ChatScreen = () => {
                   </TouchableOpacity>
                 </View>
             )}
-            {schedule && (
+            {schedule && 
+              isPostOwner && (
                 <View style={{ marginBottom: 10, backgroundColor: '#1E592B', padding: 10, borderRadius: 8 }}>
                     {schedule.photoUrl && (
                         <Image source={{ uri: schedule.photoUrl }} style={{ height: 100, width: 100, marginBottom: 5, borderRadius: 5 }} />
@@ -375,7 +454,7 @@ const ChatScreen = () => {
                     <Text style={{ color: 'white', fontWeight: 'bold' }}>Scheduled by: {schedule.offererName}</Text>
                     <Text style={{ color: 'white' }}>Collector: {schedule.collectorName}</Text>
                     <Text style={{ color: 'white' }}>Time: {schedule.scheduled_time} - Date: {schedule.scheduled_date}</Text>
-                    <Text style={{ color: 'white' }}>Location: {schedule.purok}, {schedule.barangay}</Text>
+                    {/* <Text style={{ color: 'white' }}>Location: {address}</Text> */}
                     {/* Edit button (visible only to Post Owner) */}
                     {isPostOwner && schedule.status !== 'for_collection' && (
                     <Button title="Edit" onPress={() => setModalVisible(true)} />
@@ -412,58 +491,56 @@ const ChatScreen = () => {
                     marginVertical: 2,
                     gap: 6, // Optional spacing between bubble and timestamp
                   }}
-    
-  >
-    
-    {item.sender_id !== userId ? (
-      <>
-        <View style={styles.otherBubble}>
-          {item.target_type && item.target_id && (
-            <TouchableOpacity onPress={() => {
-              if (item.target_type === 'post') homeNavigation.navigate('ViewPost', { postId: item.target_id });
-              else if (item.target_type === 'schedule') profileNavigation.navigate('ViewTransaction', { offerId: item.target_id });
-            }}>
-              <Text style={styles.bannerText}>
-                📌 In reply to {item.target_type === 'post' ? 'Post' : 'Schedule'}
-              </Text>
-            </TouchableOpacity>
-          )}
-          <Text style={styles.messageText}>{item.message}</Text>
-        </View>
-        <Text style={[styles.timestamp, { alignSelf: 'center' }]}>
-          {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </Text>
-      </>
-    ) : (
-      <>
-        <Text style={[styles.timestamp, { alignSelf: 'center' }]}>
-          {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </Text>
-        <View style={styles.userBubble}>
-          {item.target_type && item.target_id && (
-            <TouchableOpacity onPress={() => {
-              if (item.target_type === 'post') homeNavigation.navigate('ViewPost', { postId: item.target_id });
-              else if (item.target_type === 'schedule') profileNavigation.navigate('ViewTransaction', { offerId: item.target_id });
-            }}>
-              <Text style={styles.bannerText}>
-                📌 In reply to this {item.target_type === 'post' ? 'Post' : 'Schedule'}
-              </Text>
-            </TouchableOpacity>
-          )}
-          <Text
-  style={[
-    styles.messageText,
-    item.sender_id === userId && { color: '#1A1A1A' } // dark color for sent messages
-  ]}
->
-  {item.message}
-</Text>
-
-        </View>
-      </>
-    )}
-  </View>
-)}
+                >
+                  {item.sender_id !== userId ? (
+                    <>
+                      <View style={styles.otherBubble}>
+                        {item.target_type && item.target_id && (
+                          <TouchableOpacity onPress={() => {
+                            if (item.target_type === 'post') {
+                              homeNavigation.navigate('ViewPost', { postId: item.target_id });
+                            } else if (item.target_type === 'schedule') {
+                              profileNavigation.navigate('ViewTransaction', { offerId: item.target_id });
+                            }
+                          }}>
+                            <Text style={styles.bannerText}>
+                              📌 In reply to {item.target_type === 'post' ? 'Post' : 'Schedule'}
+                            </Text>
+                          </TouchableOpacity>
+                        )}
+                        <Text style={styles.messageText}>{item.message}</Text>
+                      </View>
+                      <Text style={[styles.timestamp, { alignSelf: 'center' }]}>
+                        {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </Text>
+                    </>
+                  ) : (
+                    <>
+                      <Text style={[styles.timestamp, { alignSelf: 'center' }]}>
+                        {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </Text>
+                      <View style={styles.userBubble}>
+                        {item.target_type && item.target_id && (
+                          <TouchableOpacity onPress={() => {
+                            if (item.target_type === 'post') {
+                              homeNavigation.navigate('ViewPost', { postId: item.target_id });
+                            } else if (item.target_type === 'schedule') {
+                              profileNavigation.navigate('ViewTransaction', { offerId: item.target_id });
+                            }
+                          }}>
+                            <Text style={styles.bannerText}>
+                              📌 In reply to {item.target_type === 'post' ? 'Post' : 'Schedule'}
+                            </Text>
+                          </TouchableOpacity>
+                        )}
+                        <Text style={[styles.messageText, item.sender_id === userId && { color: '#1A1A1A' }]}>
+                          {item.message}
+                        </Text>
+                      </View>
+                    </>
+                  )}
+                </View>
+              )}
                  
             />
             </View>

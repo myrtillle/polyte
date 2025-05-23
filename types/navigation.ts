@@ -103,7 +103,15 @@ export type PostStackParamList = {
 };
 
 export type MessagesStackParamList = {
-  MessagesMain: undefined;
+  MessagesMain: {
+    screen?: 'ChatScreen';
+    params?: {
+      chatId: string;
+      userId?: string;
+      post?: Post;
+      schedule?: Schedule;
+    };
+  };
   ChatScreen: {
     chatId: string;
     userId?: string;
@@ -127,7 +135,13 @@ export type RootStackParamList = {
   Signup: undefined;
   ForgotPassword: undefined;
   ResetPassword: undefined;
-  Main: undefined;
+  Main: {
+    screen?: string;
+    params?: {
+      screen?: string;
+      params?: any;
+    };
+  };
   ConfirmDelivery: {
     scheduleId: string;
     offerId: string;

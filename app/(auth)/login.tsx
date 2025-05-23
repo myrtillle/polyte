@@ -20,31 +20,54 @@ export default function LoginScreen() {
   const [successMessage, setSuccessMessage] = useState(params?.message ?? '');
 
   const [showResend, setShowResend] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   const handleLogin = async () => {
     try {
       setLoading(true);
+      setError('');
+      
       const { error } = await authService.signIn(email, password);
       
       if (error) {
         if (error.message.includes('Email not confirmed')) {
           setError('Please confirm your email before logging in. Check your inbox for the confirmation link.');
           setShowResend(true);
+        } else if (error.message.includes('Network request failed')) {
+          setError('Network error. Please check your internet connection.');
+          // Implement retry logic
+          if (retryCount < 3) {
+            setRetryCount(prev => prev + 1);
+            setTimeout(handleLogin, 2000); // Retry after 2 seconds
+          }
         } else {
           throw error;
         }
         return;
       }
   
+      // Reset retry count on success
+      setRetryCount(0);
+      
       // ✅ Redirect to main app screen
       navigation.reset({
         index: 0,
         routes: [{ name: 'Main' }],
       });
   
-    } catch (error) {
+    } catch (error: any) {
       console.error('Login failed:', error);
-      setError('Login failed. Please check your credentials.');
+      
+      // Handle specific error types
+      if (error.message?.includes('Network request failed')) {
+        setError('Network error. Please check your internet connection.');
+        if (retryCount < 3) {
+          setRetryCount(prev => prev + 1);
+          setTimeout(handleLogin, 2000);
+        }
+      } else {
+        setError('Login failed. Please check your credentials.');
+      }
       setShowResend(false);
     } finally {
       setLoading(false);
@@ -84,9 +107,12 @@ export default function LoginScreen() {
 
       {/* Show error message if exists */}
       {error ? (
-         <View style={styles.errorContainer}>
+        <View style={styles.errorContainer}>
           <Text style={styles.error}>{error}</Text>
-         </View>
+          {error.includes('Network error') && retryCount < 3 && (
+            <Text style={styles.retryText}>Retrying... ({retryCount + 1}/3)</Text>
+          )}
+        </View>
       ) : null}
 
       {showResend && (
@@ -246,10 +272,19 @@ const styles = StyleSheet.create({
     marginTop: 16,
     backgroundColor: '#cadbb7', // Light green for secondary buttons
   },
+  retryText: {
+    color: '#93a267',
+    fontSize: 12,
+    marginTop: 4,
+    textAlign: 'center',
+  },
   errorContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
     paddingHorizontal: 10,
+    backgroundColor: '#f8f8f8',
+    borderRadius: 8,
+    padding: 8,
   },
 }); 

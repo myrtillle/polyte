@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet,Image } from 'react-native';
+import { View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet,Image, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { MessagesStackParamList, RootStackParamList } from '../../types/navigation';
@@ -26,12 +26,20 @@ export default function MessagesScreen() {
   const [userId, setUserId] = useState<string | null>(null);
   const [conversations, setConversations] = useState<ChatPreview[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     const getUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      if (data?.user) {
-        setUserId(data.user.id);
+      try {
+        const { data } = await supabase.auth.getUser();
+        if (data?.user) {
+          setUserId(data.user.id);
+        }
+      } catch (err) {
+        console.error('❌ Error getting user:', err);
+        setError('Failed to get user information. Please check your internet connection.');
       }
     };
     getUser();
@@ -39,8 +47,26 @@ export default function MessagesScreen() {
 
   const loadChats = async () => {
     if (!userId) return;
-    const previews = await messagesService.getUserChats(userId);
-    setConversations(previews);
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const previews = await messagesService.getUserChats(userId);
+      setConversations(previews);
+      setRetryCount(0); // Reset retry count on success
+    } catch (err) {
+      console.error('❌ Error loading chats:', err);
+      setError('Failed to load conversations. Please check your internet connection.');
+      
+      // Implement retry logic
+      if (retryCount < 3) {
+        setRetryCount(prev => prev + 1);
+        setTimeout(loadChats, 2000); // Retry after 2 seconds
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -81,70 +107,112 @@ export default function MessagesScreen() {
     c.otherUserName.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
- return (
-  <LinearGradient
-    colors={['#023F0F', '#05A527']}
-    style={{ flex: 1 }}
-    start={{ x: 0, y: 0 }}
-    end={{ x: 0, y: 1 }}
-  >
-    {/* Sticky Full-Width Header */}
-    <View style={styles.headerContainer}>
-      <View style={styles.headerTopRow}>
-      <View style={styles.titleWithIcon}>
-        <Image source={paperplaneIcon} style={styles.headerIcon} />
-        <Text style={styles.headerTitle}>MESSAGES</Text>
+  const formatTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (diffInDays === 0) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } else if (diffInDays === 1) {
+      return 'Yesterday';
+    } else if (diffInDays < 7) {
+      return date.toLocaleDateString([], { weekday: 'short' });
+    } else {
+      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    }
+  };
+
+  return (
+    <LinearGradient
+      colors={['#023F0F', '#05A527']}
+      style={{ flex: 1 }}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+    >
+      {/* Sticky Full-Width Header */}
+      <View style={styles.headerContainer}>
+        <View style={styles.headerTopRow}>
+        <View style={styles.titleWithIcon}>
+          <Image source={paperplaneIcon} style={styles.headerIcon} />
+          <Text style={styles.headerTitle}>MESSAGES</Text>
+        </View>
+        <Text style={styles.dots}>⋯</Text>
       </View>
-      <Text style={styles.dots}>⋯</Text>
-    </View>
 
 
-      <View style={styles.searchBar}>
-        <Text style={styles.searchIcon}>🔍</Text>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="PLASTIC, OBRERO USEP"
-          placeholderTextColor="#AAA"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-      </View>
-    </View>
-
-    {/* Scrollable Container */}
-    <View style={styles.container}>
-      {filtered.length === 0 ? (
-        <Text style={styles.emptyText}>No Conversations</Text>
-      ) : (
-        <FlatList
-  data={filtered}
-  keyExtractor={(item) => item.chat_id}
-  renderItem={({ item }) => (
-    <TouchableOpacity style={styles.chatCard} onPress={() => handleChatPress(item.chat_id)}>
-      <View style={styles.chatRow}>
-        <Image
-          source={{ uri: item.photo_url || `https://i.pravatar.cc/40?u=${item.otherUserId}` }}
-          style={styles.avatar}
-        />
-        <View style={styles.chatTextContainer}>
-          <Text style={styles.chatName}>{item.otherUserName}</Text>
-          <Text style={[styles.chatMessage, { fontWeight: item.seen ? 'normal' : 'bold' }]}>
-            {item.lastMessage}
-          </Text>
-          <Text style={styles.chatTime}>
-            {new Date(item.lastTimestamp).toLocaleString()}
-          </Text>
+        <View style={styles.searchBar}>
+          <Text style={styles.searchIcon}>🔍</Text>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="PLASTIC, OBRERO USEP"
+            placeholderTextColor="#AAA"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
         </View>
       </View>
-    </TouchableOpacity>
-  )}
-/>
 
-      )}
-    </View>
-  </LinearGradient>
-);
-
+      {/* Messages List */}
+      <View style={styles.container}>
+        {isLoading ? (
+          <View style={styles.centerContainer}>
+            <ActivityIndicator size="large" color="#00D964" />
+          </View>
+        ) : error ? (
+          <View style={styles.centerContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity 
+              style={styles.retryButton}
+              onPress={loadChats}
+            >
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        ) : filtered.length === 0 ? (
+          <Text style={styles.emptyText}>No Conversations</Text>
+        ) : (
+          <FlatList
+            data={filtered}
+            keyExtractor={(item) => item.chat_id}
+            renderItem={({ item }) => (
+              <TouchableOpacity 
+                style={[
+                  styles.chatCard,
+                  !item.seen && styles.unreadChat
+                ]} 
+                onPress={() => handleChatPress(item.chat_id)}
+              >
+                <View style={styles.chatRow}>
+                  <Image
+                    source={{ uri: item.photo_url || `https://i.pravatar.cc/40?u=${item.otherUserId}` }}
+                    style={styles.avatar}
+                  />
+                  <View style={styles.chatTextContainer}>
+                    <View style={styles.nameTimeRow}>
+                      <Text style={styles.chatName}>{item.otherUserName}</Text>
+                      <Text style={styles.chatTime}>
+                        {formatTimestamp(item.lastTimestamp)}
+                      </Text>
+                    </View>
+                    <Text 
+                      style={[
+                        styles.chatMessage,
+                        !item.seen && styles.unreadMessage
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {item.lastMessage}
+                    </Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            )}
+          />
+        )}
+      </View>
+    </LinearGradient>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -166,10 +234,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 100,
-    marginRight: 10,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginRight: 12,
   },
   chatTextContainer: {
     flex: 1,
@@ -244,20 +312,61 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 10,
   },
+  unreadChat: {
+    backgroundColor: '#235F30',
+  },
   chatName: {
     color: 'white',
     fontWeight: 'bold',
+    fontSize: 15,
   },
   chatMessage: {
-    color: 'white',
+    color: '#ccc',
+    fontSize: 14,
   },
   chatTime: {
-    color: '#ccc',
+    color: '#aaa',
     fontSize: 12,
   },
   emptyText: {
     color: 'white',
     textAlign: 'center',
     marginTop: 20,
+  },
+  nameTimeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  unreadMessage: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  centerContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  
+  errorText: {
+    color: '#FF6B6B',
+    textAlign: 'center',
+    marginBottom: 16,
+    fontSize: 16,
+  },
+  
+  retryButton: {
+    backgroundColor: '#00D964',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  
+  retryButtonText: {
+    color: '#023F0F',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 });
