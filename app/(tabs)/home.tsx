@@ -18,6 +18,7 @@ import { messagesService } from '@/services/messagesService';
 import { Post } from '../../services/postsService';
 import Constants from 'expo-constants';
 
+
 interface Category {
   id: number;
   name: string;
@@ -206,49 +207,46 @@ export default function HomeScreen() {
   };
   
   const renderHeader = () => (
-    <View style={styles.headerWrapper}>
-      <View style={styles.headerBox}>
-        <Image 
-          source={require('../../assets/images/polyte-logo.png')} 
-          style={styles.logo} 
-        />
-  
-        <View style={styles.searchWrapper}>
-          <Searchbar
-          placeholder="PLASTIC, OBRERO USEP"
-          placeholderTextColor="#888E96" // 👈 makes placeholder not red
-          onChangeText={setSearchQuery}
-          value={searchQuery}
-          style={styles.searchBar}
-          inputStyle={{
-            color: '#888E96',         // user input text color
-            fontWeight: '100',        // super thin
-            letterSpacing: 0.5,
-            fontSize:10,
-          }}
-          iconColor="white"
-        />
-        </View>
-  
-        <TouchableOpacity style={styles.notificationWrapper}>
-          <IconButton icon="bell" iconColor="white" size={24} onPress={() => homeNavigation.navigate('Notifications')} />
-          {unreadCount > 0 && showBadge && (
-            <View style={{
-              position: 'absolute',
-              top: -5,
-              right: -5,
-              backgroundColor: 'red',
-              borderRadius: 10,
-              paddingHorizontal: 6,
-              paddingVertical: 1,
-            }}>
-              <Text style={{ color: 'white', fontSize: 12 }}>{unreadCount}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-      </View>
+  <View style={styles.headerWrapper}>
+    {/* Top Row: Logo + Notification */}
+    <View style={styles.headerTopRow}>
+      <Image 
+        source={require('../../assets/images/polyte-logo.png')} 
+        style={styles.logo} 
+      />
+      <TouchableOpacity style={styles.notificationWrapper}>
+        <IconButton icon="bell" iconColor="#00FF57" size={24} onPress={() => homeNavigation.navigate('Notifications')} />
+        {unreadCount > 0 && showBadge && (
+          <View style={styles.badge}>
+            <View style={styles.badgeDot} />
+          </View>
+        )}
+      </TouchableOpacity>
     </View>
-  );
+
+    {/* Second Row: Searchbar */}
+    <View style={styles.searchWrapper}>
+      <Searchbar
+        placeholder="PLASTIC, OBRERO USEP"
+        placeholderTextColor="#888E96"
+        onChangeText={setSearchQuery}
+        value={searchQuery}
+        style={styles.searchBar}
+        inputStyle={{
+          color: '#CCCCCC',
+          fontWeight: '400',
+          fontSize: 12,
+          textAlign: 'center',
+          paddingHorizontal: 20,
+          marginRight: 26,
+        }}
+        iconColor="#888E96"
+      />
+    </View>
+  </View>
+);
+
+
 
   const renderCategories = () => (
     <View style={styles.categoryWrapper}>
@@ -317,27 +315,29 @@ export default function HomeScreen() {
 
 
   const renderPost = ({ item }: { item: Post }) => (
-              <Card style={[
-                styles.card,
-                item.category_id === 2 && { backgroundColor: '#172B1F' } // Darker for SEEKING
-              ]}>
-                <Card.Content>
-                  <View style={styles.cardWrapper}>
-                    <View style={styles.infoWrapper}>
-                      {/* Name and time */}
-                      <View style={styles.userInfo}>
-                      <Text style={styles.userName}>
-                        { item.user?.username || 'Anonymous User' }
-                      </Text>
-                      <Text style={styles.timePosted}>
-                        {formatTimeAgo(item.created_at)}
-                      </Text>
-                      </View>
+    <Card style={[
+      styles.card,
+      item.category_id === 2 && { backgroundColor: '#172B1F' } // Darker for SEEKING
+    ]}>
+      <Card.Content>
+        <View style={[
+          styles.cardWrapper,
+          (!item.photos || item.photos.length === 0) && { flexDirection: 'column' }
+        ]}>
+          <View style={[
+            styles.infoWrapper,
+            (!item.photos || item.photos.length === 0) && { width: '100%', alignItems: 'flex-start' }
+          ]}>
+            {/* Name and time */}
+            <View style={styles.userInfo}>
+            <Text style={styles.userName}>
+              { item.user?.username || 'Anonymous User' }
+            </Text>
+            <Text style={styles.timePosted}>
+              {formatTimeAgo(item.created_at)}
+            </Text>
+            </View>
 
-            {/* <Text style={styles.description}>
-              {item.description || 'No description provided.'}
-            </Text> */}
-            
             {/* Mode label (yellow icon + text) */}
             <View style={styles.labelRow}>
               {(() => {
@@ -477,6 +477,51 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+
+headerTopRow: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: 12,
+},
+
+logo: {
+  width: 100,
+  height: 30,
+  resizeMode: 'contain',
+},
+
+searchWrapper: {
+  backgroundColor: '#1A3620',
+  borderRadius: 16,
+  paddingHorizontal: 6,
+  
+},
+
+searchBar: {
+  backgroundColor: 'transparent',
+  borderRadius: 16,
+  height: 44,
+  elevation: 0,
+},
+
+notificationWrapper: {
+  position: 'relative',
+},
+
+badge: {
+  position: 'absolute',
+  top: 4,
+  right: 4,
+},
+
+badgeDot: {
+  width: 8,
+  height: 8,
+  borderRadius: 4,
+  backgroundColor: 'red',
+},
+
 
   imageContainer: {
     alignItems: 'flex-end',
@@ -641,8 +686,7 @@ const styles = StyleSheet.create({
     color: '#023F0F',
     fontWeight: 'bold',
   },
-  
-  headerWrapper: {
+   headerWrapper: {
     backgroundColor: '#235F30', // overall screen background
     padding: 16,
   },
@@ -652,30 +696,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  logo: {
-    width: 100,
-    height: 24,
-    resizeMode: 'contain',
-    marginRight: 8,
-  },
+  
 
-  searchWrapper: {
-    flex: 1,
-    marginHorizontal: 8,
-  },
-
-  searchBar: {
-    backgroundColor: '#1A3620',
-    borderRadius: 16,
-    height: 40,
-    justifyContent: 'center',
-  },
-
-  notificationWrapper: {
-    position: 'relative',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
 
   categories: {
     flexDirection: 'row',

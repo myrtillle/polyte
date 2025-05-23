@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Modal, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { leaderboardService } from '@/services/leaderboardService';
 import { Ionicons } from '@expo/vector-icons';
@@ -65,16 +65,19 @@ export default function LeaderboardScreen() {
 
      
         <TouchableOpacity style={styles.dropdownBox} onPress={() => setViewDropdownVisible(true)}>
+          <Image
+            source={require('../../assets/images/trophy.png')}
+            style={styles.dropdownTrophy}
+            resizeMode="contain"
+          />
           <View style={styles.dropdownLeft}>
             <Text style={styles.dropdownTitle}>
-              {viewType === 'user' ? 'USER LEADERBOARDS' : 'PUROK LEADERBOARDS'}
+              {viewType === 'user' ? 'USER LEADER BOARDS' : 'PUROK LEADER BOARDS'}
             </Text>
             <Text style={styles.dropdownSubtitle}>As of {formattedDate}</Text>
           </View>
           <Ionicons name="chevron-down" size={20} color="white" />
         </TouchableOpacity>
-
-
 
       <View style={styles.filterTabs}>
         <TouchableOpacity style={[styles.tab, activeTab === 'ALL' && styles.activeTab]}>
@@ -372,8 +375,7 @@ itemPointsWrapper: {
     fontWeight: 'bold',
     fontSize:18,
   
-  }
-,
+  },
   modalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',
@@ -393,5 +395,11 @@ itemPointsWrapper: {
     paddingVertical: 8,
     color: '#023F0F',
     
+  },
+  dropdownTrophy: {
+    width: 32,
+    height: 32,
+    marginRight: 12,
+    marginLeft: 2,
   },
 });

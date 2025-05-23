@@ -38,8 +38,30 @@ export default function ProfileStack() {
       <Stack.Screen name="EditPost" component={EditPost} />
       <Stack.Screen name="TransaCompleted" component={TransaCompleted} />
       <Stack.Screen name="Ratings" component={Ratings} />
-      <Stack.Screen name="RedeemRewards" component={RedeemRewards} />
-      <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+      <Stack.Screen name="RedeemRewards" component={RedeemRewards} options={{
+        headerShown: true,
+        title: 'REDEEM REWARDS',
+        headerStyle: {
+          backgroundColor: '#1E592B',
+        },
+        headerTintColor: '#fff',
+        headerTitleStyle: {
+          fontWeight: 'bold',
+          fontSize: 16,
+        }
+      }} />
+      <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{
+        headerShown: true,
+        title: 'EDIT PROFILE',
+        headerStyle: {
+          backgroundColor: '#1E592B',
+        },
+        headerTintColor: '#fff',
+        headerTitleStyle: {
+          fontWeight: 'bold',
+          fontSize: 16,
+        }
+      }} />
     </Stack.Navigator>
   );
 }

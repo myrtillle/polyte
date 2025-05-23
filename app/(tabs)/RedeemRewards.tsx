@@ -110,9 +110,7 @@ export default function RedeemRewards() {
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
     >
-      <View style={styles.headerBar}>
-        <Text style={styles.headerTitle}>REDEEM REWARDS</Text>
-      </View>
+  
 
       <ScrollView style={styles.scrollView}>
         {/* Points Display */}

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image, ScrollView, ActivityIndicator } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import Constants from 'expo-constants';
 import * as ImagePicker from 'expo-image-picker';
@@ -9,6 +9,8 @@ import { supabase } from '../../services/supabase';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { ProfileStackParamList } from '../../types/navigation';
 import { RouteProp } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { MaterialIcons } from '@expo/vector-icons';
 
 type EditProfileScreenRouteProp = RouteProp<ProfileStackParamList, 'EditProfile'>;
 
@@ -36,6 +38,7 @@ const EditProfile = () => {
   const [barangayId, setBarangayId] = useState<number | null>(profile.barangay_id ?? null);
   const [purokId, setPurokId] = useState<number | null>(profile.purok_id ?? null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     const fetchDropdowns = async () => {
@@ -85,7 +88,7 @@ const EditProfile = () => {
   };
 
   const handleSave = async () => {
-    console.log('💾 Starting profile update...');
+    setSaving(true);
     try {
       let uploadedUrl = photo;
       
@@ -131,6 +134,8 @@ const EditProfile = () => {
     } catch (err) {
       console.error('❌ Profile update failed:', err);
       Alert.alert('Error', 'Could not update profile. Please try again.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -149,7 +154,7 @@ const EditProfile = () => {
   if (loading) {
     console.log('⏳ Loading state active');
     return (
-      <View style={[styles.container, styles.loadingContainer]}>
+      <View style={[styles.outerContainer, styles.loadingContainer]}>
         <Text>Loading...</Text>
       </View>
     );
@@ -157,108 +162,143 @@ const EditProfile = () => {
 
   console.log('🎨 Rendering EditProfile form');
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <TouchableOpacity onPress={handleImagePick}>
-        <Image source={{ uri: photo || 'https://i.pravatar.cc/100' }} style={styles.avatar} />
-      </TouchableOpacity>
-
-      <TextInput 
-        placeholder="First Name" 
-        value={firstName} 
-        onChangeText={(text) => {
-          console.log('📝 First name changed:', text);
-          setFirstName(text);
-        }} 
-        style={styles.input} 
-      />
-      <TextInput 
-        placeholder="Last Name" 
-        value={lastName} 
-        onChangeText={(text) => {
-          console.log('📝 Last name changed:', text);
-          setLastName(text);
-        }} 
-        style={styles.input} 
-      />
-      <TextInput 
-        placeholder="Email" 
-        value={email} 
-        onChangeText={(text) => {
-          console.log('📝 Email changed:', text);
-          setEmail(text);
-        }} 
-        style={styles.input} 
-      />
-
-      <Text style={styles.label}>Barangay</Text>
-      <View style={styles.dropdownWrapper}>
-        <Picker
-          selectedValue={barangayId}
-          onValueChange={(value: string | number) => {
-            console.log('📍 Barangay selected:', value);
-            setBarangayId(value as number);
-          }}
-          style={styles.picker}
-        >
-          {barangays.map((b) => (
-            <Picker.Item key={b.id} label={b.name} value={b.id} />
-          ))}
-        </Picker>
+    <LinearGradient
+    colors={['#023F0F', '#05A527']}
+    style={styles.outerContainer}
+    start={{ x: 0, y: 0 }}
+    end={{ x: 0, y: 1 }}
+  >
+    <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <View style={styles.card}>
+        <View style={styles.avatarContainer}>
+          <TouchableOpacity onPress={handleImagePick} style={styles.avatarTouchable}>
+            <Image source={{ uri: photo || 'https://i.pravatar.cc/100' }} style={styles.avatar} />
+            <View style={styles.cameraIconContainer}>
+              <MaterialIcons name="photo-camera" size={28} color="#fff" />
+            </View>
+          </TouchableOpacity>
+        </View>
+        <TextInput
+          placeholder="First Name"
+          value={firstName}
+          onChangeText={setFirstName}
+          style={styles.input}
+          placeholderTextColor="#888"
+        />
+        <TextInput
+          placeholder="Last Name"
+          value={lastName}
+          onChangeText={setLastName}
+          style={styles.input}
+          placeholderTextColor="#888"
+        />
+        <TextInput
+          placeholder="Email"
+          value={email}
+          onChangeText={setEmail}
+          style={styles.input}
+          placeholderTextColor="#888"
+        />
+        <Text style={styles.label}>Barangay</Text>
+        <View style={styles.dropdownWrapper}>
+          <Picker
+            selectedValue={barangayId}
+            onValueChange={(value: number) => setBarangayId(value)}
+            style={styles.picker}
+          >
+            {barangays.map((b) => (
+              <Picker.Item key={b.id} label={b.name} value={b.id} />
+            ))}
+          </Picker>
+        </View>
+        <Text style={styles.label}>Purok</Text>
+        <View style={styles.dropdownWrapper}>
+          <Picker
+            selectedValue={purokId}
+            onValueChange={(value: number) => setPurokId(value)}
+            style={styles.picker}
+          >
+            {puroks.map((p) => (
+              <Picker.Item key={p.id} label={p.purok_name} value={p.id} />
+            ))}
+          </Picker>
+        </View>
+        <TouchableOpacity onPress={handleSave} style={styles.saveButton} disabled={saving}>
+          {saving ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.saveText}>SAVE CHANGES</Text>
+          )}
+        </TouchableOpacity>
       </View>
-
-      <Text style={styles.label}>Purok</Text>
-      <View style={styles.dropdownWrapper}>
-        <Picker
-          selectedValue={purokId}
-          onValueChange={(value: string | number) => {
-            console.log('📍 Purok selected:', value);
-            setPurokId(value as number);
-          }}
-          style={styles.picker}
-        >
-          {puroks.map((p) => (
-            <Picker.Item key={p.id} label={p.purok_name} value={p.id} />
-          ))}
-        </Picker>
-      </View>
-
-      <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
-        <Text style={styles.saveText}>SAVE CHANGES</Text>
-      </TouchableOpacity>
     </ScrollView>
+    </LinearGradient>
   );
 };
 
 export default EditProfile;
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-    backgroundColor: '#f2f2f2',
-    flexGrow: 1,
+  outerContainer: {
+    flex: 1,
   },
-  loadingContainer: {
+  scrollContainer: {
+    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingVertical: 32,
+  },
+  card: {
+    backgroundColor: 'transparent',
+    borderRadius: 18,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+  },
+  avatarContainer: {
+    alignItems: 'center',
+    marginBottom: 18,
+  },
+  avatarTouchable: {
+    position: 'relative',
   },
   avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    alignSelf: 'center',
-    marginBottom: 16,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    borderWidth: 3,
+    borderColor: '#1E592B',
+    backgroundColor: '#eee',
+  },
+  cameraIconContainer: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#1E592B',
+    borderRadius: 20,
+    padding: 4,
+    borderWidth: 2,
+    borderColor: '#fff',
   },
   input: {
-    backgroundColor: '#fff',
-    marginBottom: 12,
-    padding: 12,
-    borderRadius: 8,
+    backgroundColor: '#F6F6F6',
+    marginBottom: 14,
+    padding: 14,
+    borderRadius: 10,
+    width: '100%',
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
   },
   dropdownWrapper: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
+    backgroundColor: '#F6F6F6',
+    borderRadius: 10,
     marginBottom: 16,
-    overflow: 'hidden'
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    width: '100%',
   },
   picker: {
     height: 50,
@@ -267,16 +307,26 @@ const styles = StyleSheet.create({
   label: {
     fontWeight: 'bold',
     marginBottom: 4,
+    alignSelf: 'flex-start',
+    color: '#fff',
+    fontSize: 15,
   },
   saveButton: {
     backgroundColor: '#1E592B',
-    padding: 14,
-    borderRadius: 10,
+    padding: 16,
+    borderRadius: 12,
     alignItems: 'center',
+    marginTop: 10,
+    width: '100%',
   },
   saveText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 17,
+    letterSpacing: 1,
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

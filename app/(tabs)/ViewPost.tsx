@@ -547,52 +547,49 @@ const ViewPost = () => {
         {/* Post Description */}
         <Text style={styles.description}>{post.description}</Text>
 
-        {/* Important Details Section */}
-        <View style={styles.detailsContainer}>
-          {/* collection mode */}        
-          {post.collection_mode?.name && (
-            <View style={styles.modeContainer}>
-              {(() => {
-                const mode = getModeData(post.collection_mode.name);
-                return (
-                  <>
-                    <Image
-                      source={mode.icon}
-                      style={[styles.modeIcon, { tintColor: mode.color }]}
-                      resizeMode="contain"
-                    />
-                    <Text style={[styles.modeText, { color: mode.color }]}>
-                      {post.collection_mode.name}
-                    </Text>
-                  </>
-                );
-              })()}
-            </View>
-          )}
-
-          {/* Location */}
-          <View style={styles.detailRow}>
-            <MaterialIcons name="location-on" size={20} color="#00FF57" />
-            <View style={styles.detailTextContainer}>
-              <Text style={styles.detailLabel}>Location</Text>
-              <Text style={styles.detailValue}>
-                {coords ? (address || `${coords.latitude.toFixed(5)}, ${coords.longitude.toFixed(5)}`) : 'No location specified'}
-              </Text>
-            </View>
+        {/* Mode of collection */}
+        {post.collection_mode?.name && (
+          <View style={styles.modeContainer}>
+            {(() => {
+              const mode = getModeData(post.collection_mode.name);
+              return (
+                <>
+                  <Image
+                    source={mode.icon}
+                    style={[styles.modeIcon, { tintColor: mode.color }]}
+                    resizeMode="contain"
+                  />
+                  <Text style={[styles.modeText, { color: mode.color }]}> 
+                    {post.collection_mode.name}
+                  </Text>
+                </>
+              );
+            })()}
           </View>
+        )}
 
-          {/* Weight */}
-          <View style={styles.detailRow}>
+        {/* Location */}
+        <View style={styles.detailRow}>
+          <MaterialIcons name="location-on" size={20} color="#00FF57" />
+          <View style={styles.detailTextContainer}>
+            <Text style={styles.detailLabel}>Location</Text>
+            <Text style={styles.detailValue}>
+              {coords ? (address || `${coords.latitude.toFixed(5)}, ${coords.longitude.toFixed(5)}`) : 'No location specified'}
+            </Text>
+          </View>
+        </View>
+
+        {/* Weight & Price in one row */}
+        <View style={styles.detailRowHorizontal}>
+          <View style={[styles.detailRow, styles.detailRowFlexItem]}>
             <MaterialIcons name="scale" size={20} color="#00FF57" />
             <View style={styles.detailTextContainer}>
               <Text style={styles.detailLabel}>Weight</Text>
               <Text style={styles.detailValue}>{post.kilograms} kg</Text>
             </View>
           </View>
-
-          {/* Price - Only show for selling posts */}
           {isSellingPost && (
-            <View style={styles.detailRow}>
+            <View style={[styles.detailRow, styles.detailRowFlexItem, { marginLeft: 8 }]}> 
               <MaterialIcons name="payments" size={20} color="#00FF57" />
               <View style={styles.detailTextContainer}>
                 <Text style={styles.detailLabel}>Price</Text>
@@ -627,7 +624,7 @@ const ViewPost = () => {
               onPress={() => navigation.navigate('EditPost', { post })}
             >
               <MaterialIcons name="edit" size={20} color="white" />
-              <Text style={styles.fullButtonText}>EDIT POST</Text>
+              <Text style={styles.fullButtonText}>Edit post</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -651,7 +648,7 @@ const ViewPost = () => {
               }}
             >
               <MaterialIcons name="delete" size={20} color="white" />
-              <Text style={styles.fullButtonText}>DELETE POST</Text>
+              <Text style={styles.fullButtonText}>Delete post</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -660,7 +657,7 @@ const ViewPost = () => {
               <>
                 <TouchableOpacity style={styles.fullButton} onPress={handleSendMessage}>
                   <Image source={require('../../assets/images/messagebubble.png')} style={styles.buttonIcon} />
-                  <Text style={styles.fullButtonText}>SEND MESSAGE</Text>
+                  <Text style={styles.fullButtonText}>Send message</Text>
                 </TouchableOpacity>
 
                 {post?.category_id === 1 && (
@@ -675,7 +672,7 @@ const ViewPost = () => {
                     }}
                   >
                     <Image source={require('../../assets/images/trashbag.png')} style={styles.buttonIcon} />
-                    <Text style={styles.fullButtonText}>SEND OFFER</Text>
+                    <Text style={styles.fullButtonText}>Send offer</Text>
                   </TouchableOpacity>
                 )}
 
@@ -685,7 +682,7 @@ const ViewPost = () => {
                     onPress={handleInterested}
                   >
                     <Image source={require('../../assets/images/trashbag.png')} style={styles.buttonIcon} />
-                    <Text style={styles.fullButtonText}>INTERESTED</Text>
+                    <Text style={styles.fullButtonText}>Interested</Text>
                   </TouchableOpacity>
                 )}
 
@@ -785,21 +782,21 @@ const ViewPost = () => {
                         {/* ✅ CASE: Accepted → show SEE DETAILS to both offerer and post owner */}
                         {offer.status === 'accepted' && (isUserOfferOwner || isUserPostOwner) && (
                           <TouchableOpacity style={styles.fullGreenButton} onPress={() => handleSeeDetails(offer)}>
-                            <Text style={styles.fullButtonTextinoffers}>SEE DETAILS</Text>
+                            <Text style={styles.fullButtonTextinoffers}>See details</Text>
                           </TouchableOpacity>
                         )}
 
                         {/* ✅ CASE: Declined → show DISABLED "Declined" button to both offerer and post owner */}
                         {offer.status === 'declined' && (isUserOfferOwner || isUserPostOwner) && (
                           <View style={[styles.fullGreenButton, { backgroundColor: '#6c757d' }]}>
-                            <Text style={[styles.fullButtonTextinoffers, { color: '#ccc' }]}>DECLINED</Text>
+                            <Text style={[styles.fullButtonTextinoffers, { color: '#ccc' }]}>Declined</Text>
                           </View>
                         )}
 
                         {/* ✅ CASE: Offerer sees DELETE while still pending */}
                         {offer.status === 'pending' && isUserOfferOwner && (
                           <TouchableOpacity style={styles.deleteOfferButton} onPress={() => handleDeleteOffer(offer.id)}>
-                            <Text style={styles.deleteOfferText}>DELETE</Text>
+                            <Text style={styles.deleteOfferText}>Delete</Text>
                           </TouchableOpacity>
                         )}
 
@@ -807,10 +804,10 @@ const ViewPost = () => {
                         {offer.status === 'pending' && isUserPostOwner && (
                           <>
                             <TouchableOpacity style={styles.redButton} onPress={() => handleDeclineOffer(offer.id)}>
-                              <Text style={styles.buttonText}>DECLINE</Text>
+                              <Text style={styles.buttonText}>Decline</Text>
                             </TouchableOpacity>
                             <TouchableOpacity style={styles.greenButton} onPress={() => handleAcceptOffer(offer)}>
-                              <Text style={styles.buttonText}>ACCEPT</Text>
+                              <Text style={styles.buttonText}>Accept</Text>
                             </TouchableOpacity>
                             <TouchableOpacity style={styles.iconButton} onPress={() => handleChatWithUser(offer.user_id)}>
                               <Image source={require('../../assets/images/paperplane.png')} style={styles.sendIcon} />
@@ -867,7 +864,7 @@ const ViewPost = () => {
                       {isUserPostOwner && isUserOfferOwner && (
                         <>
                           <TouchableOpacity style={styles.deleteOfferButton} onPress={() => handleDeleteOffer(offer.id)}>
-                            <Text style={styles.deleteOfferText}>DELETE</Text>
+                            <Text style={styles.deleteOfferText}>Delete</Text>
                           </TouchableOpacity>
                           <TouchableOpacity style={styles.editOfferButton} onPress={() => handleEditOffer(offer)}>
                             <MaterialIcons name="edit" size={22} color="white" />
@@ -877,17 +874,17 @@ const ViewPost = () => {
 
                       {!isUserPostOwner && isUserOfferOwner && (
                         <TouchableOpacity style={styles.fullGreenButton} onPress={() => handleSeeDetails(offer)}>
-                          <Text style={styles.fullButtonTextinoffers}>SEE DETAILS</Text>
+                          <Text style={styles.fullButtonTextinoffers}>See details</Text>
                         </TouchableOpacity>
                       )}
 
                       {isUserPostOwner && !isUserOfferOwner && (
                         <>
                           <TouchableOpacity style={styles.redButton} onPress={() => handleDeclineOffer(offer.id)}>
-                            <Text style={styles.buttonText}>DECLINE</Text>
+                            <Text style={styles.buttonText}>Decline</Text>
                           </TouchableOpacity>
                           <TouchableOpacity style={styles.greenButton} onPress={() => handleAcceptOffer(offer)}>
-                            <Text style={styles.buttonText}>ACCEPT</Text>
+                            <Text style={styles.buttonText}>Accept</Text>
                           </TouchableOpacity>
                           <TouchableOpacity style={styles.iconButton} onPress={() => handleChatWithUser(offer.user_id)}>
                             <Image source={require('../../assets/images/paperplane.png')} style={styles.sendIcon} />
@@ -959,7 +956,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   
   offerUserInfo: {
@@ -983,7 +980,7 @@ const styles = StyleSheet.create({
   },
   offerDescription: {
     color: 'white',
-    marginVertical: 6,
+    marginVertical: 2,
   },
   offerWeight: {
     color: 'white',
@@ -993,7 +990,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginVertical: 4,
+    marginVertical: 2,
   },
 
   offerPriceText: {
@@ -1005,7 +1002,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 6,
     flexWrap: 'wrap',
-    marginVertical: 10,
+    marginVertical: 2,
   },
   offerChip: {
     backgroundColor: '#1E592B',
@@ -1097,7 +1094,7 @@ const styles = StyleSheet.create({
   comment: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginBottom: 10,
+    marginBottom: 4,
   },
   
   commentAvatar: {
@@ -1168,15 +1165,13 @@ const styles = StyleSheet.create({
   fullButtonText: {
     color: '#FFFFFF',
     fontSize: 12,
-    fontWeight: 'regular',
-    textTransform: 'uppercase',
+    fontWeight: 'bold',
   },
   
   fullButtonTextinoffers: {
     color: '#FFFFFF',
     fontSize: 12,
-    fontWeight: 'regular',
-    textTransform: 'uppercase',
+    fontWeight: 'bold',
   },
 
   iconOnlyButton: {
@@ -1432,6 +1427,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#234A2D', 
     borderRadius: 5,
     marginVertical: 5,
+    marginBottom: 40,
   },
   
   commentInput: { 
@@ -1457,10 +1453,11 @@ const styles = StyleSheet.create({
   },
   
   offerCard: {
-    backgroundColor: '#1F3D19',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 10,
+    backgroundColor: '#234A2D',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 4,
+    alignItems: 'flex-start',
   },
   
   offerUser: {
@@ -1523,7 +1520,8 @@ const styles = StyleSheet.create({
   },
   buttonText:{
     flex: 1, 
-    marginHorizontal: 5 
+    marginHorizontal: 5,
+    fontWeight: 'bold',
   },
   deleteButton: {
     flex: 1, 
@@ -1581,13 +1579,22 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   itemTypesContainer: {
-    marginVertical: 15,
+    marginVertical: 3,
   },
   itemTypesTitle: {
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: 'bold',
-    marginBottom: 10,
+    marginBottom: 16,
+  },
+  detailRowHorizontal: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  detailRowFlexItem: {
+    flex: 1,
+    minWidth: 0,
   },
 });
 

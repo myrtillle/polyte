@@ -27,8 +27,30 @@ export default function HomeStack() {
           } 
         }}
       />
-      <Stack.Screen name="MakeOffer" component={MakeOffer} />
-      <Stack.Screen name="Notifications" component={Notifications} />
+      <Stack.Screen name="MakeOffer" component={MakeOffer} options={{
+        headerShown: true,
+        title: 'MAKE OFFER',
+        headerStyle: {
+          backgroundColor: '#1E592B',
+        },
+        headerTintColor: '#fff',
+        headerTitleStyle: {
+          fontWeight: 'bold',
+          fontSize: 16,
+        }
+      }} />
+      <Stack.Screen name="Notifications" component={Notifications} options={{
+        headerShown: true,
+        title: 'NOTIFICATIONS',
+        headerStyle: {
+          backgroundColor: '#1E592B',
+        },
+        headerTintColor: '#fff',
+        headerTitleStyle: {
+          fontWeight: 'bold',
+          fontSize: 16,
+        }
+      }} />
     </Stack.Navigator>
   );
 }
