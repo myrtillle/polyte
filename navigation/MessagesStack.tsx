@@ -11,6 +11,7 @@ export default function MessagesStack() {
       <Stack.Screen name="MessagesMain" component={MessagesScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ChatScreen" component={ChatScreen} options={{
         headerShown: true,
+        headerBackVisible: true,
         title: 'CHAT',
         headerStyle: {
           backgroundColor: '#1E592B',

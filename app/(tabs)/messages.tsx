@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet,Image, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, TextInput, TouchableOpacity, StyleSheet,Image, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { MessagesStackParamList, RootStackParamList } from '../../types/navigation';
@@ -54,6 +54,8 @@ export default function MessagesScreen() {
     try {
       const previews = await messagesService.getUserChats(userId);
       setConversations(previews);
+      console.log("🧪 Chat previews:", previews);
+
       setRetryCount(0); // Reset retry count on success
     } catch (err) {
       console.error('❌ Error loading chats:', err);
@@ -100,6 +102,51 @@ export default function MessagesScreen() {
   const handleChatPress = (chatId: string) => {
     if (!userId) return;
     navigation.navigate('ChatScreen', { chatId, userId });
+  };
+
+  const handleLongPress = (chatId: string) => {
+    Alert.alert(
+      "Delete Conversation",
+      "Are you sure you want to delete this conversation?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              // Delete messages in the chat
+              const { error: messagesError } = await supabase
+                .from('messages')
+                .delete()
+                .eq('chat_id', chatId);
+
+              if (messagesError) throw messagesError;
+
+              // Delete the chat
+              const { error: chatError } = await supabase
+                .from('chats')
+                .delete()
+                .eq('id', chatId);
+
+              if (chatError) throw chatError;
+
+              // Update local state
+              setConversations(prev => prev.filter(chat => chat.chat_id !== chatId));
+            } catch (error) {
+              console.error('❌ Error deleting conversation:', error);
+              Alert.alert(
+                "Error",
+                "Failed to delete conversation. Please try again."
+              );
+            }
+          }
+        }
+      ]
+    );
   };
 
   const filtered = conversations.filter((c) =>
@@ -182,6 +229,8 @@ export default function MessagesScreen() {
                   !item.seen && styles.unreadChat
                 ]} 
                 onPress={() => handleChatPress(item.chat_id)}
+                onLongPress={() => handleLongPress(item.chat_id)}
+                delayLongPress={500}
               >
                 <View style={styles.chatRow}>
                   <Image

@@ -42,6 +42,7 @@ type RawTransactionData = {
 };
 
 type TransactionDetail = {
+  offer_id: string;
   scheduled_date: string;
   scheduled_time: string;
   status: string;
@@ -217,6 +218,7 @@ export const transactionService = {
 
 
     const result: TransactionDetail = {
+      offer_id: data.id,
       schedule_id: schedule?.id,
       scheduled_date: schedule?.scheduled_date,
       scheduled_time: schedule?.scheduled_time,

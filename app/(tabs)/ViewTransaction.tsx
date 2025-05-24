@@ -17,6 +17,7 @@ import cashIcon from '../../assets/images/cash.png';
 import proofIcon from '../../assets/images/images3d.png';
 import { Button, Divider, IconButton } from 'react-native-paper';
 import Constants from 'expo-constants';
+import { messagesService } from '@/services/messagesService';
 
 
 const getModeData = (modeName: string) => {
@@ -379,63 +380,43 @@ export default function ViewTransaction() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
   
-    const offerId = transaction?.offer_id;
+    const senderId = user.id;
+    const receiverId = transaction?.collector_id === senderId
+      ? transaction?.offerer_id
+      : transaction?.collector_id;
   
-    // Step 1: Try to find an existing chat
-    let { data: chat, error } = await supabase
-      .from('chats')
-      .select('id')
-      .eq('offer_id', offerId)
-      .single();
+    try {
+      const chatId = await messagesService.getOrCreateChatId(senderId, receiverId);
   
-    // Step 2: If not found, create a new one
-    if (!chat) {
-      const { data: newChat, error: createError } = await supabase
-        .from('chats')
-        .insert({
-          offer_id: offerId,
-          user1_id: user.id,
-          user2_id: transaction?.collector_id === user.id
-            ? transaction?.offerer_id
-            : transaction?.collector_id,
-        })
-        .select()
-        .single();
-  
-      if (createError || !newChat) {
-        console.error("❌ Failed to create chat:", createError?.message);
-        Alert.alert("Error", "Failed to start chat.");
-        return;
-      }
-  
-      chat = newChat;
-    }
-  
-    // Step 3: Navigate to ChatScreen with the correct chatId
-    navigation.navigate('Main', {
-      screen: 'Messages',
-      params: {
-        screen: 'ChatScreen',
+      navigation.navigate('Main', {
+        screen: 'Messages',
         params: {
-          chatId: chat?.id,
-          userId: user.id,
-          schedule: {
-            id: transaction?.schedule_id,
-            scheduled_time: transaction?.scheduled_time,
-            scheduled_date: transaction?.scheduled_date,
-            status: transaction?.status,
-            collectorName: transaction?.collector_name,
-            offererName: transaction?.offerer_name,
-            photoUrl: transaction?.photo_url,
-            purok: transaction?.purok,
-            barangay: transaction?.barangay,
-            user_id: transaction?.collector_id,
-            offer_id: offerId,
+          screen: 'ChatScreen',
+          params: {
+            chatId,
+            userId: senderId,
+            schedule: {
+              id: transaction?.schedule_id,
+              scheduled_time: transaction?.scheduled_time,
+              scheduled_date: transaction?.scheduled_date,
+              status: transaction?.status,
+              collectorName: transaction?.collector_name,
+              offererName: transaction?.offerer_name,
+              photoUrl: transaction?.photo_url,
+              purok: transaction?.purok,
+              barangay: transaction?.barangay,
+              user_id: transaction?.collector_id,
+              offer_id: transaction?.offer_id,
+            },
           },
         },
-      },
-    });
+      });
+    } catch (error) {
+      console.error("❌ Failed to get or create chat:", error);
+      Alert.alert("Error", "Failed to start chat.");
+    }
   };
+  
   
   return (
     <LinearGradient colors={['#023F0F', '#05A527']} style={{ flex: 1 }}>

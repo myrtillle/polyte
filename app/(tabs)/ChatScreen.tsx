@@ -446,7 +446,7 @@ const ChatScreen = () => {
                 </View>
             )}
             {schedule && 
-              isPostOwner && (
+              (isPostOwner || isOfferer) && (
                 <View style={{ marginBottom: 10, backgroundColor: '#1E592B', padding: 10, borderRadius: 8 }}>
                     {schedule.photoUrl && (
                         <Image source={{ uri: schedule.photoUrl }} style={{ height: 100, width: 100, marginBottom: 5, borderRadius: 5 }} />
@@ -504,7 +504,7 @@ const ChatScreen = () => {
                             }
                           }}>
                             <Text style={styles.bannerText}>
-                              📌 In reply to {item.target_type === 'post' ? 'Post' : 'Schedule'}
+                              In reply to {item.target_type === 'post' ? 'Post' : 'Schedule'}
                             </Text>
                           </TouchableOpacity>
                         )}

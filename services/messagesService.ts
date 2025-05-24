@@ -172,7 +172,7 @@ export const messagesService = {
         .or(
             `and(user1_id.eq.${senderId},user2_id.eq.${receiverId}),and(user1_id.eq.${receiverId},user2_id.eq.${senderId})`
           )
-        .maybeSingle();
+        .single();
     
         if (error) throw error;
     
@@ -183,6 +183,7 @@ export const messagesService = {
         .from('chats')
         .insert({ user1_id: senderId, user2_id: receiverId })
         .select()
+        .limit(1)
         .single();
     
         if (insertError) throw insertError;
