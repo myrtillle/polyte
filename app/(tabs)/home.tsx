@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Image, StyleSheet, FlatList, RefreshControl, Modal, TouchableOpacity, Alert } from 'react-native';
 import { Text, Card, Button, Chip, Searchbar, IconButton, ActivityIndicator } from 'react-native-paper';
 import { postsService } from '../../services/postsService';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { HomeStackParamList, MessagesStackParamList, RootStackParamList } from '../../types/navigation';
 import { StackNavigationProp } from '@react-navigation/stack';
-  import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from 'expo-linear-gradient';
 import meetupIcon from '../../assets/images/meetup.png';
 import pickupIcon from '../../assets/images/pickup.png';
 import dropoffIcon from '../../assets/images/dropoff.png';
@@ -149,10 +149,13 @@ export default function HomeScreen() {
     };
     getCurrentUser();
   }, []);
-  //fetch post
-  useEffect(() => {
-    fetchPosts();
-  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      console.log('🔄 Home screen focused, refreshing posts...');
+      fetchPosts();
+    }, [])
+  );
 
   useEffect(() => {
     const loadCategories = async () => {

@@ -114,7 +114,13 @@ export default function Notifications() {
         homeNavigation.navigate('ViewPost', { post });
   
       } else if (type === 'offer_accepted' || type === 'transaction_completed' || type === 'payment_send') {
-        profileNavigation.navigate('ViewTransaction', { offerId: notif.target_id });
+        navigation.navigate('Main', {
+          screen: 'Profile',
+          params: {
+            screen: 'ViewTransaction',
+            params: { offerId: notif.target_id }
+          }
+        });
   
       } else if (type === 'reward_approved' || type === 'reward_rejected') {
         // Navigate to RedeemRewards screen

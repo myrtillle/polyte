@@ -19,11 +19,13 @@ import calendarIcon from '../../assets/images/calendar.png';
 const TransacHist = () => {
   const profileNavigation = useNavigation<StackNavigationProp<ProfileStackParamList>>();
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
-  const [selectedTab, setSelectedTab] = useState('Pending');
+  const route = useRoute<RouteProp<ProfileStackParamList, 'TransacHist'>>();
+  const initialTab = route.params?.initialTab;
+  const [selectedTab, setSelectedTab] = useState(initialTab || 'Pending');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   // const [loading, setLoading] = useState(true);
   const pendingCount = transactions.filter(t =>
-    ['pending', 'for_collection', 'proof_uploaded', 'awaiting_payment'].includes(t.status)
+    ['pending', 'for_collection', 'proof_uploaded', 'awaiting_payment', 'for_completion'].includes(t.status)
   ).length;
   
   const doneCount = transactions.filter(t => t.status === 'completed').length;
@@ -38,14 +40,19 @@ const TransacHist = () => {
     const fetchData = async () => {
       const data = await transactionService.fetchAllTransactions();
       setTransactions(data || []);
-
-      console.log('data: ', data);
     };
     fetchData();
-  }, [selectedTab]);
+  }, []);
+
+  useEffect(() => {
+    if (initialTab) {
+      setSelectedTab(initialTab);
+    }
+  }, [initialTab]);
+
   //
   const filtered = transactions.filter((t) => {
-    if (selectedTab === 'Pending') return t.status === 'pending' || t.status === 'for_collection' || t.status === 'proof_uploaded' || t.status === 'awaiting_payment';
+    if (selectedTab === 'Pending') return ['pending', 'for_collection', 'proof_uploaded', 'awaiting_payment', 'for_completion'].includes(t.status);
     if (selectedTab === 'Done') return t.status === 'completed';
     if (selectedTab === 'Cancelled') return t.status === 'cancelled';
     return false;

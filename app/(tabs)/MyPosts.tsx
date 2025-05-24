@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Image, StyleSheet, FlatList, RefreshControl, Modal, TouchableOpacity } from 'react-native';
 import { Text, Card, Button, Chip, Searchbar, IconButton, ActivityIndicator } from 'react-native-paper';
 import { postsService } from '../../services/postsService';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { RootStackParamList } from '../../types/navigation';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { HomeStackParamList, MessagesStackParamList } from '../../types/navigation';
@@ -110,9 +110,12 @@ export default function MyPostsScreen() {
     }
   };  
 
-  useEffect(() => {
-    fetchPosts();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      console.log('🔄 MyPosts screen focused, refreshing posts...');
+      fetchPosts();
+    }, [])
+  );
 
   useEffect(() => {
     const loadCategories = async () => {

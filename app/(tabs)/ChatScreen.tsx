@@ -210,56 +210,50 @@ const ChatScreen = () => {
     
         // ✅ Case 1: If schedule is available (from a transaction)
         if (schedule) {
-        try {
+          try {
             const postOwnerId = schedule.user_id;
-            if (userId === postOwnerId) {
-            console.log("User is the post owner — fetching offererId...");
-            receiverId = await offersService.getOffererId(chatId);
-            console.log("Fetched offererId:", receiverId);
-            } else {
-            receiverId = postOwnerId;
-            console.log("User is the offerer — using postOwnerId:", receiverId);
+            if (!postOwnerId) {
+              console.error("❌ No user_id found in schedule");
+              Alert.alert("Error", "Could not determine message recipient. Please try again.");
+              return;
             }
-        } catch (err) {
+
+            if (userId === postOwnerId) {
+              console.log("User is the post owner — fetching offererId...");
+              const offererId = await offersService.getOffererId(schedule.offer_id);
+              if (!offererId) {
+                console.error("❌ Could not find offerer ID");
+                Alert.alert("Error", "Could not determine message recipient. Please try again.");
+                return;
+              }
+              receiverId = offererId;
+              console.log("Fetched offererId:", receiverId);
+            } else {
+              receiverId = postOwnerId;
+              console.log("User is the offerer — using postOwnerId:", receiverId);
+            }
+          } catch (err) {
             console.error("❌ Error resolving receiver from schedule:", err);
+            Alert.alert("Error", "Could not determine message recipient. Please try again.");
             return;
-        }
+          }
         } else {
-        // ✅ Case 2: Try to resolve from messages history
-        const { data: messages, error } = await supabase
-            .from('messages')
-            .select('sender_id, receiver_id')
-            .eq('chat_id', chatId)
-            .order('timestamp', { ascending: false })
-            .limit(1);
-    
-        if (error) {
-            console.error("❌ Failed to fetch latest message:", error);
-            return;
-        }
-    
-        const latestMsg = messages?.[0];
-    
-        if (!latestMsg) {
-            // ✅ Case 3: No messages yet — resolve from chat record
-            console.warn("⚠️ No past messages found — resolving receiver from chats table...");
-            const { data: chat, error: chatError } = await supabase
+          // ✅ Case 2: Try to resolve from chat participants
+          console.log("No schedule found, resolving from chat participants...");
+          const { data: chat, error: chatError } = await supabase
             .from('chats')
             .select('user1_id, user2_id')
             .eq('id', chatId)
             .single();
-    
-            if (chatError) {
+
+          if (chatError) {
             console.error("❌ Could not resolve from chats table:", chatError);
+            Alert.alert("Error", "Could not determine message recipient. Please try again.");
             return;
-            }
-    
-            receiverId = chat.user1_id === userId ? chat.user2_id : chat.user1_id;
-        } else {
-            receiverId = latestMsg.sender_id === userId
-            ? latestMsg.receiver_id
-            : latestMsg.sender_id;
-        }
+          }
+
+          receiverId = chat.user1_id === userId ? chat.user2_id : chat.user1_id;
+          console.log("✅ Resolved receiverId from chat participants:", receiverId);
         }
     
         // Final safety check
@@ -393,7 +387,13 @@ const ChatScreen = () => {
 
             // Wait for 2 seconds before navigating
             setTimeout(() => {
-                profileNavigation.navigate('ViewTransaction', { offerId: schedule.offer_id });
+              rootNavigation.navigate('Main', {
+                screen: 'Profile',
+                params: {
+                    screen: 'ViewTransaction',
+                    params: { offerId: schedule.offer_id }
+                }
+            }); 
             }, 2000);
 
         } catch (error) {
@@ -686,8 +686,15 @@ const ChatScreen = () => {
                             if (item.target_type === 'post') {
                               homeNavigation.navigate('ViewPost', { postId: item.target_id });
                             } else if (item.target_type === 'schedule') {
-                              profileNavigation.navigate('ViewTransaction', { offerId: item.target_id });
+                              rootNavigation.navigate('Main', {
+                                screen: 'Profile',
+                                params: {
+                                    screen: 'ViewTransaction',
+                                    params: { offerId: item.target_id }
+                                }
+                            }); 
                             }
+
                           }}>
                             <Text style={styles.bannerText}>
                               📌 In reply to {item.target_type === 'post' ? 'Post' : 'Schedule'}

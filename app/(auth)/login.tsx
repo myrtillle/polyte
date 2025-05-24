@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Image, StyleSheet } from 'react-native';
 import { TextInput, Button, Text } from 'react-native-paper';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -16,8 +16,20 @@ export default function LoginScreen() {
   const [error, setError] = useState('');
   const navigation = useNavigation<AuthNav>();
   const route = useRoute();
-  const params = route.params as { message?: string };
-  const [successMessage, setSuccessMessage] = useState(params?.message ?? '');
+  
+  // Get params and set initial success message
+  const routeParams = route.params as { message?: string } | undefined;
+  console.log('🔵 Login screen route params:', routeParams);
+  
+  const [successMessage, setSuccessMessage] = useState(routeParams?.message || '');
+  console.log('🔵 Success message state:', successMessage);
+
+  // Update success message when route params change
+  useEffect(() => {
+    if (routeParams?.message) {
+      setSuccessMessage(routeParams.message);
+    }
+  }, [routeParams]);
 
   const [showResend, setShowResend] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
@@ -65,6 +77,9 @@ export default function LoginScreen() {
           setRetryCount(prev => prev + 1);
           setTimeout(handleLogin, 2000);
         }
+      } else if (error.message?.includes('Please confirm your email')) {
+        setError('Please confirm your email before logging in. Check your inbox for the confirmation link.');
+        setShowResend(true);
       } else {
         setError('Login failed. Please check your credentials.');
       }
@@ -263,10 +278,16 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 16,
     borderRadius: 8,
+    backgroundColor: '#f0f5e6', // Light green background
+    borderWidth: 1,
+    borderColor: '#93a267',
+    marginHorizontal: 10,
   },
   successMessage: {
-    color: '#93a267', // Medium green for success messages
+    color: '#485935', // Darker green for better contrast
     textAlign: 'center',
+    fontSize: 14,
+    fontWeight: '500',
   },
   resendButton: {
     marginTop: 16,

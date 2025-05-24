@@ -46,6 +46,7 @@ const ViewPost = () => {
   const [address, setAddress] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('post');
   const [offers, setOffers] = useState<Offer[]>([]);
+  const [successMessage, setSuccessMessage] = useState('');
   
   function formatTimeAgo(dateString: string) {
     const now = new Date();
@@ -344,30 +345,65 @@ const ViewPost = () => {
     }
 
     try {
-      const chatId = await messagesService.getOrCreateChatId(currentUser.id, userId);
+      // First try to get an existing chat
+      const { data: existingChats, error: fetchError } = await supabase
+        .from('chats')
+        .select('id')
+        .or(
+          `and(user1_id.eq.${currentUser.id},user2_id.eq.${userId}),and(user1_id.eq.${userId},user2_id.eq.${currentUser.id})`
+        );
 
-      // Get the offer details for this user
-      const userOffer = offers.find(offer => offer.user_id === userId);
+      if (fetchError) {
+        throw fetchError;
+      }
+
+      let chatId;
       
-      messagesNavigation.navigate('ChatScreen', {
-        chatId,
-        userId: currentUser.id,
-        post,
+      // If we have existing chats, use the most recent one
+      if (existingChats && existingChats.length > 0) {
+        chatId = existingChats[0].id;
+      } else {
+        // Create new chat if none exists
+        const { data: newChat, error: insertError } = await supabase
+          .from('chats')
+          .insert({ user1_id: currentUser.id, user2_id: userId })
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+        chatId = newChat.id;
+      }
+
+      // Navigate to chat screen through the root navigator
+      navigation.navigate('Main', {
+        screen: 'Messages',
+        params: {
+          screen: 'ChatScreen',
+          params: {
+            chatId,
+            userId: currentUser.id,
+            post,
+          }
+        }
       });
     } catch (err) {
       console.error("❌ Failed to navigate to ChatScreen:", err);
-      Alert.alert("Error", "Failed to start chat.");
+      Alert.alert("Error", "Failed to start chat. Please try again.");
     }
   };    
 
   const isUserOfferer = (offer: Offer) => {
     if (!currentUser || !post) return false;
+    // For SEEKING posts (category_id === 1), offerer is the user who made the offer
+    // For SELLING posts (category_id === 2), offerer is the post owner
     const offererId = post.category_id === 1 ? offer.user_id : post.user_id;
     return currentUser.id === offererId;
   };
   
   const isUserCollector = (offer: Offer) => {
     if (!currentUser || !post) return false;
+    // For SEEKING posts (category_id === 1), collector is the post owner
+    // For SELLING posts (category_id === 2), collector is the user who made the offer
     const collectorId = post.category_id === 1 ? post.user_id : offer.user_id;
     return currentUser.id === collectorId;
   };
@@ -432,6 +468,18 @@ const ViewPost = () => {
       }
   
       console.log('✅ Interest registered successfully:', insertedOffer);
+
+      // Send notification to post owner
+      await notificationService.sendNotification(
+        post.user_id,
+        'New Interest',
+        'Someone is interested in your post',
+        'new_interest',
+        {
+          type: 'offer',
+          id: insertedOffer.id
+        }
+      );
   
       Alert.alert('Success', 'You are now listed as interested!');
       // Optionally, refresh offers list here if needed
@@ -496,6 +544,11 @@ const ViewPost = () => {
       console.error("Error in handleMakeOffer:", error);
       Alert.alert("Error", "An unexpected error occurred. Please try again.");
     }
+  };
+
+  const hasUserShownInterest = () => {
+    if (!currentUser?.id || !offers) return false;
+    return offers.some(offer => offer.user_id === currentUser.id);
   };
 
   // both post & offers are fetched on mount
@@ -618,6 +671,12 @@ const ViewPost = () => {
 
   return (
     <View style={styles.container}> 
+      {successMessage ? (
+        <View style={styles.successMessageContainer}>
+          <Text style={styles.successMessageText}>{successMessage}</Text>
+        </View>
+      ) : null}
+
       {/* Back Button
       <View style={styles.headerContainer}>
         <IconButton
@@ -787,8 +846,29 @@ const ViewPost = () => {
                       text: "Delete",
                       style: "destructive",
                       onPress: async () => {
-                        await postsService.deletePost(post.id);
-                        navigation.goBack();
+                        try {
+                          console.log('🗑️ Attempting to delete post:', post.id);
+                          const { error } = await supabase
+                            .from('posts')
+                            .delete()
+                            .eq('id', post.id);
+
+                          if (error) {
+                            console.error('❌ Error deleting post:', error);
+                            Alert.alert('Error', 'Failed to delete post. Please try again.');
+                            return;
+                          }
+
+                          console.log('✅ Post deleted successfully');
+                          setSuccessMessage('Post deleted successfully');
+                          setTimeout(() => {
+                            setSuccessMessage('');
+                            profileNavigation.navigate('MyPosts');
+                          }, 1500);
+                        } catch (error) {
+                          console.error('❌ Unexpected error deleting post:', error);
+                          Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+                        }
                       }
                     }
                   ]
@@ -820,11 +900,20 @@ const ViewPost = () => {
 
                 {post?.category_id === 2 && (
                   <TouchableOpacity
-                    style={styles.fullButton}
+                    style={[
+                      styles.fullButton,
+                      hasUserShownInterest() && styles.disabledButton
+                    ]}
                     onPress={handleInterested}
+                    disabled={hasUserShownInterest()}
                   >
                     <Image source={require('../../assets/images/trashbag.png')} style={styles.buttonIcon} />
-                    <Text style={styles.fullButtonText}>Interested</Text>
+                    <Text style={[
+                      styles.fullButtonText,
+                      hasUserShownInterest() && styles.disabledButtonText
+                    ]}>
+                      {hasUserShownInterest() ? 'Already Interested' : 'Interested'}
+                    </Text>
                   </TouchableOpacity>
                 )}
 
@@ -1768,6 +1857,33 @@ const styles = StyleSheet.create({
   detailRowFlexItem: {
     flex: 1,
     minWidth: 0,
+  },
+  successMessageContainer: {
+    backgroundColor: '#00C853',
+    padding: 12,
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 8,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  
+  successMessageText: {
+    color: 'white',
+    textAlign: 'center',
+    fontWeight: '500',
+    fontSize: 14,
+  },
+  disabledButton: {
+    backgroundColor: '#1E3D28',
+    opacity: 0.7,
+  },
+  
+  disabledButtonText: {
+    color: '#A0A0A0',
   },
 });
 

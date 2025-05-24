@@ -155,6 +155,7 @@ export default function ViewTransaction() {
       profileNavigation.navigate('TransaCompleted', {
         weight: transaction.weight,
         points: transaction.weight * 100,
+        offerId: offerId
       });       
     } else {
       Alert.alert('Error', 'Failed to update status.');
@@ -637,30 +638,35 @@ export default function ViewTransaction() {
             <Text style={styles.offerPriceText}>₱ {transaction?.price?.toFixed(2) ?? 'N/A'}</Text>
           </View>
 
-
-            {isPostOwner && transaction?.status === 'awaiting_payment' && (
-              <TouchableOpacity style={styles.confirmButton} onPress={handleMockPayment}>
-                <Text style={styles.confirmText}>PAY</Text>
+            {isOfferer && (
+              <TouchableOpacity 
+                style={[
+                  styles.confirmButton,
+                  { backgroundColor: transaction?.status === 'awaiting_payment' ? '#00D964' : '#888' }
+                ]} 
+                disabled={transaction?.status !== 'awaiting_payment'}
+                onPress={handleMockPayment}
+              >
+                <Text style={[
+                  styles.confirmText,
+                  transaction?.status === 'awaiting_payment' ? { color: '#023F0F' } : { color: '#666' }
+                ]}>
+                  {transaction?.status === 'awaiting_payment' ? 'PAY' : 'PAYMENT PROCESSED'}
+                </Text>
               </TouchableOpacity>
             )}
 
-            {isOfferer && transaction?.status === 'for_collecion' && (
+            {isPostOwner && transaction?.status === 'for_collecion' && (
               <Text style={{ color: '#ccc', fontStyle: 'italic' }}>Please upload a proof of collection first before seeker sends payment.</Text>
             )}
 
-            {isOfferer && transaction?.status === 'awaiting_payment' && (
+            {isPostOwner && transaction?.status === 'awaiting_payment' && (
               <Text style={{ color: '#ccc', fontStyle: 'italic' }}>Waiting for seeker to send payment via e-wallet.</Text>
-            )}
-
-            {['for_completion', 'completed'].includes(transaction?.status) && (
-              <Text style={{ color: '#ccc', fontStyle: 'italic' }}>
-                Payment already processed.
-              </Text>
             )}
           </View>
 
         {/* Complete Transaction Button - Only for offerers */}
-        {(!isSellingPost || isOfferer) && (isSellingPost || isPostOwner) && (
+        {((isSellingPost && isPostOwner) || (!isSellingPost && isOfferer)) && (
           <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'center' }}>
             <TouchableOpacity
               style={[
@@ -768,16 +774,16 @@ export default function ViewTransaction() {
               <>
                 <Image source={{ uri: transaction.proof_image_url }} style={styles.proofImage} />
       
-                {((isSellingPost && isPostOwner) || (!isSellingPost && isOfferer)) && transaction?.status === 'proof_uploaded' && (
+                {((isSellingPost && isOfferer) || (!isSellingPost && isPostOwner)) && (
                   <TouchableOpacity
                     style={[
                       styles.confirmButton,
                       {
                         marginTop: 20,
-                        backgroundColor: canConfirm ? '#00D964' : '#888',
+                        backgroundColor: transaction?.status === 'proof_uploaded' ? '#00D964' : '#888',
                       },
                     ]}
-                    disabled={!canConfirm}
+                    disabled={transaction?.status !== 'proof_uploaded'}
                     onPress={async () => {
                       const success = await transactionService.markAsAwaitingPayment(offerId);
                       if (success) {
@@ -792,9 +798,9 @@ export default function ViewTransaction() {
                   >
                     <Text style={[
                       styles.confirmText,
-                      canConfirm && { color: '#023F0F' }  // black text if tappable
+                      transaction?.status === 'proof_uploaded' ? { color: '#023F0F' } : { color: '#666' }
                     ]}>
-                      {isConfirmed ? 'COLLECTION CONFIRMED' : 'CONFIRM COLLECTION'}
+                      {transaction?.status === 'proof_uploaded' ? 'CONFIRM COLLECTION' : 'COLLECTION CONFIRMED'}
                     </Text>
                   </TouchableOpacity>
                 )}

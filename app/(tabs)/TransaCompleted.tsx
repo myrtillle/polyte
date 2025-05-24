@@ -59,7 +59,7 @@ export default function TransaCompleted() {
           borderRadius: 24,
           marginTop: 20,
         }}
-        onPress={() => navigation.navigate('Ratings', { offerId })}
+        onPress={() => navigation.navigate('Ratings', { offerId: offerId })}
         >
         <Text style={{ color: '#023F0F', fontWeight: 'bold' }}>LEAVE A REVIEW</Text>
       </TouchableOpacity>

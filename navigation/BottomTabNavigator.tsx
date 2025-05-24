@@ -12,12 +12,69 @@ import MessagesStack from './MessagesStack';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { RootStackParamList } from '@/types/navigation';
-import { TouchableOpacity } from 'react-native';
+import { TouchableOpacity, View, Text } from 'react-native';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/services/supabase';
 
 const Tab = createBottomTabNavigator<BottomTabParamList>();
 
 export function BottomTabNavigator() {
   const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Get current user
+    const getCurrentUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setCurrentUserId(user.id);
+      }
+    };
+    getCurrentUser();
+  }, []);
+
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    // Subscribe to new messages
+    const subscription = supabase
+      .channel('messages')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `receiver_id=eq.${currentUserId}`,
+        },
+        (payload) => {
+          if (!payload.new.seen) {
+            setUnreadCount(prev => prev + 1);
+          }
+        }
+      )
+      .subscribe();
+
+    // Initial fetch of unread messages
+    const fetchUnreadCount = async () => {
+      const { count, error } = await supabase
+        .from('messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('receiver_id', currentUserId)
+        .eq('seen', false);
+
+      if (!error && count !== null) {
+        setUnreadCount(count);
+      }
+    };
+
+    fetchUnreadCount();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, [currentUserId]);
 
   return (
     <Tab.Navigator
@@ -63,8 +120,45 @@ export function BottomTabNavigator() {
         component={MessagesStack}
         options={{
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubbles" size={size} color={color} />
+            <View>
+              <Ionicons name="chatbubbles" size={size} color={color} />
+              {unreadCount > 0 && (
+                <View style={{
+                  position: 'absolute',
+                  right: -6,
+                  top: -6,
+                  backgroundColor: '#FF3B30',
+                  borderRadius: 10,
+                  minWidth: 20,
+                  height: 20,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                  <Text style={{
+                    color: 'white',
+                    fontSize: 12,
+                    fontWeight: 'bold',
+                  }}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </Text>
+                </View>
+              )}
+            </View>
           ),
+        }}
+        listeners={{
+          tabPress: () => {
+            // Reset unread count when tab is pressed
+            setUnreadCount(0);
+            // Mark all messages as seen
+            if (currentUserId) {
+              supabase
+                .from('messages')
+                .update({ seen: true })
+                .eq('receiver_id', currentUserId)
+                .eq('seen', false);
+            }
+          },
         }}
       />
       <Tab.Screen

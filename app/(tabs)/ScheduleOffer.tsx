@@ -10,6 +10,7 @@ import { offersService, updateOffer } from '@/services/offersService';
 import { notificationService } from '@/services/notificationService';
 import { IconButton } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { supabase } from '@/services/supabase';
 
 const ScheduleOffer = () => {
   const profileNavigation = useNavigation<StackNavigationProp<ProfileStackParamList>>();
@@ -59,6 +60,18 @@ const ScheduleOffer = () => {
     const formattedTime = combined.toTimeString().split(' ')[0];
   
     try {
+      // Check if schedule already exists for this offer
+      const { data: existingSchedule, error: checkError } = await supabase
+        .from('offer_schedules')
+        .select('id')
+        .eq('offer_id', offer.id)
+        .single();
+
+      if (existingSchedule) {
+        Alert.alert('Error', 'A schedule already exists for this offer.');
+        return;
+      }
+
       await scheduleService.createSchedule(offer.id, post.id, post.user_id, formattedDate, formattedTime);
       await updateOffer({ 
         id: offer.id, 
@@ -81,7 +94,13 @@ const ScheduleOffer = () => {
         }
       );
       
-      profileNavigation.navigate("ViewTransaction", { offerId: offer.id });
+      navigation.navigate('Main', {
+        screen: 'Profile',
+        params: {
+          screen: 'ViewTransaction',
+          params: { offerId: offer.id }
+        }
+      });
     } catch (error) {
       Alert.alert('Error', 'Failed to save schedule.');
       console.error('Error saving schedule:', error);

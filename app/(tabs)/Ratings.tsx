@@ -49,7 +49,7 @@ export default function Ratings() {
         [
           {
             text: "OK",
-            onPress: () => navigation.navigate('TransacHist')
+            onPress: () => navigation.navigate('TransacHist', { initialTab: 'Done' })
           }
         ]
       );
@@ -72,7 +72,10 @@ export default function Ratings() {
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity style={styles.skip} onPress={() => navigation.goBack()}>
+      <TouchableOpacity 
+        style={styles.skip} 
+        onPress={() => navigation.navigate('TransacHist', { initialTab: 'Done' })}
+      >
         <Text style={styles.skipText}>Skip</Text>
       </TouchableOpacity>
       {/* User Info Card */}

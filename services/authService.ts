@@ -18,8 +18,8 @@ export const authService = {
     last_name?: string;
     username?: string;
     contact_num?: string;
-    barangay?: string;
-    purok?: string;
+    barangay_id?: string;
+    purok_id?: string;
     account_type: 'personal' | 'barangay';
   }): Promise<SignUpResponse> {
     try {
@@ -33,8 +33,8 @@ export const authService = {
             last_name: data.last_name,
             username: data.username,
             contact_num: data.contact_num,
-            barangay: data.barangay,
-            purok: data.purok,
+            barangay_id: data.barangay_id,
+            purok_id: data.purok_id,
             account_type: data.account_type
           }
         }
@@ -54,8 +54,8 @@ export const authService = {
               username: data.username,
               email: data.email,
               contact_num: data.contact_num,
-              barangay: data.barangay,
-              purok: data.purok,
+              barangay_id: data.barangay_id,
+              purok_id: data.purok_id,
               account_type: data.account_type,
             }]);
           if (profileError) throw profileError;
@@ -66,8 +66,8 @@ export const authService = {
               id: authData.user.id,
               email: data.email,
               contact_num: data.contact_num,
-              barangay: data.barangay,
-              purok: data.purok,
+              barangay_id: data.barangay_id,
+              purok_id: data.purok_id,
               account_type: data.account_type,
             }]);
           if (profileError) throw profileError;

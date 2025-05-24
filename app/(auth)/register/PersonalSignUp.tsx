@@ -156,8 +156,8 @@ export default function PersonalSignUp() {
         last_name: lastName,
         username,
         contact_num: contactNum,
-        barangay: barangayId!.toString(),
-        purok: purokId!.toString(),
+        barangay_id: barangayId!.toString(),
+        purok_id: purokId!.toString(),
         account_type: 'personal',
       });
 
@@ -171,8 +171,17 @@ export default function PersonalSignUp() {
         return;
       }
 
-      navigation.navigate('Login', {
-        message: 'Please check your email to confirm your account before logging in.',
+      console.log('🔵 Navigating to Login with message:', 'Please check your email to confirm your account before logging in.');
+      navigation.reset({
+        index: 0,
+        routes: [
+          { 
+            name: 'Login',
+            params: {
+              message: 'Please check your email to confirm your account before logging in.'
+            }
+          }
+        ],
       });
       
     } catch (err: any) {

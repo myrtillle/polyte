@@ -429,7 +429,7 @@ export default function PostScreen() {
       await postsService.createPost(postData);
       navigation.goBack();
       resetForm();
-      Alert.alert("Success", "Post created successfully!");
+      Alert.alert("Success", "Post created successfully! You can view your posts in My Posts section under your profile.");
     } catch (error) {
       console.error('Error creating post:', error);
       Alert.alert("Error", "Failed to create post.");

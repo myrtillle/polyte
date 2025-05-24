@@ -87,13 +87,13 @@ export type HomeStackParamList = {
 
 export type ProfileStackParamList = {
   ProfileMain: undefined;
-  TransacHist: undefined;
+  TransacHist: { initialTab?: string };
   ViewTransaction: { offerId: string };
   Settings: undefined;
   MyPosts: undefined;
   Review: undefined;
   Ratings: { offerId: string };
-  TransaCompleted: { weight: number; points: number };
+  TransaCompleted: { weight: number; points: number; offerId: string };
   RedeemRewards: undefined;
   EditProfile: { profile: Profile };
 };
