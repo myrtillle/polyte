@@ -439,17 +439,6 @@ export default function ViewTransaction() {
   
   return (
     <LinearGradient colors={['#023F0F', '#05A527']} style={{ flex: 1 }}>
-  {/* Header outside the padding container */}
-      <View style={styles.headerContainer}>
-        <IconButton
-          icon="arrow-left"
-          size={24}
-          iconColor="white"
-          onPress={() => profileNavigation.navigate('TransacHist')}
-          style={{ position: 'absolute', left: 0 }}
-        />
-        <Text style={styles.headerTitle}>TRANSACTION DETAILS</Text>
-      </View>
       <ScrollView
        contentContainerStyle={{ padding: 16 }}
          refreshControl={
@@ -540,11 +529,14 @@ export default function ViewTransaction() {
           )}
         </View>
 
-          <Text style={styles.subLabel}>SETTLED AT</Text>
+         
           <Text style={styles.subLabel}>SETTLED AT</Text>
             <View style={styles.addressRow}>
               <Image source={locationIcon} style={styles.locationIcon} resizeMode="contain" />
-              <Text style={styles.subValue}>
+              <Text style={[styles.subValue, { maxWidth: 280 }]} 
+                numberOfLines={2}
+                ellipsizeMode="tail"
+              >
                 {address ?? 'Loading location...'}
               </Text>
             </View>

@@ -914,12 +914,14 @@ const ViewPost = () => {
                 // Seeking Post - Full Offer layout
                 return (
                   <View key={index} style={styles.offerCard}>
-                    <View style={styles.headerRow}>
-                      <View style={styles.leftInfo}>
-                        <Image source={{ uri: 'https://i.pravatar.cc/36' }} style={styles.offerAvatar} />
-                        <View>
-                          <Text style={styles.offerUserText}>{offer.personal_users?.first_name} {offer.personal_users?.last_name}</Text>
-                          <Text style={styles.offerTimeText}>{formatTimeAgo(offer.created_at)}</Text>
+                    <View style={{ position: 'relative' }}>
+                      <View style={styles.headerRow}>
+                        <View style={styles.leftInfo}>
+                          <Image source={{ uri: 'https://i.pravatar.cc/36' }} style={styles.offerAvatar} />
+                          <View>
+                            <Text style={styles.offerUserText}>{offer.personal_users?.first_name} {offer.personal_users?.last_name}</Text>
+                            <Text style={styles.offerTimeText}>{formatTimeAgo(offer.created_at)}</Text>
+                          </View>
                         </View>
                       </View>
                       {offer.images?.[0] && (
@@ -1030,7 +1032,7 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 10,
     position: 'absolute',
-    right: 0,
+    right: -80,
     top: 0,
   },
   
