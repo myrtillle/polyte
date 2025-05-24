@@ -36,7 +36,7 @@ export interface Schedule {
   scheduled_date: string;
   collectorName: string;
   offererName: string;
-  photoUrl: string | null;
+  photoUrl: string | '';
   purok: string;
   barangay: string;
   user_id: string; 

@@ -20,7 +20,7 @@ export default function ProfileStack() {
         component={TransacHist} 
         options={{
           headerShown: true,
-          title: 'TRANSACTION HISTORY', 
+          title: 'Transaction History', 
           headerStyle: {
             backgroundColor: '#1A3620',
           },
@@ -35,7 +35,7 @@ export default function ProfileStack() {
       <Stack.Screen name="ViewTransaction" component={ViewTransaction} 
         options={{
           headerShown: true,
-          title: 'TRANSACTION DETAIL',
+          title: 'Transaction Details',
           headerStyle: {
             backgroundColor: '#1A3620',
           },

@@ -10,10 +10,15 @@ import HomeStack from './HomeStack';
 import ProfileStack from './ProfileStack';
 import MessagesStack from './MessagesStack';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation, NavigationProp } from '@react-navigation/native';
+import { RootStackParamList } from '@/types/navigation';
+import { TouchableOpacity } from 'react-native';
 
 const Tab = createBottomTabNavigator<BottomTabParamList>();
 
 export function BottomTabNavigator() {
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>();
+
   return (
     <Tab.Navigator
       screenOptions={{
@@ -53,7 +58,7 @@ export function BottomTabNavigator() {
           ),
         }}
       />
-       <Tab.Screen
+      <Tab.Screen
         name="Messages"
         component={MessagesStack}
         options={{
@@ -65,11 +70,24 @@ export function BottomTabNavigator() {
       <Tab.Screen
         name="Profile"
         component={ProfileStack}
-        options={{
+        options={({ navigation }) => ({
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person" size={size} color={color} />
           ),
-        }}
+          tabBarButton: (props) => (
+            <TouchableOpacity
+              {...props}
+              onPress={() => {
+                navigation.navigate('Main', {
+                  screen: 'Profile',
+                  params: {
+                    screen: 'ProfileMain'
+                  }
+                });
+              }}
+            />
+          )
+        })}
       />
     </Tab.Navigator>
   );

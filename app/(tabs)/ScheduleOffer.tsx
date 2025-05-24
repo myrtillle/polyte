@@ -22,6 +22,19 @@ const ScheduleOffer = () => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
 
+  const isDateValid = (selectedDate: Date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return selectedDate >= today;
+  };
+
+  const isTimeValid = (selectedTime: Date) => {
+    const now = new Date();
+    if (date.toDateString() === now.toDateString()) {
+      return selectedTime > now;
+    }
+    return true;
+  };
 
   const handleSchedule = async () => {
     const combined = new Date(
@@ -31,6 +44,16 @@ const ScheduleOffer = () => {
       time.getHours(),
       time.getMinutes()
     );
+
+    if (!isDateValid(date)) {
+      Alert.alert('Invalid Date', 'Please select a future date.');
+      return;
+    }
+
+    if (!isTimeValid(time)) {
+      Alert.alert('Invalid Time', 'Please select a future time.');
+      return;
+    }
   
     const formattedDate = combined.toISOString().split('T')[0];
     const formattedTime = combined.toTimeString().split(' ')[0];
@@ -48,7 +71,7 @@ const ScheduleOffer = () => {
       Alert.alert('Success', 'Schedule saved successfully!');
 
       await notificationService.sendNotification(
-        offer.user_id, // OF's user_id from the offer
+        offer.user_id,
         'Offer Accepted',
         `Seeker has accepted your offer and a collection schedule has been set. Please review and confirm it.`,
         'offer_accepted',
@@ -89,9 +112,18 @@ const ScheduleOffer = () => {
             value={date}
             mode="date"
             display="default"
+            minimumDate={new Date()}
             onChange={(event, selectedDate) => {
               setShowDatePicker(false);
-              if (selectedDate) setDate(selectedDate);
+              if (selectedDate && isDateValid(selectedDate)) {
+                setDate(selectedDate);
+                // Reset time if date changes to today
+                if (selectedDate.toDateString() === new Date().toDateString()) {
+                  setTime(new Date());
+                }
+              } else {
+                Alert.alert('Invalid Date', 'Please select a future date.');
+              }
             }}
           />
         )}
@@ -107,9 +139,14 @@ const ScheduleOffer = () => {
             value={time}
             mode="time"
             display="default"
+            minimumDate={date.toDateString() === new Date().toDateString() ? new Date() : undefined}
             onChange={(event, selectedTime) => {
               setShowTimePicker(false);
-              if (selectedTime) setTime(selectedTime);
+              if (selectedTime && isTimeValid(selectedTime)) {
+                setTime(selectedTime);
+              } else {
+                Alert.alert('Invalid Time', 'Please select a future time.');
+              }
             }}
           />
         )}

@@ -659,8 +659,8 @@ export default function ViewTransaction() {
             )}
           </View>
 
-        {/* Offerer Button */}
-        {((isSellingPost && isOfferer) || (!isSellingPost && isPostOwner)) && ['for_completion', 'completed'].includes(transaction?.status) && (
+        {/* Complete Transaction Button - Only for offerers */}
+        {(!isSellingPost || isOfferer) && (isSellingPost || isPostOwner) && (
           <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'center' }}>
             <TouchableOpacity
               style={[
@@ -768,7 +768,7 @@ export default function ViewTransaction() {
               <>
                 <Image source={{ uri: transaction.proof_image_url }} style={styles.proofImage} />
       
-                {((isSellingPost && isOfferer) || (!isSellingPost && isPostOwner)) && transaction?.status === 'proof_uploaded' && (
+                {((isSellingPost && isPostOwner) || (!isSellingPost && isOfferer)) && transaction?.status === 'proof_uploaded' && (
                   <TouchableOpacity
                     style={[
                       styles.confirmButton,
@@ -791,29 +791,46 @@ export default function ViewTransaction() {
                     }}
                   >
                     <Text style={[
-                    styles.confirmText,
-                    canConfirm && { color: '#023F0F' }  // black text if tappable
-                  ]}>
-                    {isConfirmed ? 'COLLECTION CONFIRMED' : 'CONFIRM COLLECTION'}
-                  </Text>
-
+                      styles.confirmText,
+                      canConfirm && { color: '#023F0F' }  // black text if tappable
+                    ]}>
+                      {isConfirmed ? 'COLLECTION CONFIRMED' : 'CONFIRM COLLECTION'}
+                    </Text>
                   </TouchableOpacity>
                 )}
               </>
             ) : (
               <View style={{ marginTop: 10 }}>
                 <Text style={styles.proofModalText}>No proof of collection uploaded yet.</Text>
-                {((isSellingPost && isPostOwner) || (!isSellingPost && isOfferer)) && transaction?.status === 'for_collection' && (
-                  <TouchableOpacity onPress={handleUploadProof}>UPLOAD PROOF</TouchableOpacity>
-                )}
+                {(() => {
+                  console.log('Debug upload button conditions:');
+                  console.log('isSellingPost:', isSellingPost);
+                  console.log('isPostOwner:', isPostOwner);
+                  console.log('isOfferer:', isOfferer);
+                  console.log('transaction status:', transaction?.status);
+                  
+                  // For selling posts: post owner (offerer) can upload proof
+                  // For seeking posts: offerer (not post owner) can upload proof
+                  const shouldShowButton = (isSellingPost ? isPostOwner : isOfferer) && transaction?.status === 'for_collection';
+                  console.log('Should show button:', shouldShowButton);
+                  
+                  return shouldShowButton ? (
+                    <TouchableOpacity 
+                      style={[styles.confirmButton, { marginTop: 10 }]} 
+                      onPress={handleUploadProof}
+                    >
+                      <Text style={[styles.confirmText, { color: '#023F0F' }]}>UPLOAD PROOF</Text>
+                    </TouchableOpacity>
+                  ) : null;
+                })()}
               </View>
             )}
       
             <TouchableOpacity
               onPress={() => setProofModalVisible(false)}
-              style={[styles.modalButton, {  marginTop: 10 }]}
+              style={[styles.modalButton, { marginTop: 20, backgroundColor: '#1E592B' }]}
             >
-              <Text style={{ fontWeight: 'bold',color:'white' }}>CLOSE</Text>
+              <Text style={{ fontWeight: 'bold', color: 'white' }}>CLOSE</Text>
             </TouchableOpacity>
           </View>
         </View>

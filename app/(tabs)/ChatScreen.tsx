@@ -9,7 +9,7 @@ import { supabase } from '@/services/supabase';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Chip, Divider, IconButton } from 'react-native-paper';
 import { offersService, Schedule } from '@/services/offersService';
-import { HomeStackParamList, MessagesStackParamList, ProfileStackParamList  } from '@/types/navigation';
+import { HomeStackParamList, MessagesStackParamList, ProfileStackParamList, RootStackParamList } from '@/types/navigation';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Message } from '@/services/messagesService';
 import { formatTimeAgo } from '@/utils/dateUtils'; 
@@ -18,6 +18,7 @@ import Constants from 'expo-constants';
 import paperplaneIcon from '../../assets/images/paperplane.png';
 import { notificationService } from '@/services/notificationService';
 import { transactionService } from '@/services/transactionService';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 // interface Schedule {
 //     status: string;
@@ -41,14 +42,21 @@ const ChatScreen = () => {
     const route = useRoute();
     const homeNavigation = useNavigation<StackNavigationProp<HomeStackParamList>>();
     const profileNavigation = useNavigation<StackNavigationProp<ProfileStackParamList>>();
+    const rootNavigation = useNavigation<StackNavigationProp<RootStackParamList>>();
 
     const { offerId } = route.params as { offerId: string };
-    const { chatId, userId, post, schedule } = (route.params || {}) as RouteParams;
+    const { chatId, userId, post, schedule: incomingSchedule } = (route.params || {}) as RouteParams;
+    const [schedule, setSchedule] = useState<Schedule | undefined>(incomingSchedule);
+
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState<string>('');
     const [modalVisible, setModalVisible] = useState(false);
     const [newTime, setNewTime] = useState<string>(schedule?.scheduled_time || '');
     const [newDate, setNewDate] = useState<string>(schedule?.scheduled_date || '');
+    const [showDatePicker, setShowDatePicker] = useState(false);
+    const [showTimePicker, setShowTimePicker] = useState(false);
+    const [selectedDate, setSelectedDate] = useState(new Date());
+    const [selectedTime, setSelectedTime] = useState(new Date());
     const [receiverName, setReceiverName] = useState<string>('');
     const [address, setAddress] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
@@ -59,7 +67,7 @@ const ChatScreen = () => {
           const loadMessages = async () => {
             const data = await messagesService.fetchMessages(chatId);
             setMessages(data);
-      
+
             // Mark messages as read
             const { error } = await supabase
               .from('messages')
@@ -100,22 +108,93 @@ const ChatScreen = () => {
     }, [chatId, userId]);
     
     useEffect(() => {
-      const fetchTransactDetails = async () => {
-        setLoading(true);
-        setTransaction(null); 
-        const data = await transactionService.fetchTransactionDetails(offerId);
-        console.log('📄 Data returned from transactionService:', data);
-  
-        setTransaction(data);
-        setLoading(false);
-      };
-      
-      if (offerId) {
-        fetchTransactDetails(); 
-      }
-  
-    }, [offerId]);
+      const hydrateScheduleUsingChatId = async () => {
+        if (!schedule && chatId) {
+          console.log('🔍 Hydrating pending schedule from chat participants...');
+    
+          // Step 1: Get user1 and user2 from chat
+          const { data: chatData, error: chatErr } = await supabase
+            .from('chats')
+            .select('user1_id, user2_id')
+            .eq('id', chatId)
+            .single();
+    
+          if (chatErr || !chatData) {
+            console.warn('❌ Failed to fetch chat participants');
+            return;
+          }
+    
+          const userA = chatData.user1_id;
+          const userB = chatData.user2_id;
+    
+          // Step 2: Find matching pending offer_schedules
+          const { data: schedules, error: scheduleErr } = await supabase
+            .from('offer_schedules')
+            .select('*')
+            .eq('status', 'pending');
 
+            console.log('📦 All offer_schedules:', schedules);
+    
+          if (scheduleErr || !schedules?.length) {
+            console.warn('⛔ No pending schedules found');
+            return;
+          }
+    
+          for (const sched of schedules) {
+            const { data: postData, error: postErr } = await supabase
+              .from('posts')
+              .select('user_id')
+              .eq('id', sched.post_id)
+              .single();
+    
+            if (postErr || !postData) continue;
+    
+            const isCollector = [userA, userB].includes(sched.user_id);
+            const isOfferer = [userA, userB].includes(postData.user_id);
+    
+            if (isCollector && isOfferer) {
+              // Step 3: Get names of collector and offerer
+              const [collectorProfile, offererProfile] = await Promise.all([
+                supabase.from('personal_users').select('first_name, last_name').eq('id', sched.user_id).single(),
+                supabase.from('personal_users').select('first_name, last_name').eq('id', postData.user_id).single(),
+              ]);
+    
+              const hydrated = {
+                id: sched.id,
+                scheduled_time: sched.scheduled_time,
+                scheduled_date: sched.scheduled_date,
+                status: sched.status,
+                photoUrl: sched.photo_url || '',
+                collectorName: collectorProfile.data ? `${collectorProfile.data.first_name} ${collectorProfile.data.last_name}` : 'Collector',
+                offererName: offererProfile.data ? `${offererProfile.data.first_name} ${offererProfile.data.last_name}` : 'Offerer',
+                purok: '',
+                barangay: '',
+                user_id: sched.user_id,
+                offer_id: sched.offer_id,
+              };
+    
+              setSchedule(hydrated);
+              setNewTime(hydrated.scheduled_time);
+              setNewDate(hydrated.scheduled_date);
+              console.log('✅ Hydrated schedule:', hydrated);
+              return;
+            }
+          }
+    
+          console.log('⚠️ No matching pending schedule found for this chat');
+        }
+      };
+    
+      hydrateScheduleUsingChatId();
+    }, [chatId, schedule]);
+    
+    // console.log("🧩 ChatScreen mounted — chatId:", chatId, "schedule:", schedule);
+
+    useEffect(() => {
+      console.log("🧩 useEffect triggered — chatId:", chatId, "schedule:", schedule);
+    }, [chatId, schedule]);
+    
+    
     const handleSend = async () => {
     console.log("Send button clicked");
     console.log("chatId:", chatId, "userId:", userId, "newMessage:", newMessage);
@@ -222,6 +301,28 @@ const ChatScreen = () => {
             return;
         }
 
+        // Validate date and time
+        const selectedDate = new Date(newDate);
+        const selectedTime = new Date(`2000-01-01T${newTime}`);
+        const now = new Date();
+
+        // Check if date is in the past
+        if (selectedDate < new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
+            Alert.alert("Invalid Date", "Please select a future date.");
+            return;
+        }
+
+        // If date is today, check if time is in the past
+        if (selectedDate.toDateString() === now.toDateString()) {
+            const currentTime = now.getHours() * 60 + now.getMinutes();
+            const selectedTimeInMinutes = selectedTime.getHours() * 60 + selectedTime.getMinutes();
+            
+            if (selectedTimeInMinutes <= currentTime) {
+                Alert.alert("Invalid Time", "Please select a future time.");
+                return;
+            }
+        }
+
         try {
             const { error } = await supabase
                 .from('offer_schedules')
@@ -238,9 +339,9 @@ const ChatScreen = () => {
             schedule.scheduled_date = newDate;
 
             // Send notification to the other user
-            const otherUserId = schedule.user_id === userId ? transaction.offerer_id : schedule.user_id;
+            const otherUserId = schedule.user_id === userId ? schedule.offer_id : schedule.user_id;
             await notificationService.sendNotification(
-                otherUserId,
+                otherUserId as string,
                 'Schedule Updated',
                 'The schedule has been updated. Please check the new details.',
                 'schedule_updated',
@@ -259,23 +360,28 @@ const ChatScreen = () => {
     };
 
     const handleAgree = async () => {
+        if (!schedule?.offer_id || !schedule?.user_id) {
+            Alert.alert("Error", "Missing schedule information");
+            return;
+        }
+
         try {
             const { error } = await supabase
                 .from('offer_schedules')
                 .update({ status: 'for_collection' })
-                .eq('offer_id', chatId);
+                .eq('offer_id', schedule.offer_id);
 
             if (error) throw error;
 
             // Send notification to the post owner
             await notificationService.sendNotification(
-                transaction.collector_id,
+                schedule.user_id,
                 'Schedule Agreed! 🎉',
                 'Great news! The schedule has been agreed upon. Time to make our planet greener! 🌱',
                 'schedule_agreed',
                 {
                     type: 'transaction',
-                    id: transaction?.offer_id
+                    id: schedule.offer_id
                 }
             );
 
@@ -287,7 +393,7 @@ const ChatScreen = () => {
 
             // Wait for 2 seconds before navigating
             setTimeout(() => {
-                profileNavigation.navigate('ViewTransaction', { offerId: transaction?.offer_id });
+                profileNavigation.navigate('ViewTransaction', { offerId: schedule.offer_id });
             }, 2000);
 
         } catch (error) {
@@ -307,7 +413,7 @@ const ChatScreen = () => {
     
     const coords = typeof post?.location === 'string' ? extractCoords(post.location) : null;
   
-    console.log('coords: ', coords);
+    // console.log('coords: ', coords);
   
     const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.GOOGLE_MAPS_API_KEY || '';
   
@@ -445,36 +551,91 @@ const ChatScreen = () => {
                   </TouchableOpacity>
                 </View>
             )}
-            {schedule && 
-              (isPostOwner || isOfferer) && (
-                <View style={{ marginBottom: 10, backgroundColor: '#1E592B', padding: 10, borderRadius: 8 }}>
-                    {schedule.photoUrl && (
-                        <Image source={{ uri: schedule.photoUrl }} style={{ height: 100, width: 100, marginBottom: 5, borderRadius: 5 }} />
-                    )}
-                    <Text style={{ color: 'white', fontWeight: 'bold' }}>Scheduled by: {schedule.offererName}</Text>
-                    <Text style={{ color: 'white' }}>Collector: {schedule.collectorName}</Text>
-                    <Text style={{ color: 'white' }}>Time: {schedule.scheduled_time} - Date: {schedule.scheduled_date}</Text>
-                    {/* <Text style={{ color: 'white' }}>Location: {address}</Text> */}
-                    {/* Edit button (visible only to Post Owner) */}
-                    {isPostOwner && schedule.status !== 'for_collection' && (
-                    <Button title="Edit" onPress={() => setModalVisible(true)} />
-                    )}
-                    {/* Agree button (visible only to Offerer) */}
-                    {isOfferer && schedule.status !== 'for_collection' && (
-                    <Button title="Agree" onPress={handleAgree} />
-                    )}
-                    {isOfferer && schedule.status === 'for_collection' && (
-                    <Button title="Agreed ✅" disabled color="#888" />
-                    )}
+            {schedule && schedule.status === 'pending' && (isPostOwner || isOfferer) && (
+                <View style={styles.scheduleCard}>
+                    <View style={styles.scheduleHeader}>
+                        <Text style={styles.scheduleTitle}>COLLECTION SCHEDULE</Text>
+                        <View style={styles.scheduleStatus}>
+                            <Text style={styles.statusText}>PENDING</Text>
+                        </View>
+                    </View>
 
-                    <Button
-                    title="Back to Transaction"
-                    onPress={() => profileNavigation.navigate('ViewTransaction', { offerId: schedule.offer_id })}
-                    color="#888"
-                    />
+                    <View style={styles.scheduleContent}>
+                        {schedule.photoUrl && (
+                            <Image 
+                                source={{ uri: schedule.photoUrl }} 
+                                style={styles.scheduleImage} 
+                            />
+                        )}
+                        
+                        <View style={styles.scheduleDetails}>
+                            <View style={styles.scheduleRow}>
+                                <MaterialIcons name="person" size={20} color="#00D964" />
+                                <Text style={styles.scheduleText}>
+                                    Scheduled by: {schedule.offererName}
+                                </Text>
+                            </View>
 
+                            <View style={styles.scheduleRow}>
+                                <MaterialIcons name="person-outline" size={20} color="#00D964" />
+                                <Text style={styles.scheduleText}>
+                                    Collector: {schedule.collectorName}
+                                </Text>
+                            </View>
 
-                    {/* <Button title="Approve"/> */}
+                            <View style={styles.scheduleRow}>
+                                <MaterialIcons name="access-time" size={20} color="#00D964" />
+                                <Text style={styles.scheduleText}>
+                                    Time: {schedule.scheduled_time}
+                                </Text>
+                            </View>
+
+                            <View style={styles.scheduleRow}>
+                                <MaterialIcons name="calendar-today" size={20} color="#00D964" />
+                                <Text style={styles.scheduleText}>
+                                    Date: {schedule.scheduled_date}
+                                </Text>
+                            </View>
+                        </View>
+                    </View>
+
+                    <View style={styles.scheduleActions}>
+                        {isPostOwner && (
+                            <TouchableOpacity 
+                                style={[styles.scheduleButton, styles.editButton]} 
+                                onPress={() => setModalVisible(true)}
+                            >
+                                <MaterialIcons name="edit" size={20} color="white" />
+                                <Text style={styles.buttonText}>Edit Schedule</Text>
+                            </TouchableOpacity>
+                        )}
+                        
+                        {isOfferer && (
+                            <TouchableOpacity 
+                                style={[styles.scheduleButton, styles.agreeButton]} 
+                                onPress={handleAgree}
+                            >
+                                <MaterialIcons name="check-circle" size={20} color="white" />
+                                <Text style={styles.buttonText}>Agree to Schedule</Text>
+                            </TouchableOpacity>
+                        )}
+
+                        <TouchableOpacity 
+                            style={[styles.scheduleButton, styles.viewButton]}
+                            onPress={() => {
+                                rootNavigation.navigate('Main', {
+                                    screen: 'Profile',
+                                    params: {
+                                        screen: 'ViewTransaction',
+                                        params: { offerId: schedule.offer_id }
+                                    }
+                                });
+                            }}
+                        >
+                            <MaterialIcons name="receipt" size={20} color="white" />
+                            <Text style={styles.buttonText}>View Transaction</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
             )}
             <FlatList
@@ -572,20 +733,71 @@ const ChatScreen = () => {
                 <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.7)' }}>
                     <View style={{ backgroundColor: '#004d00', padding: 20, borderRadius: 10, width: '80%' }}>
                         <Text style={{ color: '#fff', textAlign: 'center', marginBottom: 14, fontSize: 18 }}>Edit Schedule</Text>
-                        <TextInput
-                            placeholder="New Time"
-                            value={newTime}
-                            onChangeText={setNewTime}
-                            style={{ borderColor: 'gray', borderWidth: 1, marginBottom: 10, padding: 5 }}
-                        />
-                        <TextInput
-                            placeholder="New Date"
-                            value={newDate}
-                            onChangeText={setNewDate}
-                            style={{ borderColor: 'gray', borderWidth: 1, marginBottom: 10, padding: 5 }}
-                        />
-                        <Button title="Save" onPress={handleEditSchedule} />
-                        <Button title="Cancel" onPress={() => setModalVisible(false)} />
+                        
+                        <TouchableOpacity 
+                            style={styles.dateTimeButton} 
+                            onPress={() => setShowDatePicker(true)}
+                        >
+                            <Text style={styles.dateTimeButtonText}>
+                                Date: {selectedDate.toDateString()}
+                            </Text>
+                        </TouchableOpacity>
+
+                        {showDatePicker && (
+                            <DateTimePicker
+                                value={selectedDate}
+                                mode="date"
+                                display="default"
+                                minimumDate={new Date()}
+                                onChange={(event, date) => {
+                                    setShowDatePicker(false);
+                                    if (date) {
+                                        setSelectedDate(date);
+                                        setNewDate(date.toISOString().split('T')[0]);
+                                    }
+                                }}
+                            />
+                        )}
+
+                        <TouchableOpacity 
+                            style={styles.dateTimeButton} 
+                            onPress={() => setShowTimePicker(true)}
+                        >
+                            <Text style={styles.dateTimeButtonText}>
+                                Time: {selectedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </Text>
+                        </TouchableOpacity>
+
+                        {showTimePicker && (
+                            <DateTimePicker
+                                value={selectedTime}
+                                mode="time"
+                                display="default"
+                                minimumDate={selectedDate.toDateString() === new Date().toDateString() ? new Date() : undefined}
+                                onChange={(event, time) => {
+                                    setShowTimePicker(false);
+                                    if (time) {
+                                        setSelectedTime(time);
+                                        setNewTime(time.toTimeString().split(' ')[0]);
+                                    }
+                                }}
+                            />
+                        )}
+
+                        <View style={styles.modalButtons}>
+                            <TouchableOpacity 
+                                style={[styles.modalButton, { backgroundColor: '#00D964' }]} 
+                                onPress={handleEditSchedule}
+                            >
+                                <Text style={styles.modalButtonText}>Save</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity 
+                                style={[styles.modalButton, { backgroundColor: '#666' }]} 
+                                onPress={() => setModalVisible(false)}
+                            >
+                                <Text style={styles.modalButtonText}>Cancel</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 </View>
             </Modal>
@@ -757,6 +969,123 @@ avatar: {
     paddingHorizontal: 8,
     paddingVertical: 3,
     overflow: 'hidden',
+  },
+
+  dateTimeButton: {
+    backgroundColor: '#1E592B',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#00D964',
+  },
+  dateTimeButtonText: {
+    color: 'white',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+  },
+  modalButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    marginHorizontal: 5,
+  },
+  modalButtonText: {
+    color: 'white',
+    textAlign: 'center',
+    fontWeight: 'bold',
+  },
+  scheduleCard: {
+    backgroundColor: '#1E592B',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#00D964',
+  },
+  scheduleHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#235F30',
+  },
+  scheduleTitle: {
+    color: '#00D964',
+    fontSize: 16,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+  },
+  scheduleStatus: {
+    backgroundColor: '#235F30',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  statusText: {
+    color: '#00D964',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  scheduleContent: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  scheduleImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    marginRight: 12,
+  },
+  scheduleDetails: {
+    flex: 1,
+  },
+  scheduleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  scheduleText: {
+    color: 'white',
+    marginLeft: 8,
+    fontSize: 14,
+  },
+  scheduleActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  scheduleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    flex: 1,
+    minWidth: '48%',
+  },
+  editButton: {
+    backgroundColor: '#235F30',
+  },
+  agreeButton: {
+    backgroundColor: '#00D964',
+  },
+  viewButton: {
+    backgroundColor: '#1A3620',
+  },
+  buttonText: {
+    color: 'white',
+    marginLeft: 4,
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 });
 ;
