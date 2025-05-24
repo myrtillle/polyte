@@ -32,7 +32,20 @@ export default function ProfileStack() {
           } 
         }}
       />
-      <Stack.Screen name="ViewTransaction" component={ViewTransaction} />
+      <Stack.Screen name="ViewTransaction" component={ViewTransaction} 
+        options={{
+          headerShown: true,
+          title: 'TRANSACTION DETAIL',
+          headerStyle: {
+            backgroundColor: '#1A3620',
+          },
+          headerTintColor: '#fff',
+          headerTitleStyle: {
+            fontWeight: 'bold',
+            fontSize: 16,
+          }
+        }}
+      />
       <Stack.Screen name="Review" component={Review} 
         options={{
           headerShown: true,
@@ -63,7 +76,20 @@ export default function ProfileStack() {
       />
       <Stack.Screen name="EditPost" component={EditPost} />
       <Stack.Screen name="TransaCompleted" component={TransaCompleted} />
-      <Stack.Screen name="Ratings" component={Ratings} />
+      <Stack.Screen name="Ratings" component={Ratings} 
+        options={{
+          headerShown: true,
+          title: 'RATINGS',
+          headerStyle: {
+            backgroundColor: '#1A3620',
+          },
+          headerTintColor: '#fff',
+          headerTitleStyle: {
+            fontWeight: 'bold',
+            fontSize: 16,
+          }
+        }}
+      />
       <Stack.Screen name="RedeemRewards" component={RedeemRewards} options={{
         headerShown: true,
         title: 'REDEEM REWARDS',

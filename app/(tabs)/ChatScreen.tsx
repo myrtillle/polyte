@@ -748,11 +748,15 @@ avatar: {
   },
 
   bannerText: {
-    color: '#1A1A1A',
+    color: '#fff',
+    backgroundColor: '#235F30',
     fontWeight: 'bold',
-    fontSize: 12,
-    textDecorationLine: 'underline',
+    fontSize: 14,
     textTransform: 'uppercase',
+    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    overflow: 'hidden',
   },
 });
 ;
