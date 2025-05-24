@@ -417,7 +417,7 @@ const ChatScreen = () => {
                       style={{ backgroundColor: '#235F30', marginRight: 6, marginTop: 4 }}
                       textStyle={{ color: 'white', fontSize: 10 }}
                       >
-                      {type.item_types?.name}
+                      {type.name}
                       </Chip>
                   ))}
                   </View>

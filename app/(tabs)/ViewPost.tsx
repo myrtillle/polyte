@@ -430,6 +430,58 @@ const ViewPost = () => {
     return offer.status === 'accepted';
   };
 
+  const handleMakeOffer = async () => {
+    if (!currentUser?.id || !post?.id) {
+      Alert.alert("Error", "Cannot make offer: Missing user or post information.");
+      return;
+    }
+
+    try {
+      // Check if user already has an offer for this post
+      const { data: existingOffers, error } = await supabase
+        .from('offers')
+        .select('id')
+        .eq('post_id', post.id)
+        .eq('user_id', currentUser.id);
+
+      if (error) {
+        console.error("Error checking existing offers:", error);
+        Alert.alert("Error", "Failed to check existing offers. Please try again.");
+        return;
+      }
+
+      if (existingOffers && existingOffers.length > 0) {
+        Alert.alert(
+          "Existing Offer",
+          "You have already made an offer for this post. You can edit your existing offer instead.",
+          [
+            { text: "Cancel", style: "cancel" },
+            { 
+              text: "Edit Offer", 
+              onPress: () => {
+                const existingOffer = offers.find(o => o.user_id === currentUser.id);
+                if (existingOffer) {
+                  handleEditOffer(existingOffer);
+                }
+              }
+            }
+          ]
+        );
+        return;
+      }
+
+      // If no existing offer, proceed to make offer screen
+      if (!post?.post_item_types?.length) {
+        Alert.alert("Error", "Plastic item types are missing.");
+        return;
+      }
+      homeNavigation.navigate('MakeOffer', { post });
+    } catch (error) {
+      console.error("Error in handleMakeOffer:", error);
+      Alert.alert("Error", "An unexpected error occurred. Please try again.");
+    }
+  };
+
   // both post & offers are fetched on mount
   useFocusEffect(
     React.useCallback(() => {
@@ -743,13 +795,7 @@ const ViewPost = () => {
                 {post?.category_id === 1 && (
                   <TouchableOpacity
                     style={styles.fullButton}
-                    onPress={() => {
-                      if (!post?.post_item_types?.length) {
-                        Alert.alert("Error", "Plastic item types are missing.");
-                        return;
-                      }
-                      homeNavigation.navigate('MakeOffer', { post });
-                    }}
+                    onPress={handleMakeOffer}
                   >
                     <Image source={require('../../assets/images/trashbag.png')} style={styles.buttonIcon} />
                     <Text style={styles.fullButtonText}>Send offer</Text>
@@ -961,7 +1007,18 @@ const ViewPost = () => {
                         </>
                       )}
 
-                      {!isUserPostOwner && isUserOfferOwner && (
+                      {!isUserPostOwner && isUserOfferOwner && offer.status === 'pending' && (
+                        <>
+                          <TouchableOpacity style={styles.deleteOfferButton} onPress={() => handleDeleteOffer(offer.id)}>
+                            <Text style={styles.deleteOfferText}>Delete</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity style={styles.editOfferButton} onPress={() => handleEditOffer(offer)}>
+                            <MaterialIcons name="edit" size={22} color="white" />
+                          </TouchableOpacity>
+                        </>
+                      )}
+
+                      {!isUserPostOwner && isUserOfferOwner && offer.status !== 'pending' && (
                         <TouchableOpacity style={styles.fullGreenButton} onPress={() => handleSeeDetails(offer)}>
                           <Text style={styles.fullButtonTextinoffers}>See details</Text>
                         </TouchableOpacity>

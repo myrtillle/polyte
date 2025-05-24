@@ -8,41 +8,38 @@ export interface Post {
   collection_mode_id: number;
   status: string;
   created_at: string;
-  // updated_at: string;
   photos?: string[];
   location?: string;
-  personal_users?: {
+  views?: number;
+  offers_count?: number;
+  comments_count?: number;
+  last_activity?: string;
+
+  // Fetched via join from personal_users
+  user?: {
     email: string;
     first_name: string;
     last_name: string;
-    purok: string;
+    full_name: string;
     barangay: string;
+    purok: string;
+    username: string;
+    profile_photo_url: string;
   };
-  users?: {
-    id: string;
-    email: string;
-    raw_user_meta_data?: {
-      first_name?: string;
-      last_name?: string;
-      username?: string;
-      name?: string;
-    };
-    barangays?: { name?: string };
-    puroks?: { name?: string };
-  };
+
   category?: {
     id: number;
     name: string;
   };
+
   collection_mode?: {
     id: number;
     name: string;
     icon: string;
   };
+
   post_item_types?: Array<{
-    item_types: {
-      id: number;
-      name: string;
-    };
+    id: number;
+    name: string;
   }>;
-} 
+}

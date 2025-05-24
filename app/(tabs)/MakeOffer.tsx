@@ -62,16 +62,22 @@ const MakeOffer = () => {
         return;
       }
       
+      // Check if already at max limit
       if (images.length >= 5) {
-        Alert.alert("Limit Reached", "You can only upload up to 5 images.");
+        Alert.alert(
+          "Maximum Photos Reached",
+          "You can only upload up to 5 photos. Please remove some photos before adding more.",
+          [{ text: "OK" }]
+        );
         return;
       }
 
       setUploading(true);
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsMultipleSelection: true,
         quality: 1,
+        selectionLimit: 5 - images.length, // Limit selection to remaining slots
       });
   
       if (!result.canceled) {
@@ -92,7 +98,7 @@ const MakeOffer = () => {
           })
         );
   
-        setImages(uploadedImages.filter(url => url !== null));
+        setImages(prevImages => [...prevImages, ...uploadedImages.filter(url => url !== null)]);
       }
     } catch (error) {
       if (error instanceof Error) {
@@ -157,8 +163,22 @@ const MakeOffer = () => {
       return;
     }
     
+    // Validate required fields
     if (!price || !offeredWeight || selectedItems.length === 0) {
       Alert.alert("Missing Fields", "Please fill in all required fields before sending your offer.");
+      return;
+    }
+
+    // Validate price is a valid number
+    const priceNum = parseFloat(price);
+    if (isNaN(priceNum) || priceNum <= 0) {
+      Alert.alert("Invalid Price", "Please enter a valid price greater than 0.");
+      return;
+    }
+
+    // Validate weight is a valid number
+    if (isNaN(offeredWeight) || offeredWeight <= 0) {
+      Alert.alert("Invalid Weight", "Please enter a valid weight greater than 0.");
       return;
     }
 
@@ -168,7 +188,7 @@ const MakeOffer = () => {
     }
     
     if (offeredWeight > post.kilograms) {
-      Alert.alert("Offer too high", `Offered weight exceeded than the amount needed.`);
+      Alert.alert("Offer too high", `Offered weight cannot exceed ${post.kilograms} kg.`);
       return;
     }
 
@@ -178,9 +198,9 @@ const MakeOffer = () => {
       offered_items: selectedItems.map(item => item.name),
       offered_weight: offeredWeight,
       requested_weight: post.kilograms,
-      price,
-      message,
-      images,
+      price: priceNum, // Use the validated price number
+      message: message || '', // Ensure message is never null
+      images: images || [], // Ensure images is never null
       status: "pending",
     };
   
@@ -257,6 +277,42 @@ const MakeOffer = () => {
       setSelectedItems([]); // Prevent lingering state
     }
   }, [post]); // Runs whenever post changes  
+
+  useEffect(() => {
+    const checkExistingOffer = async () => {
+      if (!currentUser?.id || !post?.id) return;
+
+      try {
+        const { data: existingOffers, error } = await supabase
+          .from('offers')
+          .select('id')
+          .eq('post_id', post.id)
+          .eq('user_id', currentUser.id);
+
+        if (error) {
+          console.error("Error checking existing offers:", error);
+          return;
+        }
+
+        if (existingOffers && existingOffers.length > 0) {
+          Alert.alert(
+            "Existing Offer",
+            "You have already made an offer for this post. You can edit your existing offer instead.",
+            [
+              { 
+                text: "Go Back", 
+                onPress: () => navigation.goBack()
+              }
+            ]
+          );
+        }
+      } catch (error) {
+        console.error("Error in checkExistingOffer:", error);
+      }
+    };
+
+    checkExistingOffer();
+  }, [currentUser?.id, post?.id]);
 
   if (offerSent) {
     return (

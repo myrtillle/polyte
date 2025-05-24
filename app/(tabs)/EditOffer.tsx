@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, Image } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
-import { Offer, updateOffer } from '../../services/offersService';
+import { Offer, updateOffer, offersService } from '../../services/offersService';
 import { IconButton, Button } from 'react-native-paper';
 
 const EditOffer = () => {
@@ -19,20 +19,85 @@ const EditOffer = () => {
   const [selectedItems, setSelectedItems] = useState<string[]>(offer.offered_items || []);
 
   const pickImages = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsMultipleSelection: true,
-      quality: 1,
-    });
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Sorry, we need camera roll permissions to make this work!');
+        return;
+      }
+      
+      // Check if already at max limit
+      if (images.length >= 5) {
+        Alert.alert(
+          "Maximum Photos Reached",
+          "You can only upload up to 5 photos. Please remove some photos before adding more.",
+          [{ text: "OK" }]
+        );
+        return;
+      }
 
-    if (!result.canceled) {
-      setImages([...images, ...result.assets.map(asset => asset.uri)]);
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsMultipleSelection: true,
+        quality: 1,
+        selectionLimit: 5 - images.length, // Limit selection to remaining slots
+      });
+
+      if (!result.canceled) {
+        const assets = result.assets || [];
+        const allowedSlots = 5 - images.length;
+        const assetsToUpload = assets.slice(0, allowedSlots);
+        
+        const uploadedImages = await Promise.all(
+          assetsToUpload.map(async (asset) => {
+            try {
+              const url = await offersService.uploadImage(asset.uri);
+              if (!url) throw new Error("Image upload returned null");
+              return url as string;
+            } catch (uploadError) {
+              console.error("Image upload failed:", uploadError);
+              return null;
+            }
+          })
+        );
+  
+        setImages(prevImages => [...prevImages, ...uploadedImages.filter(url => url !== null)]);
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        console.error("Error picking images:", error.message);
+        Alert.alert("Error", error.message);
+      } else {
+        console.error("Unknown error while picking images:", error);
+        Alert.alert("Error", "An unexpected error occurred while picking images.");
+      }
     }
   };
 
   const handleUpdateOffer = async () => {
-    if (!price || !offeredWeight || selectedItems.length === 0 || images.length === 0) {
-      Alert.alert('Missing Fields', 'Please fill in all required fields.');
+    // Validate required fields
+    if (!price || !offeredWeight || selectedItems.length === 0) {
+      Alert.alert("Missing Fields", "Please fill in all required fields before updating your offer.");
+      return;
+    }
+
+    // Validate price is a valid number
+    const priceNum = parseFloat(price);
+    if (isNaN(priceNum) || priceNum <= 0) {
+      Alert.alert("Invalid Price", "Please enter a valid price greater than 0.");
+      return;
+    }
+
+    // Validate weight is a valid number
+    const weightNum = parseFloat(offeredWeight);
+    if (isNaN(weightNum) || weightNum <= 0) {
+      Alert.alert("Invalid Weight", "Please enter a valid weight greater than 0.");
+      return;
+    }
+
+    // Validate weight doesn't exceed requested weight
+    if (weightNum > offer.requested_weight) {
+      Alert.alert("Invalid Weight", `Offered weight cannot exceed ${offer.requested_weight} kg.`);
       return;
     }
 
@@ -41,11 +106,11 @@ const EditOffer = () => {
       post_id: offer.post_id, 
       user_id: offer.user_id, 
       requested_weight: offer.requested_weight, 
-      price: parseFloat(price),
-      offered_weight: parseFloat(offeredWeight),
-      message,
+      price: priceNum,
+      offered_weight: weightNum,
+      message: message || '', // Ensure message is never null
       offered_items: selectedItems,
-      images,
+      images: images || [], // Ensure images is never null
     };
 
     const success = await updateOffer(updatedOffer); 
@@ -69,7 +134,7 @@ const EditOffer = () => {
   
   useEffect(() => {
     if (offer?.post_item_types) {
-      const allTypes = offer.post_item_types.map((item) => item.item_types.name);
+      const allTypes = offer.post_item_types.map((item) => item.name);
       console.log("✅ Available Plastic Types from Post:", allTypes); // Debug log
       setAvailableItems(allTypes); // ✅ Store post's available plastic types
     } else {
