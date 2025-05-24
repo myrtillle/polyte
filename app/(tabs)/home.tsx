@@ -111,10 +111,16 @@ export default function HomeScreen() {
     try {
       const chatId = await messagesService.getOrCreateChatId(senderId, receiverId);
   
-      messagesNavigation.navigate('ChatScreen', {
-        chatId,
-        userId: senderId,
-        post,
+      navigation.navigate('Main', {
+        screen: 'Messages',
+        params: {
+          screen: 'ChatScreen',
+          params: {
+            chatId,
+            userId: senderId,
+            post,
+          }
+        }
       });
     } catch (error) {
       console.error("❌ Failed to get or create chat:", error);

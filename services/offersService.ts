@@ -196,7 +196,7 @@ export const offersService = {
   
         // Fetch related user data (collector and offerer)
         const postDetails = await postsService.getPostById(data.post_id);
-        const collectorName = `${postDetails.users?.raw_user_meta_data?.first_name ?? ''} ${postDetails.users?.raw_user_meta_data?.last_name ?? ''}`.trim() || 'Unknown'
+        const collectorName = `${postDetails.user?.first_name ?? ''} ${postDetails.user?.last_name ?? ''}`.trim() || 'Unknown'
         const photoUrl = postDetails.photos?.[0] ?? '';
   
         return {
@@ -206,10 +206,10 @@ export const offersService = {
             scheduled_time: data.scheduled_time,
             scheduled_date: data.scheduled_date,
             collectorName,
-            offererName: `${postDetails.users?.raw_user_meta_data?.first_name ?? ''} ${postDetails.users?.raw_user_meta_data?.last_name ?? ''}`.trim() || 'Unknown',
+            offererName: `${postDetails.user?.first_name ?? ''} ${postDetails.user?.last_name ?? ''}`.trim() || 'Unknown',
             photoUrl,
-            purok: postDetails.users?.puroks?.name ?? 'Unknown',
-            barangay: postDetails.users?.barangays?.name ?? 'Unknown',
+            purok: postDetails.user?.purok?? 'Unknown',
+            barangay: postDetails.user?.barangay ?? 'Unknown',
             user_id: data.user_id,
         };
     } catch (error) {

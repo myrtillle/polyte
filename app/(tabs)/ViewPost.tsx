@@ -106,12 +106,45 @@ const ViewPost = () => {
     }
   
     try {
-      const chatId = await messagesService.getOrCreateChatId(currentUser.id, post.user_id);
+      // First try to get an existing chat
+      const { data: existingChats, error: fetchError } = await supabase
+        .from('chats')
+        .select('id')
+        .or(
+          `and(user1_id.eq.${currentUser.id},user2_id.eq.${post.user_id}),and(user1_id.eq.${post.user_id},user2_id.eq.${currentUser.id})`
+        );
+
+      if (fetchError) {
+        throw fetchError;
+      }
+
+      let chatId;
+      
+      // If we have existing chats, use the most recent one
+      if (existingChats && existingChats.length > 0) {
+        chatId = existingChats[0].id;
+      } else {
+        // Create new chat if none exists
+        const { data: newChat, error: insertError } = await supabase
+          .from('chats')
+          .insert({ user1_id: currentUser.id, user2_id: post.user_id })
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+        chatId = newChat.id;
+      }
   
-      messagesNavigation.navigate('ChatScreen', {
-        chatId,
-        userId: currentUser.id,
-        post,
+      navigation.navigate('Main', {
+        screen: 'Messages',
+        params: {
+          screen: 'ChatScreen',
+          params: {
+            chatId,
+            userId: currentUser.id,
+            post,
+          }
+        }
       });
     } catch (err) {
       console.error("❌ Failed to navigate to ChatScreen:", err);

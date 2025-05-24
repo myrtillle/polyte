@@ -20,7 +20,10 @@ const MakeOffer = () => {
   const post = route.params?.post ?? null;
 
   const [selectedItems, setSelectedItems] = useState<{ id: number, name: string }[]>(
-    post?.post_item_types ? post.post_item_types.map(item => item.item_types) : []
+    post?.post_item_types ? post.post_item_types.map(item => ({
+      id: item.id,
+      name: item.name
+    })) : []
   );
   
   const [currentUser, setCurrentUser] = useState<{ id: string } | null>(null);
@@ -45,8 +48,8 @@ const MakeOffer = () => {
       if (prev.some(item => item.id === itemId)) {
         return prev.filter(item => item.id !== itemId);
       } else {
-        const foundItem = post?.post_item_types?.find(item => item.item_types.id === itemId)?.item_types;
-        return foundItem ? [...prev, foundItem] : prev;
+        const foundItem = post?.post_item_types?.find(item => item.id === itemId);
+        return foundItem ? [...prev, { id: foundItem.id, name: foundItem.name }] : prev;
       }
     });
   };
@@ -244,7 +247,11 @@ const MakeOffer = () => {
   
     if (post?.post_item_types) {
       console.log("✅ post_item_types exists, resetting selection.");
-      setSelectedItems(post.post_item_types.map(item => item.item_types)); // 🔄 Reset selected items
+      console.log("🧪 selectedItems:", selectedItems);
+      setSelectedItems(post.post_item_types.map(item => ({
+        id: item.id,
+        name: item.name
+      })));
     } else {
       console.error("❌ post_item_types is missing in MakeOffer!");
       setSelectedItems([]); // Prevent lingering state
@@ -279,16 +286,16 @@ const MakeOffer = () => {
         <Text style={styles.label}>TYPE OF PLASTICS</Text>
         <Text style={styles.subLabel}>Deselect items you are not going to offer.</Text>
         <View style={styles.tagContainer}>
-          {(post?.post_item_types ?? []).map(({ item_types }) => (
+          {(post?.post_item_types ?? []).map((item) => (
             <TouchableOpacity 
-              key={item_types.id} 
-              onPress={() => toggleItemSelection(item_types.id)}
+              key={item.id} 
+              onPress={() => toggleItemSelection(item.id)}
               style={[
                 styles.tag, 
-                selectedItems.some(item => item.id === item_types.id) ? styles.tagSelected : styles.tagUnselected
+                selectedItems.some(selectedItem => selectedItem.id === item.id) ? styles.tagSelected : styles.tagUnselected
               ]}
             >
-              <Text style={styles.tagText}>{item_types.name}</Text>
+              <Text style={styles.tagText}>{item.name}</Text>
             </TouchableOpacity>
           ))}
         </View>
