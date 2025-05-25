@@ -16,6 +16,8 @@ import { Image } from 'react-native';
 import { Animated } from 'react-native';
 import Constants from 'expo-constants';
 import { rgbaColor } from 'react-native-reanimated/lib/typescript/Colors';
+import PinImage from '../../assets/images/NEW/PIN.png'; // Make sure this image exists
+import GreenMark from '../../assets/images/greenmark.png';
 
 type IconName = 'account-multiple' | 'map-marker' | 'home' | 'image-plus';
 
@@ -760,74 +762,87 @@ export default function PostScreen() {
       )}
 
       {step === 2 && (
-        <View style={{ flex: 1, backgroundColor: '#023F0F' }}>
-          <Text style={{ color: 'white', textAlign: 'center', fontSize: 16, marginVertical: 12 }}>
-            Tap to drop a pin on the map
+        <View style={{ flex: 1, backgroundColor: '#023F0F', paddingHorizontal: 0 }}>
+          <Text style={{ color: 'white', textAlign: 'center', fontSize: 16, marginVertical: 12, fontWeight: 'bold', letterSpacing: 1 }}>
+            Select your drop-off location
           </Text>
-
-          <View style={styles.mapContainer}>
-            {mapReady ? (
-              <MapView
-                ref={mapRef}
-                provider={PROVIDER_GOOGLE}
-                style={styles.map}
-                initialRegion={region}
-                onRegionChangeComplete={setRegion}
-                onPress={async (e) => {
-                  const { latitude, longitude } = e.nativeEvent.coordinate;
-                  setMarker({ latitude, longitude });
-                  setFormData(prev => ({
-                    ...prev,
-                    location: {
-                      ...prev.location,
-                      latitude,
-                      longitude
-                    }
-                  }));
-                  // Get address for tapped location
-                  await getAddressFromCoordinates(latitude, longitude);
-                }}
-              >
-                <Marker
-                  coordinate={marker}
-                  draggable
-                  onDragEnd={async (e) => {
-                    const { latitude, longitude } = e.nativeEvent.coordinate;
-                    setMarker({ latitude, longitude });
-                    setFormData(prev => ({
-                      ...prev,
-                      location: {
-                        ...prev.location,
-                        latitude,
-                        longitude
-                      }
-                    }));
-                    // Get address for dragged location
-                    await getAddressFromCoordinates(latitude, longitude);
-                  }}
-                />
-              </MapView>
-            ) : (
-              <View style={[styles.map, styles.mapPlaceholder]}>
-                <ActivityIndicator size="large" color="#00FF57" />
+          <View style={styles.mapCardContainer}>
+            <View style={styles.mapCardShadow}>
+              <View style={styles.mapCard}>
+                {mapReady ? (
+                  <MapView
+                    ref={mapRef}
+                    provider={PROVIDER_GOOGLE}
+                    style={styles.mapImproved}
+                    initialRegion={region}
+                    onRegionChangeComplete={setRegion}
+                    onPress={async (e) => {
+                      const { latitude, longitude } = e.nativeEvent.coordinate;
+                      setMarker({ latitude, longitude });
+                      setFormData(prev => ({
+                        ...prev,
+                        location: {
+                          ...prev.location,
+                          latitude,
+                          longitude
+                        }
+                      }));
+                      await getAddressFromCoordinates(latitude, longitude);
+                    }}
+                  >
+                    <Marker
+                      coordinate={marker}
+                      draggable
+                      onDragEnd={async (e) => {
+                        const { latitude, longitude } = e.nativeEvent.coordinate;
+                        setMarker({ latitude, longitude });
+                        setFormData(prev => ({
+                          ...prev,
+                          location: {
+                            ...prev.location,
+                            latitude,
+                            longitude
+                          }
+                        }));
+                        await getAddressFromCoordinates(latitude, longitude);
+                      }}
+                    />
+                  </MapView>
+                ) : (
+                  <View style={[styles.mapImproved, styles.mapPlaceholder]}>
+                    <ActivityIndicator size="large" color="#00FF57" />
+                  </View>
+                )}
+                {/* Floating Current Location Button */}
+                <TouchableOpacity
+                  style={styles.fabLocation}
+                  onPress={getCurrentLocation}
+                >
+                  <MaterialCommunityIcons name="crosshairs-gps" size={28} color="#fff" />
+                </TouchableOpacity>
               </View>
-            )}
+            </View>
           </View>
-
+          {/* Divider */}
+          <View style={{ height: 16 }} />
           {/* Address Display Box */}
-          <View style={styles.addressContainer}>
+          <View style={styles.addressCard}>
             <Text style={styles.addressLabel}>Selected Location:</Text>
-            <Text style={styles.addressText}>{address || 'Loading address...'}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+              <Image source={GreenMark} style={{ width: 20, height: 20, marginRight: 8 }} />
+              <Text style={styles.addressText}>{address || 'Loading address...'}</Text>
+            </View>
           </View>
-
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 16 }}>
-            <Button mode="outlined" onPress={() => setStep(1)}>
+          <View style={{ flex: 1 }} />
+          <View style={styles.mapActionRow}>
+            <Button mode="outlined" onPress={() => setStep(1)} style={styles.mapActionButton} labelStyle={styles.mapActionButtonLabel}>
               Back
             </Button>
-            <Button mode="contained" onPress={handleSubmit} loading={loading}>
+            <Button mode="contained" onPress={handleSubmit} loading={loading} style={[styles.mapActionButton, styles.mapActionButtonPrimary]} labelStyle={styles.mapActionButtonLabelDark}>
               Submit Post
             </Button>
           </View>
+          <View style={{ height: 16 }} />
         </View>
       )}
 
@@ -1247,5 +1262,84 @@ const styles = StyleSheet.create({
   buttonDisabled: {
     backgroundColor: '#2C5735',
     opacity: 0.7,
+  },
+  mapCardContainer: {
+    paddingHorizontal: 16,
+    marginTop: 8,
+  },
+  mapCardShadow: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    elevation: 8,
+    borderRadius: 18,
+  },
+  mapCard: {
+    backgroundColor: '#1A3620',
+    borderRadius: 18,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  mapImproved: {
+    width: '100%',
+    height: 340,
+    borderRadius: 18,
+  },
+  fabLocation: {
+    position: 'absolute',
+    bottom: 18,
+    right: 18,
+    backgroundColor: '#00FF57',
+    borderRadius: 28,
+    width: 56,
+    height: 56,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 6,
+  },
+  addressCard: {
+    backgroundColor: '#1A3620',
+    borderRadius: 14,
+    padding: 18,
+    marginHorizontal: 16,
+    marginTop: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  mapActionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginTop: 24,
+    gap: 16,
+  },
+  mapActionButton: {
+    flex: 1,
+    borderRadius: 10,
+    marginHorizontal: 4,
+    paddingVertical: 8,
+  },
+  mapActionButtonPrimary: {
+    backgroundColor: '#00FF57',
+  },
+  mapActionButtonLabel: {
+    fontWeight: 'bold',
+    fontSize: 16,
+    letterSpacing: 1,
+  },
+  mapActionButtonLabelDark: {
+    fontWeight: 'bold',
+    fontSize: 16,
+    letterSpacing: 1,
+    color: '#222',
   },
 }); 
