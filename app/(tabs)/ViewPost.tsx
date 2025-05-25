@@ -209,6 +209,7 @@ const ViewPost = () => {
     
     if (!commentText.trim() || !post?.id || !currentUser?.id) {
       console.warn("⚠️ Cannot send comment: Missing data!");
+      Alert.alert("Error", "Cannot send comment: Missing required information");
       return;
     }
     
@@ -222,22 +223,15 @@ const ViewPost = () => {
 
       if (newComment) {
         console.log("Comment Posted:", JSON.stringify(newComment, null, 2));
-        
-        await notificationService.sendNotification(
-          post.user_id,
-          'New Comment',
-          `Someone commented on your post: "${newComment.text}"`,
-          'new_comment',
-          {
-            type: 'comment',
-            id: post.id
-          }
-        );
         fetchComments(post.id);
         setCommentText('');
+      } else {
+        console.error("Failed to post comment: No comment data returned");
+        Alert.alert("Error", "Failed to post comment. Please try again.");
       }
     } catch (error) {
       console.error("Error posting comment:", error);
+      Alert.alert("Error", "Failed to post comment. Please try again.");
     }
   };
   

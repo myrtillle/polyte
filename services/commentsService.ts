@@ -52,7 +52,7 @@ export const commentsService = {
       .from('personal_users')
       .select('first_name, last_name, email')
       .eq('id', userId)
-      .single(); // 🔥 Ensures we get only one object, not an array
+      .single();
   
     if (userError) {
       console.error('❌ Error fetching user details:', userError.message);
@@ -69,25 +69,35 @@ export const commentsService = {
       .select()
       .single(); 
     
+    if (error) {
+      console.error('❌ Error adding comment:', error.message);
+      return null;
+    }
+
+    if (!data) {
+      console.error('❌ No data returned after comment insertion');
+      return null;
+    }
+      
+    try {
       await notificationService.sendNotification(
-        data.user_id,
+        userId,
         'New Comment on Your Post',
-        `Someone commented on your post: "${data.comment_text}"`,
+        `Someone commented on your post: "${commentText}"`,
         'new_comment',
         {
           type: 'transaction',
           id: postId
         },
       );
-      
-    if (error) {
-      console.error('❌ Error adding comment:', error.message);
-      return null;
+    } catch (notificationError) {
+      console.error('❌ Error sending notification:', notificationError);
+      // Don't return null here, as the comment was successfully created
     }
     
     return {
       ...data,
-      user_name: userName, // Attach user details immediately
+      user_name: userName,
     };
   }
   
