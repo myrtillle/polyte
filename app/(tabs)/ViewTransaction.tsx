@@ -13,7 +13,7 @@ import locationIcon from '../../assets/images/greenmark.png';
 import pickupIcon from '../../assets/images/pickup.png';
 import dropoffIcon from '../../assets/images/dropoff.png';
 import meetupIcon from '../../assets/images/meetup.png';
-import cashIcon from '../../assets/images/cash.png';
+import cashIcon from '../../assets/images/GCASHandMAYA.png';
 import proofIcon from '../../assets/images/images3d.png';
 import { Button, Divider, IconButton } from 'react-native-paper';
 import Constants from 'expo-constants';
@@ -530,7 +530,7 @@ export default function ViewTransaction() {
             return (
               <>
                 <Image source={mode.icon} style={[styles.modeIcon, { tintColor: mode.color }]} />
-                <Text style={[styles.modeText, { color: mode.color }]}>
+                <Text style={[styles.modeText, { color: mode.color }]}> 
                   {transaction?.method?.toUpperCase()}
                 </Text>
               </>
@@ -980,8 +980,8 @@ const styles = StyleSheet.create({
   },
   
   offerPesoIcon: {
-    width: 26,
-    height: 26,
+    width: 100,
+    height: 20,
     resizeMode: 'contain',
   },
   

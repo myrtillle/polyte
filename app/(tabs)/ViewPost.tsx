@@ -725,7 +725,7 @@ const ViewPost = () => {
         <ScrollView style={styles.content}>
           {/* User Info */}
           <View style={styles.userInfo}>
-          <Image source={{ uri: 'https://i.pravatar.cc/40' }} style={styles.avatar} />
+          <Image source={{ uri: post.user?.profile_photo_url || 'https://i.pravatar.cc/40' }} style={styles.avatar} />
 
           <View style={{ flex: 1 }}>
             <Text style={styles.userName}>
@@ -989,7 +989,7 @@ const ViewPost = () => {
                     <View key={index} style={styles.offerCard}>
                       <View style={styles.headerRow}>
                         <View style={styles.leftInfo}>
-                          <Image source={{ uri: 'https://i.pravatar.cc/36' }} style={styles.offerAvatar} />
+                          <Image source={{ uri: offer.personal_users?.profile_photo_url || 'https://i.pravatar.cc/36' }} style={styles.offerAvatar} />
                           <View>
                             <Text style={styles.offerUserText}>{offer.personal_users?.first_name} {offer.personal_users?.last_name}</Text>
                             <Text style={styles.offerTimeText}>{formatTimeAgo(offer.created_at)}</Text>
@@ -1068,7 +1068,7 @@ const ViewPost = () => {
                     <View style={{ position: 'relative' }}>
                       <View style={styles.headerRow}>
                         <View style={styles.leftInfo}>
-                          <Image source={{ uri: 'https://i.pravatar.cc/36' }} style={styles.offerAvatar} />
+                          <Image source={{ uri: offer.personal_users?.profile_photo_url || 'https://i.pravatar.cc/36' }} style={styles.offerAvatar} />
                           <View>
                             <Text style={styles.offerUserText}>{offer.personal_users?.first_name} {offer.personal_users?.last_name}</Text>
                             <Text style={styles.offerTimeText}>{formatTimeAgo(offer.created_at)}</Text>
