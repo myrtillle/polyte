@@ -818,9 +818,113 @@ const ViewPost = () => {
           </View>
         </View>
 
-        {/* Post Image */}
+        {/* Post Images Grid */}
         {post.photos && post.photos.length > 0 && (
-          <Image source={{ uri: post.photos[0] }} style={styles.postImage} />
+          <View style={styles.imagesGridContainer}>
+            {post.photos.length === 1 ? (
+              <Image 
+                source={{ uri: post.photos[0] }} 
+                style={styles.singleImage} 
+                resizeMode="cover"
+              />
+            ) : post.photos.length === 2 ? (
+              <View style={styles.twoImagesContainer}>
+                <Image 
+                  source={{ uri: post.photos[0] }} 
+                  style={styles.twoImages} 
+                  resizeMode="cover"
+                />
+                <Image 
+                  source={{ uri: post.photos[1] }} 
+                  style={styles.twoImages} 
+                  resizeMode="cover"
+                />
+              </View>
+            ) : post.photos.length === 3 ? (
+              <View style={styles.threeImagesContainer}>
+                <Image 
+                  source={{ uri: post.photos[0] }} 
+                  style={styles.threeImagesMain} 
+                  resizeMode="cover"
+                />
+                <View style={styles.threeImagesRight}>
+                  <Image 
+                    source={{ uri: post.photos[1] }} 
+                    style={styles.threeImagesSub} 
+                    resizeMode="cover"
+                  />
+                  <Image 
+                    source={{ uri: post.photos[2] }} 
+                    style={styles.threeImagesSub} 
+                    resizeMode="cover"
+                  />
+                </View>
+              </View>
+            ) : post.photos.length === 4 ? (
+              <View style={styles.fourImagesContainer}>
+                <View style={styles.fourImagesTop}>
+                  <Image 
+                    source={{ uri: post.photos[0] }} 
+                    style={styles.fourImages} 
+                    resizeMode="cover"
+                  />
+                  <Image 
+                    source={{ uri: post.photos[1] }} 
+                    style={styles.fourImages} 
+                    resizeMode="cover"
+                  />
+                </View>
+                <View style={styles.fourImagesBottom}>
+                  <Image 
+                    source={{ uri: post.photos[2] }} 
+                    style={styles.fourImages} 
+                    resizeMode="cover"
+                  />
+                  <Image 
+                    source={{ uri: post.photos[3] }} 
+                    style={styles.fourImages} 
+                    resizeMode="cover"
+                  />
+                </View>
+              </View>
+            ) : (
+              <View style={styles.manyImagesContainer}>
+                <View style={styles.manyImagesTop}>
+                  <Image 
+                    source={{ uri: post.photos[0] }} 
+                    style={styles.manyImagesMain} 
+                    resizeMode="cover"
+                  />
+                  <View style={styles.manyImagesRight}>
+                    <Image 
+                      source={{ uri: post.photos[1] }} 
+                      style={styles.manyImagesSub} 
+                      resizeMode="cover"
+                    />
+                    <Image 
+                      source={{ uri: post.photos[2] }} 
+                      style={styles.manyImagesSub} 
+                      resizeMode="cover"
+                    />
+                  </View>
+                </View>
+                {post.photos.length > 3 && (
+                  <View style={styles.manyImagesBottom}>
+                    <Image 
+                      source={{ uri: post.photos[3] }} 
+                      style={styles.manyImagesBottomImage} 
+                      resizeMode="cover"
+                    />
+                    {post.photos.length > 4 && (
+                      <View style={styles.moreImagesOverlay}>
+                        <Text style={styles.moreImagesText}>+{post.photos.length - 4}</Text>
+                      </View>
+                    )}
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
         )}
 
         {/* Action Buttons */}
@@ -1884,6 +1988,96 @@ const styles = StyleSheet.create({
   
   disabledButtonText: {
     color: '#A0A0A0',
+  },
+  imagesGridContainer: {
+    marginVertical: 12,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  singleImage: {
+    width: '100%',
+    height: 300,
+    borderRadius: 8,
+  },
+  twoImagesContainer: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  twoImages: {
+    flex: 1,
+    height: 200,
+  },
+  threeImagesContainer: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  threeImagesMain: {
+    flex: 1,
+    height: 200,
+  },
+  threeImagesRight: {
+    flex: 1,
+    gap: 2,
+  },
+  threeImagesSub: {
+    flex: 1,
+    height: 99,
+  },
+  fourImagesContainer: {
+    gap: 2,
+  },
+  fourImagesTop: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  fourImagesBottom: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  fourImages: {
+    flex: 1,
+    height: 150,
+  },
+  manyImagesContainer: {
+    gap: 2,
+  },
+  manyImagesTop: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  manyImagesMain: {
+    flex: 1,
+    height: 200,
+  },
+  manyImagesRight: {
+    flex: 1,
+    gap: 2,
+  },
+  manyImagesSub: {
+    flex: 1,
+    height: 99,
+  },
+  manyImagesBottom: {
+    position: 'relative',
+  },
+  manyImagesBottomImage: {
+    width: '100%',
+    height: 150,
+  },
+  moreImagesOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  moreImagesText: {
+    color: 'white',
+    fontSize: 24,
+    fontWeight: 'bold',
   },
 });
 

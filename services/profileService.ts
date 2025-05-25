@@ -9,7 +9,12 @@ type OfferScheduleWithPost = {
   posts: {
     user_id: string;
     kilograms: number;
-  } | { user_id: string; kilograms: number }[]; // handle both object and array
+    category_id: number;
+  } | {
+    user_id: string;
+    kilograms: number;
+    category_id: number;
+  }[]; // handle both object and array
 };
 
 // types/Profile.ts
@@ -135,34 +140,64 @@ export const profileService = {
 
   async fetchUserCollection(userId: string) {
     try {
-      // Step 1: Get completed schedules joined with post weights where the user is the offerer
+      // Step 1: Get completed schedules joined with post weights
       const { data, error } = await supabase
         .from('offer_schedules')
         .select(`
           id,
           status,
           post_id,
-          posts (kilograms, user_id)
+          posts (
+            kilograms,
+            user_id,
+            category_id
+          )
         `)
         .eq('status', 'completed');
-  
+
       if (error) throw error;
-  
+
       let donatedTotal = 0;
-  
+      let collectedTotal = 0;
+
       (data as OfferScheduleWithPost[])?.forEach((schedule) => {
         const post = Array.isArray(schedule.posts) ? schedule.posts[0] : schedule.posts;
-      
-        if (post?.user_id === userId) {
-          donatedTotal += post.kilograms || 0;
+        
+        if (!post) return;
+
+        // For SEEKING posts (category_id === 1):
+        // - If user is post owner, they are the COLLECTOR
+        // - If user is offerer, they are the DONOR
+        // For SELLING posts (category_id === 2):
+        // - If user is post owner, they are the DONOR
+        // - If user is offerer, they are the COLLECTOR
+        if (post.category_id === 1) {
+          if (post.user_id === userId) {
+            collectedTotal += post.kilograms || 0; // Post owner is collector
+          } else {
+            donatedTotal += post.kilograms || 0; // Offerer is donor
+          }
+        } else if (post.category_id === 2) {
+          if (post.user_id === userId) {
+            donatedTotal += post.kilograms || 0; // Post owner is donor
+          } else {
+            collectedTotal += post.kilograms || 0; // Offerer is collector
+          }
         }
-      });      
-  
-      // Optionally, still calculate collectedTotal (if needed)
-      // In this example, we just return 0 unless you want to apply the same logic for collectors
-  
+      });
+
+      console.log('📊 Collection stats:', {
+        userId,
+        donatedTotal,
+        collectedTotal,
+        explanation: {
+          seeking: 'Post owner = Collector, Offerer = Donor',
+          selling: 'Post owner = Donor, Offerer = Collector'
+        }
+      });
+
       return {
-        collected: 0,
+        collected: collectedTotal,
         donated: donatedTotal,
       };
     } catch (error) {

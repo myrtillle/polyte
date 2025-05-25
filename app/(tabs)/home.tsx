@@ -105,12 +105,45 @@ export default function HomeScreen() {
   };
   
   const handleSendMessage = async (post: Post) => {
-    const senderId = currentUserId!;
+    if (!currentUserId) {
+      Alert.alert("Error", "Please log in to send messages");
+      return;
+    }
+
+    const senderId = currentUserId;
     const receiverId = post.user_id;
 
     try {
-      const chatId = await messagesService.getOrCreateChatId(senderId, receiverId);
-  
+      // First check if a chat already exists
+      const { data: existingChat, error: fetchError } = await supabase
+        .from('chats')
+        .select('id')
+        .or(`user1_id.eq.${senderId},user2_id.eq.${senderId}`)
+        .or(`user1_id.eq.${receiverId},user2_id.eq.${receiverId}`)
+        .single();
+
+      let chatId;
+
+      if (fetchError) {
+        if (fetchError.code === 'PGRST116') {
+          // No chat exists, create a new one
+          const { data: newChat, error: createError } = await supabase
+            .from('chats')
+            .insert([
+              { user1_id: senderId, user2_id: receiverId }
+            ])
+            .select('id')
+            .single();
+
+          if (createError) throw createError;
+          chatId = newChat.id;
+        } else {
+          throw fetchError;
+        }
+      } else {
+        chatId = existingChat.id;
+      }
+
       navigation.navigate('Main', {
         screen: 'Messages',
         params: {
@@ -124,7 +157,7 @@ export default function HomeScreen() {
       });
     } catch (error) {
       console.error("❌ Failed to get or create chat:", error);
-      Alert.alert("Error", "Could not start chat.");
+      Alert.alert("Error", "Could not start chat. Please try again.");
     }   
   };
 

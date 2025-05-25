@@ -12,9 +12,10 @@ import MessagesStack from './MessagesStack';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { RootStackParamList } from '@/types/navigation';
-import { TouchableOpacity, View, Text } from 'react-native';
+import { TouchableOpacity, View, Text, Alert } from 'react-native';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/services/supabase';
+import { IconButton } from 'react-native-paper';
 
 const Tab = createBottomTabNavigator<BottomTabParamList>();
 
@@ -109,11 +110,47 @@ export function BottomTabNavigator() {
       <Tab.Screen
         name="Post"
         component={PostScreen}
-        options={{
+        options={({ navigation }) => ({
+          headerShown: true,
+          headerStyle: {
+            backgroundColor: '#1A3620',
+          },
+          headerTintColor: 'white',
+          headerTitle: 'Create Post',
+          headerTitleStyle: {
+            fontSize: 14,
+            fontWeight: 'normal',
+            textTransform: 'uppercase',
+          },
+          headerLeft: () => (
+            <IconButton
+              icon="arrow-left"
+              size={24}
+              iconColor="white"
+              onPress={() => {
+                Alert.alert(
+                  "Are you sure?",
+                  "Your changes may not be saved.",
+                  [
+                    { text: "Cancel", style: "cancel" },
+                    { 
+                      text: "Yes", 
+                      onPress: () => {
+                        // Navigate back to the main screen
+                        navigation.navigate('Main', {
+                          screen: 'Home'
+                        });
+                      }
+                    }
+                  ]
+                );
+              }}
+            />
+          ),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="add-circle" size={size} color={color} />
           ),
-        }}
+        })}
       />
       <Tab.Screen
         name="Messages"

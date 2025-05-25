@@ -315,8 +315,7 @@ export default function PostScreen() {
   
   // Add cleanup effect
   useEffect(() => {
-    return () => {
-      // Reset all form data when component unmounts
+    const resetFormData = () => {
       setFormData({
         category_id: null,
         item_type_ids: [],
@@ -338,8 +337,23 @@ export default function PostScreen() {
         longitude: DAVAO_COORDS.longitude,
       });
       setAddress('');
+      setSelectedMode('');
     };
-  }, []);
+
+    // Reset form when component mounts
+    resetFormData();
+
+    // Add navigation focus listener
+    const unsubscribe = navigation.addListener('focus', () => {
+      resetFormData();
+    });
+
+    // Cleanup
+    return () => {
+      resetFormData();
+      unsubscribe();
+    };
+  }, [navigation]);
 
   // Modify the back handler to use router.replace instead of back
   useEffect(() => {
@@ -530,23 +544,22 @@ export default function PostScreen() {
   };
 
   return (
-    
     <View style={{ flex: 1, backgroundColor: '#023F0F' }}>
-      {/* Sticky Header */}
-      <View style={styles.headerContainer}>
-        <IconButton
-          icon="arrow-left"
-          size={24}
-          iconColor="white"
-          onPress={handleBackPress}          
-          style={styles.backIcon}
-        />
-        <Text style={styles.headerTitle}>Create Post</Text>
-      </View>
-      
-      <View style={{ flexDirection: 'row', justifyContent: 'center', padding: 16 }}>
-        <View style={[styles.stepDot, step === 1 && styles.activeDot]} />
-        <View style={[styles.stepDot, step === 2 && styles.activeDot]} />
+      {/* Remove custom header */}
+      <View style={{ flexDirection: 'row', justifyContent: 'center', padding: 16, marginTop: 8 }}>
+        <View style={styles.stepContainer}>
+          <View style={[styles.stepNumber, step === 1 && styles.activeStep]}>
+            <Text style={[styles.stepNumberText, step === 1 && styles.activeStepText]}>1</Text>
+          </View>
+          <Text style={[styles.stepLabel, step === 1 && styles.activeStepLabel]}>Post & Waste Info</Text>
+        </View>
+        <View style={styles.stepConnector} />
+        <View style={styles.stepContainer}>
+          <View style={[styles.stepNumber, step === 2 && styles.activeStep]}>
+            <Text style={[styles.stepNumberText, step === 2 && styles.activeStepText]}>2</Text>
+          </View>
+          <Text style={[styles.stepLabel, step === 2 && styles.activeStepLabel]}>Location</Text>
+        </View>
       </View>
       
       {step === 1 && (
@@ -558,7 +571,7 @@ export default function PostScreen() {
           nestedScrollEnabled={true}
         >
           {/* Category Selection */}
-          <View style={styles.categoryContainer}>
+          <View style={[styles.categoryContainer, { marginTop: 0 }]}>
             <Text style={styles.sectionTitle}>CATEGORY</Text>
 
             {/* SELLING Button */}
@@ -1116,16 +1129,44 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     fontWeight: 'bold',
   },
-  stepDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#555',
-    marginHorizontal: 6,
+  stepContainer: {
+    alignItems: 'center',
   },
-  activeDot: {
+  stepNumber: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#2C5735',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  activeStep: {
     backgroundColor: '#00FF57',
-  },  
+  },
+  stepNumberText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  activeStepText: {
+    color: '#000000',
+  },
+  stepLabel: {
+    color: '#888888',
+    fontSize: 12,
+    textTransform: 'uppercase',
+  },
+  activeStepLabel: {
+    color: '#00FF57',
+  },
+  stepConnector: {
+    width: 40,
+    height: 2,
+    backgroundColor: '#2C5735',
+    marginHorizontal: 8,
+    marginTop: 16,
+  },
   itemTypes: {
     flexDirection: 'row',
     flexWrap: 'wrap',

@@ -10,6 +10,7 @@ import { Post } from '../../services/postsService';
 import { ItemType, CollectionMode } from '../../types/postTypes';
 import { RootStackParamList } from '../../types/navigation';
 import { StackNavigationProp } from '@react-navigation/stack';
+import Constants from 'expo-constants';
 
 const { width, height } = Dimensions.get('window');
 
@@ -40,6 +41,7 @@ const EditPost = () => {
   const [uploading, setUploading] = useState(false);
   const [itemTypes, setItemTypes] = useState<ItemType[]>([]);
   const [collectionModes, setCollectionModes] = useState<CollectionMode[]>([]);
+  const [address, setAddress] = useState<string>('');
 
   
   const parseWKT = (wkt: string) => {
@@ -149,6 +151,33 @@ const EditPost = () => {
   
   const formatLocationToWKT = (lat: number, lon: number): string => `POINT(${lon} ${lat})`;
 
+  const reverseGeocode = async (latitude: number, longitude: number) => {
+    const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.GOOGLE_MAPS_API_KEY || '';
+    
+    try {
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${GOOGLE_MAPS_API_KEY}`
+      );
+      const data = await response.json();
+      
+      if (data.status === 'OK' && data.results.length > 0) {
+        return data.results[0].formatted_address;
+      }
+      return 'Address not found';
+    } catch (error) {
+      console.error('Error reverse geocoding:', error);
+      return 'Error getting address';
+    }
+  };
+
+  useEffect(() => {
+    const getAddress = async () => {
+      const address = await reverseGeocode(formData.location.latitude, formData.location.longitude);
+      setAddress(address);
+    };
+    getAddress();
+  }, [formData.location]);
+
   const validateForm = () => {
     if (!formData.description.trim()) {
       Alert.alert('Error', 'Please enter a description');
@@ -205,13 +234,23 @@ const EditPost = () => {
     }
   };
 
+  useEffect(() => {
+    navigation.setOptions({
+      headerStyle: {
+        backgroundColor: '#1A3620',
+      },
+      headerTintColor: 'white',
+      headerTitleStyle: {
+        fontSize: 14,
+        fontWeight: 'normal',
+        textTransform: 'uppercase',
+      },
+      headerTitle: 'Edit Post',
+    });
+  }, [navigation]);
+
   return (
     <View style={{ flex: 1, backgroundColor: '#023F0F' }}>
-      <View style={styles.headerContainer}>
-        <IconButton icon="arrow-left" iconColor="white" onPress={() => navigation.goBack()} />
-        <Text style={styles.headerTitle}>Edit Post</Text>
-      </View>
-
       <ScrollView style={{ padding: 16 }}>
         <Text style={styles.label}>Category</Text>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 10 }}>
@@ -292,26 +331,35 @@ const EditPost = () => {
             latitudeDelta: 0.01,
             longitudeDelta: 0.01,
           }}
-          onPress={e => {
+          onPress={async (e) => {
             const { latitude, longitude } = e.nativeEvent.coordinate;
             setFormData(prev => ({
               ...prev,
               location: { latitude, longitude }
             }));
+            const newAddress = await reverseGeocode(latitude, longitude);
+            setAddress(newAddress);
           }}
         >
           <Marker
             coordinate={formData.location}
             draggable
-            onDragEnd={e => {
+            onDragEnd={async (e) => {
               const { latitude, longitude } = e.nativeEvent.coordinate;
               setFormData(prev => ({
                 ...prev,
                 location: { latitude, longitude }
               }));
+              const newAddress = await reverseGeocode(latitude, longitude);
+              setAddress(newAddress);
             }}
           />
         </MapView>
+
+        <View style={styles.addressContainer}>
+          <Text style={styles.addressLabel}>Selected Location:</Text>
+          <Text style={styles.addressText}>{address}</Text>
+        </View>
 
         <Text style={styles.label}>Mode of Collection</Text>
             <View style={{ gap: 10 }}>
@@ -357,18 +405,6 @@ const EditPost = () => {
 };
 
 const styles = StyleSheet.create({
-  headerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1A3620',
-    padding: 16,
-  },
-  headerTitle: {
-    color: 'white',
-    fontSize: 16,
-    marginLeft: 8,
-    fontWeight: 'bold'
-  },
   label: {
     color: 'white',
     marginTop: 16,
@@ -409,6 +445,21 @@ const styles = StyleSheet.create({
   removePhotoText: {
     color: 'white',
     fontSize: 12,
+  },
+  addressContainer: {
+    backgroundColor: '#234A2D',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  addressLabel: {
+    color: '#A0A0A0',
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  addressText: {
+    color: 'white',
+    fontSize: 14,
   },
 });
 

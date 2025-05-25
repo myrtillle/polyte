@@ -25,6 +25,7 @@ export interface Offer {
   personal_users?: {
     first_name: string;
     last_name: string;
+    profile_photo_url: string;
   }
 }
 

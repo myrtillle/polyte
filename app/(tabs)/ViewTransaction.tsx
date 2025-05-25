@@ -120,6 +120,10 @@ export default function ViewTransaction() {
   const isConfirmed = ['awaiting_payment', 'for_completion', 'completed'].includes(transaction?.status);
   const canConfirm = transaction?.status === 'proof_uploaded';
 
+  // Determine roles based on post category
+  const isBuyer = isSellingPost ? isOfferer : isPostOwner;
+  const isSeller = isSellingPost ? isPostOwner : isOfferer;
+
   const handlePostOwnerConfirm = async () => {
     const success = await transactionService.completeTransaction(offerId);
 
@@ -543,9 +547,13 @@ export default function ViewTransaction() {
         <View style={styles.cardRow}>
           <View>
             <Text style={styles.subLabel}>TO BE COLLECTED BY :</Text>
-            <Text style={styles.collectorName}>{transaction?.collector_name}</Text>
+            <Text style={styles.collectorName}>
+              {isSellingPost ? transaction?.collector_name : transaction?.offerer_name}
+            </Text>
             <Text style={styles.subLabel}>FROM:</Text>
-            <Text style={styles.offererName}>{transaction?.offerer_name}</Text>
+            <Text style={styles.offererName}>
+              {isSellingPost ? transaction?.offerer_name : transaction?.collector_name}
+            </Text>
 
             {/* {!hasAgreed && isOfferer && (
               <TouchableOpacity onPress={handleAgreeToSchedule} style={[styles.confirmButton, { marginTop: 10 }]}>
@@ -665,8 +673,8 @@ export default function ViewTransaction() {
             )}
           </View>
 
-        {/* Complete Transaction Button - Only for offerers */}
-        {((isSellingPost && isPostOwner) || (!isSellingPost && isOfferer)) && (
+        {/* Complete Transaction Button - Only for sellers */}
+        {isSeller && (
           <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'center' }}>
             <TouchableOpacity
               style={[
@@ -811,16 +819,15 @@ export default function ViewTransaction() {
                 {(() => {
                   console.log('Debug upload button conditions:');
                   console.log('isSellingPost:', isSellingPost);
-                  console.log('isPostOwner:', isPostOwner);
-                  console.log('isOfferer:', isOfferer);
+                  console.log('isBuyer:', isBuyer);
+                  console.log('isSeller:', isSeller);
                   console.log('transaction status:', transaction?.status);
                   
-                  // For selling posts: post owner (offerer) can upload proof
-                  // For seeking posts: offerer (not post owner) can upload proof
-                  const shouldShowButton = (isSellingPost ? isPostOwner : isOfferer) && transaction?.status === 'for_collection';
-                  console.log('Should show button:', shouldShowButton);
+                  // Seller should see upload button
+                  const shouldShowUploadButton = isSeller && transaction?.status === 'for_collection';
+                  console.log('Should show upload button:', shouldShowUploadButton);
                   
-                  return shouldShowButton ? (
+                  return shouldShowUploadButton ? (
                     <TouchableOpacity 
                       style={[styles.confirmButton, { marginTop: 10 }]} 
                       onPress={handleUploadProof}
@@ -829,6 +836,24 @@ export default function ViewTransaction() {
                     </TouchableOpacity>
                   ) : null;
                 })()}
+
+                {/* Buyer should see confirm button */}
+                {isBuyer && transaction?.status === 'proof_uploaded' && (
+                  <TouchableOpacity
+                    style={[styles.confirmButton, { marginTop: 20 }]}
+                    onPress={async () => {
+                      const success = await transactionService.markAsAwaitingPayment(offerId);
+                      if (success) {
+                        const updated = await transactionService.fetchTransactionDetails(offerId);
+                        setTransaction(updated);
+                        Alert.alert('Confirmed', 'Collection confirmed. Waiting for payment.');
+                        setProofModalVisible(false);
+                      }
+                    }}
+                  >
+                    <Text style={styles.confirmText}>CONFIRM COLLECTION</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             )}
       
