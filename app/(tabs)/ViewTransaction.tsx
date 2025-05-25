@@ -13,7 +13,7 @@ import locationIcon from '../../assets/images/greenmark.png';
 import pickupIcon from '../../assets/images/pickup.png';
 import dropoffIcon from '../../assets/images/dropoff.png';
 import meetupIcon from '../../assets/images/meetup.png';
-import cashIcon from '../../assets/images/GCASHandMAYA.png';
+import cashIcon from '../../assets/images/GCASHandMAYA2.png';
 import proofIcon from '../../assets/images/images3d.png';
 import { Button, Divider, IconButton } from 'react-native-paper';
 import Constants from 'expo-constants';
@@ -642,9 +642,9 @@ export default function ViewTransaction() {
             <Text style={styles.collectionStatusHeader}>PAYMENT</Text>
             
             <View style={styles.offerPriceRow}>
-            <Image source={cashIcon} style={styles.offerPesoIcon} />
-            <Text style={styles.offerPriceText}>₱ {transaction?.price?.toFixed(2) ?? 'N/A'}</Text>
-          </View>
+              <Text style={styles.offerPriceText}>₱ {transaction?.price?.toFixed(2) ?? 'N/A'}</Text>
+            </View>
+            <Image source={cashIcon} style={{ width: 200, height: 60, alignSelf: 'center', marginBottom: 8, marginTop: 0, resizeMode: 'contain' }} />
 
             {isOfferer && (
               <TouchableOpacity 
