@@ -636,7 +636,6 @@ export default function PostScreen() {
               <Image source={require('../../assets/images/trashbag.png')} style={styles.kilogramsIcon} />
               <Text style={styles.kilogramsTitle}>TOTAL KILOGRAMS</Text>
             </View>
-
             <View style={styles.kilogramsInputWrapper}>
               <TextInput
                 underlineColor="transparent"
@@ -644,33 +643,30 @@ export default function PostScreen() {
                 value={formData.kilograms}
                 onChangeText={text => setFormData(prev => ({ ...prev, kilograms: text }))}
                 keyboardType="numeric"
-              
-              style={[styles.kilogramsInput, { color: '#FFFFFF' }]}
+                style={[styles.kilogramsInput, { color: '#FFFFFF' }]}
                 textColor="#FFFFFF"
               />
             </View>
-
-            {formData.category_id === categories[1]?.id && ( // SELLING category
-              <View style={styles.kilogramsContainer}>
-                <View style={styles.kilogramsLabel}>
-                  {/* <Image source={} style={styles.kilogramsIcon} /> */}
-                  <Text style={styles.kilogramsTitle}>PRICE</Text>
-                </View>
-
-                <View style={styles.kilogramsInputWrapper}>
-                  <TextInput
-                    underlineColor="transparent"
-                    activeUnderlineColor="transparent"
-                    value={formData.price || ''}
-                    onChangeText={text => setFormData(prev => ({ ...prev, price: text }))}
-                    keyboardType="numeric"
-                    style={[styles.kilogramsInput, { color: '#FFFFFF' }]}
-                    textColor="#FFFFFF"
-                  />
-                </View>
-              </View>
-            )}
           </View>
+
+          {formData.category_id === categories[1]?.id && (
+            <View style={styles.kilogramsContainer}>
+              <View style={styles.kilogramsLabel}>
+                <Text style={styles.kilogramsTitle}>PRICE</Text>
+              </View>
+              <View style={styles.kilogramsInputWrapper}>
+                <TextInput
+                  underlineColor="transparent"
+                  activeUnderlineColor="transparent"
+                  value={formData.price || ''}
+                  onChangeText={text => setFormData(prev => ({ ...prev, price: text }))}
+                  keyboardType="numeric"
+                  style={[styles.kilogramsInput, { color: '#FFFFFF' }]}
+                  textColor="#FFFFFF"
+                />
+              </View>
+            </View>
+          )}
 
           <View style={styles.galleryContainer}>
             <Text style={styles.sectionTitle}>GALLERY</Text>
