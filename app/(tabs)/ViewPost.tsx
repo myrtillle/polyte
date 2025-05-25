@@ -1,6 +1,6 @@
 // ViewPostScreen.tsx
 import React,  { useState, useEffect }  from 'react';
-import { View, Text, StyleSheet, Image, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert  } from 'react-native';
+import { View, Text, StyleSheet, Image, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Modal } from 'react-native';
 import { RouteProp, useFocusEffect } from '@react-navigation/native';
 import { HomeStackParamList, MessagesStackParamList, ProfileStackParamList, RootStackParamList } from '../../types/navigation';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -47,6 +47,10 @@ const ViewPost = () => {
   const [activeTab, setActiveTab] = useState('post');
   const [offers, setOffers] = useState<Offer[]>([]);
   const [successMessage, setSuccessMessage] = useState('');
+  const [previewVisible, setPreviewVisible] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [previewImages, setPreviewImages] = useState<string[]>([]);
+  const [previewIndex, setPreviewIndex] = useState<number>(0);
   
   function formatTimeAgo(dateString: string) {
     const now = new Date();
@@ -709,7 +713,12 @@ const ViewPost = () => {
             activeTab === 'offers' && styles.activeTabButton,
           ]}
         >
-          <Text style={styles.tabText}>
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'offers' && styles.activeTabText,
+            ]}
+          >
             {post?.category_id === 2 ? 'INTERESTED USERS' : 'OFFERS'}
           </Text>
         </TouchableOpacity>
@@ -816,110 +825,199 @@ const ViewPost = () => {
         {post.photos && post.photos.length > 0 && (
           <View style={styles.imagesGridContainer}>
             {post.photos.length === 1 ? (
-              <Image 
-                source={{ uri: post.photos[0] }} 
-                style={styles.singleImage} 
-                resizeMode="cover"
-              />
+              <TouchableOpacity onPress={() => {
+                setPreviewImages(post.photos ?? []);
+                setPreviewIndex(0);
+                setPreviewImage(post.photos?.[0] ?? null);
+                setPreviewVisible(true);
+              }}>
+                <Image 
+                  source={{ uri: post.photos?.[0] }} 
+                  style={styles.singleImage} 
+                  resizeMode="cover"
+                />
+              </TouchableOpacity>
             ) : post.photos.length === 2 ? (
               <View style={styles.twoImagesContainer}>
-                <Image 
-                  source={{ uri: post.photos[0] }} 
-                  style={styles.twoImages} 
-                  resizeMode="cover"
-                />
-                <Image 
-                  source={{ uri: post.photos[1] }} 
-                  style={styles.twoImages} 
-                  resizeMode="cover"
-                />
+                {post.photos?.slice(0, 2).map((uri, idx) => (
+                  <TouchableOpacity key={idx} onPress={() => {
+                    setPreviewImages(post.photos ?? []);
+                    setPreviewIndex(idx);
+                    setPreviewImage(post.photos?.[idx] ?? null);
+                    setPreviewVisible(true);
+                  }} style={{ flex: 1 }}>
+                    <Image 
+                      source={{ uri }} 
+                      style={styles.twoImages} 
+                      resizeMode="cover"
+                    />
+                  </TouchableOpacity>
+                ))}
               </View>
             ) : post.photos.length === 3 ? (
               <View style={styles.threeImagesContainer}>
-                <Image 
-                  source={{ uri: post.photos[0] }} 
-                  style={styles.threeImagesMain} 
-                  resizeMode="cover"
-                />
+                <TouchableOpacity style={{ flex: 1 }} onPress={() => {
+                  setPreviewImages(post.photos ?? []);
+                  setPreviewIndex(0);
+                  setPreviewImage(post.photos?.[0] ?? null);
+                  setPreviewVisible(true);
+                }}>
+                  <Image 
+                    source={{ uri: post.photos?.[0] }} 
+                    style={styles.threeImagesMain} 
+                    resizeMode="cover"
+                  />
+                </TouchableOpacity>
                 <View style={styles.threeImagesRight}>
-                  <Image 
-                    source={{ uri: post.photos[1] }} 
-                    style={styles.threeImagesSub} 
-                    resizeMode="cover"
-                  />
-                  <Image 
-                    source={{ uri: post.photos[2] }} 
-                    style={styles.threeImagesSub} 
-                    resizeMode="cover"
-                  />
+                  {[1,2].map(idx => (
+                    <TouchableOpacity key={idx} style={{ flex: 1 }} onPress={() => {
+                      setPreviewImages(post.photos ?? []);
+                      setPreviewIndex(idx);
+                      setPreviewImage(post.photos?.[idx] ?? null);
+                      setPreviewVisible(true);
+                    }}>
+                      <Image 
+                        source={{ uri: post.photos?.[idx] }} 
+                        style={styles.threeImagesSub} 
+                        resizeMode="cover"
+                      />
+                    </TouchableOpacity>
+                  ))}
                 </View>
               </View>
             ) : post.photos.length === 4 ? (
               <View style={styles.fourImagesContainer}>
                 <View style={styles.fourImagesTop}>
-                  <Image 
-                    source={{ uri: post.photos[0] }} 
-                    style={styles.fourImages} 
-                    resizeMode="cover"
-                  />
-                  <Image 
-                    source={{ uri: post.photos[1] }} 
-                    style={styles.fourImages} 
-                    resizeMode="cover"
-                  />
+                  {[0,1].map(idx => (
+                    <TouchableOpacity key={idx} style={{ flex: 1 }} onPress={() => {
+                      setPreviewImages(post.photos ?? []);
+                      setPreviewIndex(idx);
+                      setPreviewImage(post.photos?.[idx] ?? null);
+                      setPreviewVisible(true);
+                    }}>
+                      <Image 
+                        source={{ uri: post.photos?.[idx] }} 
+                        style={styles.fourImages} 
+                        resizeMode="cover"
+                      />
+                    </TouchableOpacity>
+                  ))}
                 </View>
                 <View style={styles.fourImagesBottom}>
-                  <Image 
-                    source={{ uri: post.photos[2] }} 
-                    style={styles.fourImages} 
-                    resizeMode="cover"
-                  />
-                  <Image 
-                    source={{ uri: post.photos[3] }} 
-                    style={styles.fourImages} 
-                    resizeMode="cover"
-                  />
+                  {[2,3].map(idx => (
+                    <TouchableOpacity key={idx} style={{ flex: 1 }} onPress={() => {
+                      setPreviewImages(post.photos ?? []);
+                      setPreviewIndex(idx);
+                      setPreviewImage(post.photos?.[idx] ?? null);
+                      setPreviewVisible(true);
+                    }}>
+                      <Image 
+                        source={{ uri: post.photos?.[idx] }} 
+                        style={styles.fourImages} 
+                        resizeMode="cover"
+                      />
+                    </TouchableOpacity>
+                  ))}
                 </View>
               </View>
             ) : (
               <View style={styles.manyImagesContainer}>
                 <View style={styles.manyImagesTop}>
-                  <Image 
-                    source={{ uri: post.photos[0] }} 
-                    style={styles.manyImagesMain} 
-                    resizeMode="cover"
-                  />
+                  <TouchableOpacity style={{ flex: 1 }} onPress={() => {
+                    setPreviewImages(post.photos ?? []);
+                    setPreviewIndex(0);
+                    setPreviewImage(post.photos?.[0] ?? null);
+                    setPreviewVisible(true);
+                  }}>
+                    <Image 
+                      source={{ uri: post.photos?.[0] }} 
+                      style={styles.manyImagesMain} 
+                      resizeMode="cover"
+                    />
+                  </TouchableOpacity>
                   <View style={styles.manyImagesRight}>
-                    <Image 
-                      source={{ uri: post.photos[1] }} 
-                      style={styles.manyImagesSub} 
-                      resizeMode="cover"
-                    />
-                    <Image 
-                      source={{ uri: post.photos[2] }} 
-                      style={styles.manyImagesSub} 
-                      resizeMode="cover"
-                    />
+                    {[1,2].map(idx => (
+                      <TouchableOpacity key={idx} style={{ flex: 1 }} onPress={() => {
+                        setPreviewImages(post.photos ?? []);
+                        setPreviewIndex(idx);
+                        setPreviewImage(post.photos?.[idx] ?? null);
+                        setPreviewVisible(true);
+                      }}>
+                        <Image 
+                          source={{ uri: post.photos?.[idx] }} 
+                          style={styles.manyImagesSub} 
+                          resizeMode="cover"
+                        />
+                      </TouchableOpacity>
+                    ))}
                   </View>
                 </View>
                 {post.photos.length > 3 && (
                   <View style={styles.manyImagesBottom}>
-                    <Image 
-                      source={{ uri: post.photos[3] }} 
-                      style={styles.manyImagesBottomImage} 
-                      resizeMode="cover"
-                    />
-                    {post.photos.length > 4 && (
-                      <View style={styles.moreImagesOverlay}>
-                        <Text style={styles.moreImagesText}>+{post.photos.length - 4}</Text>
-                      </View>
-                    )}
+                    <TouchableOpacity style={{ flex: 1 }} onPress={() => {
+                      setPreviewImages(post.photos ?? []);
+                      const lastIdx = (post.photos?.length ?? 1) - 1;
+                      setPreviewIndex(lastIdx);
+                      setPreviewImage(post.photos?.[lastIdx] ?? null);
+                      setPreviewVisible(true);
+                    }}>
+                      {(() => { const lastIdx = (post.photos?.length ?? 1) - 1; return (
+                        <Image 
+                          source={{ uri: post.photos?.[lastIdx] }} 
+                          style={styles.manyImagesBottomImage} 
+                          resizeMode="cover"
+                        />
+                      ); })()}
+                      {post.photos.length > 4 && (
+                        <View style={styles.moreImagesOverlay}>
+                          <Text style={styles.moreImagesText}>+{post.photos.length - 4}</Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
                   </View>
                 )}
               </View>
             )}
           </View>
         )}
+
+        {/* Image Preview Modal */}
+        <Modal
+          visible={previewVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setPreviewVisible(false)}
+        >
+          <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center' }} activeOpacity={1} onPressOut={() => setPreviewVisible(false)}>
+            {previewImages.length > 0 && previewIndex >= 0 && previewIndex < previewImages.length && (
+              <Image source={{ uri: previewImages[previewIndex] }} style={{ width: '90%', height: 300, borderRadius: 12, resizeMode: 'contain' }} />
+            )}
+            {/* Prev Button */}
+            {previewImages.length > 1 && previewIndex > 0 && (
+              <TouchableOpacity onPress={() => {
+                const newIndex = previewIndex - 1;
+                setPreviewIndex(newIndex);
+                setPreviewImage(previewImages[newIndex]);
+              }} style={{ position: 'absolute', left: 20, top: '50%', marginTop: -30, backgroundColor: '#222', borderRadius: 20, padding: 8 }}>
+                <Text style={{ color: 'white', fontSize: 32 }}>{'‹'}</Text>
+              </TouchableOpacity>
+            )}
+            {/* Next Button */}
+            {previewImages.length > 1 && previewIndex < previewImages.length - 1 && (
+              <TouchableOpacity onPress={() => {
+                const newIndex = previewIndex + 1;
+                setPreviewIndex(newIndex);
+                setPreviewImage(previewImages[newIndex]);
+              }} style={{ position: 'absolute', right: 20, top: '50%', marginTop: -30, backgroundColor: '#222', borderRadius: 20, padding: 8 }}>
+                <Text style={{ color: 'white', fontSize: 32 }}>{'›'}</Text>
+              </TouchableOpacity>
+            )}
+            {/* Close Button */}
+            <TouchableOpacity onPress={() => setPreviewVisible(false)} style={{ position: 'absolute', top: 40, right: 30, backgroundColor: '#222', borderRadius: 20, padding: 8 }}>
+              <Text style={{ color: 'white', fontSize: 22 }}>✕</Text>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </Modal>
 
         {/* Action Buttons */}
         {isPostOwner() ? (
@@ -1173,9 +1271,6 @@ const ViewPost = () => {
                           </View>
                         </View>
                       </View>
-                      {offer.images?.[0] && (
-                        <Image source={{ uri: offer.images[0] }} style={styles.offerImageThumbnail} />
-                      )}
                     </View>
 
                     <Text style={styles.offerDescription}>
@@ -1198,6 +1293,15 @@ const ViewPost = () => {
                         </View>
                       ))}
                     </View>
+
+                    {/* Images below TYPE OF PLASTIC row */}
+                    {offer.images && offer.images.length > 0 && (
+                      <View style={{ width: '100%', marginTop: 8, marginBottom: 8 }}>
+                        {offer.images.map((img, i) => (
+                          <Image key={i} source={{ uri: img }} style={{ width: '100%', height: 180, borderRadius: 10, marginBottom: 10 }} />
+                        ))}
+                      </View>
+                    )}
 
                     <View style={styles.offerActionRow}>
                       {/* Action buttons based on owner */}

@@ -326,16 +326,7 @@ const MakeOffer = () => {
 
   return (
     <View style={styles.container}>
-    <View style={styles.headerContainer}>
-      <IconButton
-        icon="arrow-left"
-        size={24}
-        iconColor="white"
-        onPress={() => navigation.goBack()}
-        style={{ position: 'absolute', left: 0 }}
-      />
-      <Text style={styles.headerTitle}>Make Offer</Text>
-    </View>
+ 
 
     <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Plastic Types Selection */}
@@ -451,8 +442,8 @@ const styles = StyleSheet.create({
 
 label: {
   color: 'white',
-  marginTop: 20, // 🆕 gives breathing room between sections
-  marginBottom: 6,
+  marginTop: 10, // 🆕 gives breathing room between sections
+  marginBottom: 2,
   fontWeight: '700',
   fontSize: 16,
   textTransform: 'uppercase',

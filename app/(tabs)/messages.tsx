@@ -184,7 +184,7 @@ export default function MessagesScreen() {
           <Image source={paperplaneIcon} style={styles.headerIcon} />
           <Text style={styles.headerTitle}>MESSAGES</Text>
         </View>
-        <Text style={styles.dots}>⋯</Text>
+        
       </View>
 
 

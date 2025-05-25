@@ -10,6 +10,8 @@ import { profileService } from '@/services/profileService';
 import { Profile } from '../../services/profileService';
 import { MaterialIcons } from '@expo/vector-icons';
 import editIcon from '../../assets/images/edit.png';
+import trashbagIcon from '../../assets/images/trashbag.png';
+import bioIcon from '../../assets/images/bio.png';
 
 
 
@@ -115,37 +117,32 @@ export default function ProfileScreen() {
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
     >
-      <View style={styles.headerBar}>
-        <Text style={styles.headerTitle}>PROFILE</Text>
-      </View>
+
 
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.headerWrapper}>
-          <TouchableOpacity onPress={handleEditProfile}>
-            <Image
-              source={{ 
-                uri: profile?.profile_photo_url || 'https://i.pravatar.cc/100'
-              }}
-              style={styles.profileImage}
-              onError={(e) => {
-                console.error('❌ Image loading error:', e.nativeEvent.error);
-                console.log('📸 Attempted to load image from:', profile?.profile_photo_url);
-              }}
-            />
-          <View style={styles.editIconContainer}>
-            <Image
-              source={editIcon}
-              style={styles.editIconImage}
-              resizeMode="contain"
-            />
-          </View>
-
-          </TouchableOpacity>
+          <Image
+            source={{ 
+              uri: profile?.profile_photo_url || 'https://i.pravatar.cc/100'
+            }}
+            style={styles.profileImage}
+            onError={(e) => {
+              console.error('❌ Image loading error:', e.nativeEvent.error);
+              console.log('📸 Attempted to load image from:', profile?.profile_photo_url);
+            }}
+          />
           <View style={styles.headerTextContainer}>
             <Text style={styles.profileName}>{profile.first_name} {profile.last_name}</Text>
             <Text style={styles.profileLocation}> {profile.purok}, {profile.barangay}</Text>
             <Text style={styles.memberSince}>Member Since: {new Date(profile.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</Text>
           </View>
+          <TouchableOpacity onPress={handleEditProfile} style={styles.editIconContainer}>
+            <Image
+              source={editIcon}
+              style={styles.editIconImage}
+              resizeMode="contain"
+            />
+          </TouchableOpacity>
         </View>
 
         <View style={styles.ratingRow}>
@@ -190,7 +187,7 @@ export default function ProfileScreen() {
             <View style={styles.statBox}>
               <View style={styles.statLabelRow}>
                 <Text style={styles.statLabel}>CARBON EMISSION SAVED</Text>
-                <Text style={styles.statIcon}>♻️</Text>
+                <Image source={bioIcon} style={styles.statIcon} />
               </View>
               <Text style={styles.statValue}>
                 <Text style={styles.co2Emphasis}>{co2Saved.toFixed(2)}</Text> kg of CO2
@@ -199,7 +196,7 @@ export default function ProfileScreen() {
             <View style={styles.statBox}>
               <View style={styles.statLabelRow}>
                 <Text style={styles.statLabel}>KG OF TRASH</Text>
-                <Text style={styles.statIcon}>🧺</Text>
+                <Image source={trashbagIcon} style={styles.statIcon} />
               </View>
               <View style={styles.statRowSplit}>
                 <Text style={styles.statSplit}><Text style={styles.boldText}>DONATED</Text> {collectionStats.donated}</Text>
@@ -224,22 +221,23 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   editIconContainer: {
-  position: 'absolute',
-  bottom: 0,
-  right: 0,
-},
-editIconImage: {
-  width: 28,     // You can resize freely
-  height: 28,
-},
+    marginLeft: 'auto',
+    bottom: undefined,
+    right: undefined,
+  },
+  editIconImage: {
+    width: 28,     // You can resize freely
+    height: 28,
+  },
   statLabelRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   statIcon: {
-    fontSize: 16,
-    color: '#ccc',
+    width: 16,
+    height: 16,
+
   },
 
   ratingRow: {
