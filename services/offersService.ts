@@ -31,6 +31,22 @@ export interface Offer {
     last_name: string;
     profile_photo_url: string;
   };
+  buyer?: {
+    username: string;
+    id: string;
+    email: string;
+    first_name: string;
+    last_name: string;
+    profile_photo_url: string;
+  };
+  seller?: {
+    username: string;
+    id: string;
+    email: string;
+    first_name: string;
+    last_name: string;
+    profile_photo_url: string;
+  };
 }
 
 export interface Schedule {

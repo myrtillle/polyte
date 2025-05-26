@@ -1204,9 +1204,9 @@ const ViewPost = () => {
                     <View key={index} style={styles.offerCard}>
                       <View style={styles.headerRow}>
                         <View style={styles.leftInfo}>
-                          <Image source={{ uri: offer.personal_users?.profile_photo_url || 'https://i.pravatar.cc/36' }} style={styles.offerAvatar} />
+                          <Image source={{ uri: offer.buyer?.profile_photo_url || 'https://i.pravatar.cc/36' }} style={styles.offerAvatar} />
                           <View>
-                            <Text style={styles.offerUserText}>{offer.personal_users?.first_name} {offer.personal_users?.last_name}</Text>
+                            <Text style={styles.offerUserText}>{offer.buyer?.first_name} {offer.buyer?.last_name}</Text>
                             <Text style={styles.offerTimeText}>{formatTimeAgo(offer.created_at)}</Text>
                           </View>
                         </View>
@@ -1242,54 +1242,65 @@ const ViewPost = () => {
                         {/* CASE: Pending → show appropriate buttons based on user role */}
                         {offer.status === 'pending' && (
                           <>
-                            {/* Offerer sees DELETE while still pending */}
-                            {isuserofferer && (
-                              <View>
-                                <TouchableOpacity style={styles.deleteOfferButton} onPress={() => handleDeleteOffer(offer.id)}>
-                                  <Text style={styles.deleteOfferText}>Delete</Text>
-                                </TouchableOpacity>
-                                
-                                <TouchableOpacity style={styles.editOfferButton} onPress={() => handleEditOffer(offer)}>
-                                  <MaterialIcons name="edit" size={22} color="white" />
-                                </TouchableOpacity>
-                              </View>
-
-                            )}
-
-                            {/* Post Owner sees ACCEPT/DECLINE + chat */}
-                            {isUserCollector && (
+                            {/* Only post owner sees actions for selling posts */}
+                            {post?.category_id === 2 ? (
+                              isUserCollector && (
+                                <>
+                                  <TouchableOpacity style={styles.redButton} onPress={() => handleDeclineOffer(offer.id)}>
+                                    <Text style={styles.buttonText}>Decline</Text>
+                                  </TouchableOpacity>
+                                  <TouchableOpacity style={styles.greenButton} onPress={() => handleAcceptOffer(offer)}>
+                                    <Text style={styles.buttonText}>Accept</Text>
+                                  </TouchableOpacity>
+                                  <TouchableOpacity
+                                    style={styles.iconButton}
+                                    onPress={() =>
+                                      handleChatWithUser(
+                                        currentUser?.id === offer.buyer_id ? offer.seller_id : offer.buyer_id
+                                      )
+                                    }
+                                  >
+                                    <Image source={require('../../assets/images/paperplane.png')} style={styles.sendIcon} />
+                                  </TouchableOpacity>
+                                  <TouchableOpacity style={styles.iconButton}>
+                                    <Text style={styles.moreOptionsText}>⋮</Text>
+                                  </TouchableOpacity>
+                                </>
+                              )
+                            ) : (
+                              // For seeking posts, keep old logic
                               <>
-                                <TouchableOpacity style={styles.redButton} onPress={() => handleDeclineOffer(offer.id)}>
-                                  <Text style={styles.buttonText}>Decline</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity style={styles.greenButton} onPress={() => handleAcceptOffer(offer)}>
-                                  <Text style={styles.buttonText}>Accept</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                  style={styles.iconButton}
-                                  onPress={() =>
-                                    handleChatWithUser(
-                                      currentUser?.id === offer.buyer_id ? offer.seller_id : offer.buyer_id
-                                    )
-                                  }
-                                >
-                                  <Image source={require('../../assets/images/paperplane.png')} style={styles.sendIcon} />
-                                </TouchableOpacity>
-                                <TouchableOpacity style={styles.iconButton}>
-                                  <Text style={styles.moreOptionsText}>⋮</Text>
-                                </TouchableOpacity>
+                                {isuserofferer && (
+                                  <TouchableOpacity style={styles.deleteOfferButton} onPress={() => handleDeleteOffer(offer.id)}>
+                                    <Text style={styles.deleteOfferText}>Delete</Text>
+                                  </TouchableOpacity>
+                                )}
+                                {isUserCollector && (
+                                  <>
+                                    <TouchableOpacity style={styles.redButton} onPress={() => handleDeclineOffer(offer.id)}>
+                                      <Text style={styles.buttonText}>Decline</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity style={styles.greenButton} onPress={() => handleAcceptOffer(offer)}>
+                                      <Text style={styles.buttonText}>Accept</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={styles.iconButton}
+                                        onPress={() =>
+                                          handleChatWithUser(
+                                            currentUser?.id === offer.buyer_id ? offer.seller_id : offer.buyer_id
+                                          )
+                                        }
+                                      >
+                                      <Image source={require('../../assets/images/paperplane.png')} style={styles.sendIcon} />
+                                    </TouchableOpacity>
+                                    <TouchableOpacity style={styles.iconButton}>
+                                      <Text style={styles.moreOptionsText}>⋮</Text>
+                                    </TouchableOpacity>
+                                  </>
+                                )}
                               </>
                             )}
                           </>
-                        )}
-
-                        {/* CASE: Neither post owner nor offer owner - just show status */}
-                        {!isUserCollector && !isuserofferer && (
-                          <View style={[styles.fullGreenButton, { backgroundColor: '#6c757d' }]}>
-                            <Text style={[styles.fullButtonTextinoffers, { color: '#ccc' }]}>
-                              {offer?.status?.toUpperCase()}
-                            </Text>
-                          </View>
                         )}
                       </View>
                     </View>
@@ -1302,9 +1313,9 @@ const ViewPost = () => {
                     <View style={{ position: 'relative' }}>
                       <View style={styles.headerRow}>
                         <View style={styles.leftInfo}>
-                          <Image source={{ uri: offer.personal_users?.profile_photo_url || 'https://i.pravatar.cc/36' }} style={styles.offerAvatar} />
+                          <Image source={{ uri: offer.seller?.profile_photo_url || 'https://i.pravatar.cc/36' }} style={styles.offerAvatar} />
                           <View>
-                            <Text style={styles.offerUserText}>{offer.personal_users?.first_name} {offer.personal_users?.last_name}</Text>
+                            <Text style={styles.offerUserText}>{offer.seller?.first_name} {offer.seller?.last_name}</Text>
                             <Text style={styles.offerTimeText}>{formatTimeAgo(offer.created_at)}</Text>
                           </View>
                         </View>
@@ -1359,23 +1370,17 @@ const ViewPost = () => {
                       {/* CASE: Pending → show appropriate buttons based on user role */}
                       {offer.status === 'pending' && (
                         <>
-                          {/* Offerer sees DELETE while still pending */}
-                          {isuserofferer && (
-                            <TouchableOpacity style={styles.deleteOfferButton} onPress={() => handleDeleteOffer(offer.id)}>
-                              <Text style={styles.deleteOfferText}>Delete</Text>
-                            </TouchableOpacity>
-                          )}
-
-                          {/* Post Owner sees ACCEPT/DECLINE + chat */}
-                          {isUserCollector && (
-                            <>
-                              <TouchableOpacity style={styles.redButton} onPress={() => handleDeclineOffer(offer.id)}>
-                                <Text style={styles.buttonText}>Decline</Text>
-                              </TouchableOpacity>
-                              <TouchableOpacity style={styles.greenButton} onPress={() => handleAcceptOffer(offer)}>
-                                <Text style={styles.buttonText}>Accept</Text>
-                              </TouchableOpacity>
-                              <TouchableOpacity
+                          {/* Only post owner sees actions for selling posts */}
+                          {post?.category_id === 2 ? (
+                            isUserCollector && (
+                              <>
+                                <TouchableOpacity style={styles.redButton} onPress={() => handleDeclineOffer(offer.id)}>
+                                  <Text style={styles.buttonText}>Decline</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={styles.greenButton} onPress={() => handleAcceptOffer(offer)}>
+                                  <Text style={styles.buttonText}>Accept</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
                                   style={styles.iconButton}
                                   onPress={() =>
                                     handleChatWithUser(
@@ -1383,23 +1388,47 @@ const ViewPost = () => {
                                     )
                                   }
                                 >
-                                <Image source={require('../../assets/images/paperplane.png')} style={styles.sendIcon} />
-                              </TouchableOpacity>
-                              <TouchableOpacity style={styles.iconButton}>
-                                <Text style={styles.moreOptionsText}>⋮</Text>
-                              </TouchableOpacity>
+                                  <Image source={require('../../assets/images/paperplane.png')} style={styles.sendIcon} />
+                                </TouchableOpacity>
+                                <TouchableOpacity style={styles.iconButton}>
+                                  <Text style={styles.moreOptionsText}>⋮</Text>
+                                </TouchableOpacity>
+                              </>
+                            )
+                          ) : (
+                            // For seeking posts, keep old logic
+                            <>
+                              {isuserofferer && (
+                                <TouchableOpacity style={styles.deleteOfferButton} onPress={() => handleDeleteOffer(offer.id)}>
+                                  <Text style={styles.deleteOfferText}>Delete</Text>
+                                </TouchableOpacity>
+                              )}
+                              {isUserCollector && (
+                                <>
+                                  <TouchableOpacity style={styles.redButton} onPress={() => handleDeclineOffer(offer.id)}>
+                                    <Text style={styles.buttonText}>Decline</Text>
+                                  </TouchableOpacity>
+                                  <TouchableOpacity style={styles.greenButton} onPress={() => handleAcceptOffer(offer)}>
+                                    <Text style={styles.buttonText}>Accept</Text>
+                                  </TouchableOpacity>
+                                  <TouchableOpacity
+                                      style={styles.iconButton}
+                                      onPress={() =>
+                                        handleChatWithUser(
+                                          currentUser?.id === offer.buyer_id ? offer.seller_id : offer.buyer_id
+                                        )
+                                      }
+                                    >
+                                    <Image source={require('../../assets/images/paperplane.png')} style={styles.sendIcon} />
+                                  </TouchableOpacity>
+                                  <TouchableOpacity style={styles.iconButton}>
+                                    <Text style={styles.moreOptionsText}>⋮</Text>
+                                  </TouchableOpacity>
+                                </>
+                              )}
                             </>
                           )}
                         </>
-                      )}
-
-                      {/* CASE: Neither post owner nor offer owner - just show status */}
-                      {!isUserCollector && !isuserofferer && (
-                        <View style={[styles.fullGreenButton, { backgroundColor: '#6c757d' }]}>
-                          <Text style={[styles.fullButtonTextinoffers, { color: '#ccc' }]}>
-                            {offer?.status?.toUpperCase()}
-                          </Text>
-                        </View>
                       )}
                     </View>
                   </View>
