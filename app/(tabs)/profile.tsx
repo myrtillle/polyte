@@ -27,7 +27,7 @@ export default function ProfileScreen() {
   const [collectionStats, setCollectionStats] = useState({ collected: 0, donated: 0 });
   const [userId, setUserId] = useState<string | null>(null);
 
-  const co2Saved = collectionStats.donated * 1.5;
+  const co2Saved = collectionStats.donated * 1.02;
 
   const renderStars = (rating: number) => {
     const fullStars = Math.floor(rating);
@@ -176,7 +176,7 @@ export default function ProfileScreen() {
             <Text style={styles.actionButtonTextMP}>My Posts</Text>
           </TouchableOpacity>
           <View style={{ width: 12 }} />
-          <TouchableOpacity style={[styles.actionButton, styles.transacHistButton, styles.halfButton]} onPress={() => profileNavigation.navigate('TransacHist')}>
+          <TouchableOpacity style={[styles.actionButton, styles.transacHistButton, styles.halfButton]} onPress={() => profileNavigation.navigate('TransacHist', { initialTab: 'Done' })}>
             <Text style={styles.actionButtonTextTH}>Transaction History</Text>
           </TouchableOpacity>
         </View>

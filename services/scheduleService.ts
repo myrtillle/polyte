@@ -2,18 +2,21 @@ import { supabase } from './supabase';
 import { notificationService } from './notificationService';
 
 export const scheduleService = {
-    // ✅ Create schedule when post owner accepts an offer
-    async createSchedule(offerId: string, postId: string, userId: string, date: string, time: string) {
+    // Create schedule when post owner accepts an offer
+    async createSchedule(offerId: string, postId: string, offererId: string, collectorId: string, date: string, time: string) {
       const { data: offer, error: offerError } = await supabase.from('offer_schedules').insert([
         {
           offer_id: offerId,
           post_id: postId,
-          user_id: userId,
+          offerer_id: offererId,
+          collector_id: collectorId,
           scheduled_date: date,
           scheduled_time: time,
           status: 'pending'
         }
-      ]);
+      ])
+      .select()
+      .single();
 
       if (offerError) throw offerError;
 
@@ -25,7 +28,28 @@ export const scheduleService = {
     async getScheduleByOffer(offerId: string) {
       const { data, error } = await supabase
         .from('offer_schedules')
-        .select('*')
+        .select(`
+          *,
+          offers(
+            *,
+            buyer:buyer_id (
+              username,
+              id,
+              email,
+              first_name,
+              last_name,
+              profile_photo_url
+            ),
+            seller:seller_id (
+              username,
+              id,
+              email,
+              first_name,
+              last_name,
+              profile_photo_url
+            )
+          )
+        `)
         .eq('offer_id', offerId)
         .single();
   

@@ -9,7 +9,8 @@ import { v4 as uuidv4 } from 'uuid';
 export interface Offer {
   id: string;
   post_id: string;
-  user_id: string;
+  buyer_id: string;
+  seller_id: string;
   offered_items: string[];
   offered_weight: number;
   requested_weight: number;
@@ -23,10 +24,13 @@ export interface Offer {
   }>;
   created_at: string;
   personal_users?: {
+    username: string;
+    id: string;
+    email: string;
     first_name: string;
     last_name: string;
     profile_photo_url: string;
-  }
+  };
 }
 
 export interface Schedule {
@@ -35,16 +39,15 @@ export interface Schedule {
   status: string;
   scheduled_time: string;
   scheduled_date: string;
-  collectorName: string;
-  offererName: string;
-  photoUrl: string | '';
+  photoUrl: string; // standardized to camelCase
   purok: string;
   barangay: string;
-  user_id: string; 
-  photo_url?: string;
-  offerer_name?: string;
-  collector_name?: string;
+  collector_id: string;
+  offerer_id: string;
+  collectorName: string;
+  offererName: string;
 }
+
 
 export const createOffer = async (offerData: Offer) => {
   const { error } = await supabase.from('offers').insert([offerData]);
@@ -62,11 +65,21 @@ export const getOffersByPost = async (postId: string) => {
     .from('offers')
     .select(`
       *,
-      personal_users (
+      buyer:buyer_id (
+        username,
         id,
         email,
         first_name,
-        last_name
+        last_name,
+        profile_photo_url
+      ),
+      seller:seller_id (
+        username,
+        id,
+        email,
+        first_name,
+        last_name,
+        profile_photo_url
       )
     `)
     .eq('post_id', postId)
@@ -77,14 +90,37 @@ export const getOffersByPost = async (postId: string) => {
     throw new Error(error.message);
   }
 
-  return data;
+  // Normalize images and flatten buyer/seller
+  return data.map(offer => {
+    let parsedImages = offer.images;
+    if (typeof offer.images === 'string') {
+      try {
+        parsedImages = JSON.parse(offer.images);
+      } catch (e) {
+        console.error("❌ Error parsing offer images:", e);
+        parsedImages = [];
+      }
+    }
+
+    if (!Array.isArray(parsedImages)) {
+      parsedImages = [];
+    }
+
+    return {
+      ...offer,
+      images: parsedImages,
+      buyer: offer.buyer || null,
+      seller: offer.seller || null,
+    };
+  });
 };
+
 
 export const getUserOffers = async (userId: string) => {
   const { data, error } = await supabase
     .from('offers')
     .select('*')
-    .eq('user_id', userId)
+    .eq('offerer_id', userId)
     .order('created_at', { ascending: false });
 
   if (error) {

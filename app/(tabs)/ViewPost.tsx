@@ -98,7 +98,6 @@ const ViewPost = () => {
       // ✅ Fetch offers for this post
       const fetchedOffers = await getOffersByPost(postId);
       setOffers(fetchedOffers);
-  
     } catch (error) {
       console.error("❌ Error fetching post and offers:", error);
     }
@@ -292,6 +291,8 @@ const ViewPost = () => {
   
   const handleDeclineOffer = async (offerId: string) => {
     try {
+      console.log("❌ Attempting to decline offer:", offerId);
+      
       const { error } = await supabase
         .from("offers")
         .update({ status: 'declined' })
@@ -299,16 +300,18 @@ const ViewPost = () => {
 
       if (error) throw error;
 
-      console.log("✅ Offer declined successfully");
-      setOffers((prev) => prev.map((offer) => 
-        offer.id === offerId ? { ...offer, status: 'declined' } : offer
-      ));
+      console.log("✅ Offer declined successfully:", offerId);
+      setOffers((prev) => prev.map((offer) => {
+        console.log(`Updating offer ${offer.id} status:`, offer.status);
+        return offer.id === offerId ? { ...offer, status: 'declined' } : offer;
+      }));
 
       // Send notification to the offerer
       const declinedOffer = offers.find(o => o.id === offerId);
       if (declinedOffer) {
+        console.log("📬 Sending decline notification to user:", declinedOffer.buyer_id);
         await notificationService.sendNotification(
-          declinedOffer.user_id,
+          declinedOffer.buyer_id,
           'Offer Declined',
           'Your offer has been declined by the post owner.',
           'offer_declined',
@@ -331,7 +334,11 @@ const ViewPost = () => {
       return;
     }
 
-    console.log("✅ Accepting offer, navigating to ScheduleOffer:", offer);
+    console.log("✅ Accepting offer:", {
+      offerId: offer.id,
+      currentStatus: offer.status,
+      postId: post.id
+    });
 
     navigation.navigate("ScheduleOffer", { offer, post });
   };
@@ -391,29 +398,25 @@ const ViewPost = () => {
   };    
 
   const isUserOfferer = (offer: Offer) => {
-    if (!currentUser || !post) return false;
-    // For SEEKING posts (category_id === 1), offerer is the user who made the offer
-    // For SELLING posts (category_id === 2), offerer is the post owner
-    const offererId = post.category_id === 1 ? offer.user_id : post.user_id;
-    return currentUser.id === offererId;
-  };
+    if (!currentUser) return false;
+    return currentUser.id === offer.seller_id;
+  };  
   
   const isUserCollector = (offer: Offer) => {
-    if (!currentUser || !post) return false;
-    // For SEEKING posts (category_id === 1), collector is the post owner
-    // For SELLING posts (category_id === 2), collector is the user who made the offer
-    const collectorId = post.category_id === 1 ? post.user_id : offer.user_id;
-    return currentUser.id === collectorId;
-  };
+    if (!currentUser) return false;
+    return currentUser.id === offer.buyer_id;
+  };   
   
   const isActualPostOwner = () => {
+    console.log(`Checking if ${currentUser?.id} is owner of post ${post?.id}: ${post?.user_id === currentUser?.id}`);
     return currentUser?.id === post?.user_id;
   };
   
-  const isOfferOwner = (offer: Offer) => {
-    console.log(`Checking if ${currentUser?.id} is owner of offer ${offer.id}: ${offer.user_id === currentUser?.id}`);
-    return offer.user_id === currentUser?.id;
-  };
+  const isOfferer = (offer: Offer) => {
+    const isOfferer = offer.seller_id === currentUser?.id; // assuming seller initiates the offer
+    console.log(`Checking if ${currentUser?.id} is the offerer (seller) of offer ${offer.id}: ${isOfferer}`);
+    return isOfferer;
+  };  
   
   const isPostOwner = () => {
     console.log(`Checking if ${currentUser?.id} is owner of post ${post?.id}: ${post?.user_id === currentUser?.id}`);
@@ -441,7 +444,8 @@ const ViewPost = () => {
         .insert([
           {
             post_id: post.id,
-            user_id: currentUser.id,
+            buyer_id: currentUser.id, // For selling posts, current user is buyer
+            seller_id: post.user_id,  // For selling posts, post owner is seller
             offered_items: [],
             offered_weight: 0,
             requested_weight: 0,
@@ -451,7 +455,7 @@ const ViewPost = () => {
             status: 'pending',
           },
         ])
-        .select(); // fetch inserted data if needed
+        .select();
   
       if (error) {
         console.error('❌ Failed to register interest:', error.message);
@@ -489,6 +493,7 @@ const ViewPost = () => {
   };
   
   const isOfferAccepted = (offer: Offer) => {
+    console.log(`🔍 Checking if offer ${offer.id} is accepted:`, offer.status === 'accepted');
     return offer.status === 'accepted';
   };
 
@@ -504,7 +509,7 @@ const ViewPost = () => {
         .from('offers')
         .select('id')
         .eq('post_id', post.id)
-        .eq('user_id', currentUser.id);
+        .eq('seller_id', currentUser.id); // For seeking posts, current user is seller
 
       if (error) {
         console.error("Error checking existing offers:", error);
@@ -518,10 +523,12 @@ const ViewPost = () => {
           "You have already made an offer for this post. You can edit your existing offer instead.",
           [
             { text: "Cancel", style: "cancel" },
-            { 
-              text: "Edit Offer", 
+            {
+              text: "Edit Offer",
               onPress: () => {
-                const existingOffer = offers.find(o => o.user_id === currentUser.id);
+                const existingOffer = offers.find(
+                  o => o.seller_id === currentUser.id
+                );
                 if (existingOffer) {
                   handleEditOffer(existingOffer);
                 }
@@ -531,6 +538,7 @@ const ViewPost = () => {
         );
         return;
       }
+      
 
       // If no existing offer, proceed to make offer screen
       if (!post?.post_item_types?.length) {
@@ -546,7 +554,7 @@ const ViewPost = () => {
 
   const hasUserShownInterest = () => {
     if (!currentUser?.id || !offers) return false;
-    return offers.some(offer => offer.user_id === currentUser.id);
+    return offers.some(offer => offer.buyer_id === currentUser.id); // For selling posts, check if current user is buyer
   };
 
   // both post & offers are fetched on mount
@@ -609,9 +617,10 @@ const ViewPost = () => {
     console.log("Current User ID:", currentUser?.id);
     console.log("Post Owner ID:", post?.user_id);
     offers.forEach((offer) => {
-      console.log(`Offer ID: ${offer.id}, Made By User ID: ${offer.user_id}`);
+      console.log(`Offer ID: ${offer.id}, Buyer ID: ${offer.buyer_id}, Seller ID: ${offer.seller_id}`);
     });
   }, [currentUser, offers]);
+  
   
   useEffect(() => {
     if (activeTab === 'offers' && offers.length === 0) {
@@ -1020,7 +1029,7 @@ const ViewPost = () => {
         </Modal>
 
         {/* Action Buttons */}
-        {isPostOwner() ? (
+        {isActualPostOwner() ? (
           <View style={styles.actionRow}>
             <TouchableOpacity
               style={styles.fullButton}
@@ -1077,7 +1086,7 @@ const ViewPost = () => {
           </View>
         ) : (
           <View style={styles.actionRow}>
-            {!isPostOwner() && (
+            {!isActualPostOwner() && (
               <>
                 <TouchableOpacity style={styles.fullButton} onPress={handleSendMessage}>
                   <Image source={require('../../assets/images/messagebubble.png')} style={styles.buttonIcon} />
@@ -1175,9 +1184,19 @@ const ViewPost = () => {
               </Text>
             ) : (
               offers.map((offer, index) => {
-                const isuserofferer = isOfferOwner(offer);
-                const isUserCollector= isPostOwner();
+                const isuserofferer = isUserOfferer(offer);
+                const isUserCollector = isActualPostOwner();
                 const isAccepted = isOfferAccepted(offer);
+
+                console.log(`📊 Offer ${offer.id} status check:`, {
+                  offerId: offer.id,
+                  status: offer.status,
+                  isAccepted,
+                  isUserOfferer: isuserofferer,
+                  isUserCollector,
+                  userId: currentUser?.id,
+                  postOwnerId: post?.user_id
+                });
 
                 if (post?.category_id === 2) {
                   // Selling Post - INTERESTED USERS layout
@@ -1206,47 +1225,66 @@ const ViewPost = () => {
                       )}
                       
                       <View style={styles.offerActionRow}>
-                        {/* ✅ CASE: Accepted → show SEE DETAILS to both offerer and post owner */}
-                        {offer.status === 'accepted' && (isuserofferer || isActualPostOwner()) && (
+                        {/* CASE: Accepted → show SEE DETAILS to both offerer and post owner */}
+                        {offer.status === 'accepted' && (
                           <TouchableOpacity style={styles.fullGreenButton} onPress={() => handleSeeDetails(offer)}>
                             <Text style={styles.fullButtonTextinoffers}>See details</Text>
                           </TouchableOpacity>
                         )}
 
-                        {/* ✅ CASE: Declined → show DISABLED "Declined" button to both offerer and post owner */}
-                        {offer.status === 'declined' && (isuserofferer || isActualPostOwner()) && (
+                        {/* CASE: Declined → show DISABLED "Declined" button */}
+                        {offer.status === 'declined' && (
                           <View style={[styles.fullGreenButton, { backgroundColor: '#6c757d' }]}>
                             <Text style={[styles.fullButtonTextinoffers, { color: '#ccc' }]}>Declined</Text>
                           </View>
                         )}
 
-                        {/* ✅ CASE: Offerer sees DELETE while still pending */}
-                        {offer.status === 'pending' && isuserofferer && (
-                          <TouchableOpacity style={styles.deleteOfferButton} onPress={() => handleDeleteOffer(offer.id)}>
-                            <Text style={styles.deleteOfferText}>Delete</Text>
-                          </TouchableOpacity>
-                        )}
-
-                        {/* ✅ CASE: Post Owner sees ACCEPT/DECLINE + chat */}
-                        {offer.status === 'pending' && isUserCollector&& (
+                        {/* CASE: Pending → show appropriate buttons based on user role */}
+                        {offer.status === 'pending' && (
                           <>
-                            <TouchableOpacity style={styles.redButton} onPress={() => handleDeclineOffer(offer.id)}>
-                              <Text style={styles.buttonText}>Decline</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.greenButton} onPress={() => handleAcceptOffer(offer)}>
-                              <Text style={styles.buttonText}>Accept</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.iconButton} onPress={() => handleChatWithUser(offer.user_id)}>
-                              <Image source={require('../../assets/images/paperplane.png')} style={styles.sendIcon} />
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.iconButton}>
-                              <Text style={styles.moreOptionsText}>⋮</Text>
-                            </TouchableOpacity>
+                            {/* Offerer sees DELETE while still pending */}
+                            {isuserofferer && (
+                              <View>
+                                <TouchableOpacity style={styles.deleteOfferButton} onPress={() => handleDeleteOffer(offer.id)}>
+                                  <Text style={styles.deleteOfferText}>Delete</Text>
+                                </TouchableOpacity>
+                                
+                                <TouchableOpacity style={styles.editOfferButton} onPress={() => handleEditOffer(offer)}>
+                                  <MaterialIcons name="edit" size={22} color="white" />
+                                </TouchableOpacity>
+                              </View>
+
+                            )}
+
+                            {/* Post Owner sees ACCEPT/DECLINE + chat */}
+                            {isUserCollector && (
+                              <>
+                                <TouchableOpacity style={styles.redButton} onPress={() => handleDeclineOffer(offer.id)}>
+                                  <Text style={styles.buttonText}>Decline</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={styles.greenButton} onPress={() => handleAcceptOffer(offer)}>
+                                  <Text style={styles.buttonText}>Accept</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                  style={styles.iconButton}
+                                  onPress={() =>
+                                    handleChatWithUser(
+                                      currentUser?.id === offer.buyer_id ? offer.seller_id : offer.buyer_id
+                                    )
+                                  }
+                                >
+                                  <Image source={require('../../assets/images/paperplane.png')} style={styles.sendIcon} />
+                                </TouchableOpacity>
+                                <TouchableOpacity style={styles.iconButton}>
+                                  <Text style={styles.moreOptionsText}>⋮</Text>
+                                </TouchableOpacity>
+                              </>
+                            )}
                           </>
                         )}
 
-                        {/* New case: Neither post owner nor offer owner - just show status */}
-                        {!isUserCollector&& !isuserofferer && (
+                        {/* CASE: Neither post owner nor offer owner - just show status */}
+                        {!isUserCollector && !isuserofferer && (
                           <View style={[styles.fullGreenButton, { backgroundColor: '#6c757d' }]}>
                             <Text style={[styles.fullButtonTextinoffers, { color: '#ccc' }]}>
                               {offer?.status?.toUpperCase()}
@@ -1304,54 +1342,59 @@ const ViewPost = () => {
                     )}
 
                     <View style={styles.offerActionRow}>
-                      {/* Action buttons based on owner */}
-                      {isUserCollector&& isuserofferer && (
-                        <>
-                          <TouchableOpacity style={styles.deleteOfferButton} onPress={() => handleDeleteOffer(offer.id)}>
-                            <Text style={styles.deleteOfferText}>Delete</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity style={styles.editOfferButton} onPress={() => handleEditOffer(offer)}>
-                            <MaterialIcons name="edit" size={22} color="white" />
-                          </TouchableOpacity>
-                        </>
-                      )}
-
-                      {!isUserCollector&& isuserofferer && offer.status === 'pending' && (
-                        <>
-                          <TouchableOpacity style={styles.deleteOfferButton} onPress={() => handleDeleteOffer(offer.id)}>
-                            <Text style={styles.deleteOfferText}>Delete</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity style={styles.editOfferButton} onPress={() => handleEditOffer(offer)}>
-                            <MaterialIcons name="edit" size={22} color="white" />
-                          </TouchableOpacity>
-                        </>
-                      )}
-
-                      {!isUserCollector&& isuserofferer && offer.status !== 'pending' && (
+                      {/* CASE: Accepted → show SEE DETAILS to both offerer and post owner */}
+                      {offer.status === 'accepted' && (
                         <TouchableOpacity style={styles.fullGreenButton} onPress={() => handleSeeDetails(offer)}>
                           <Text style={styles.fullButtonTextinoffers}>See details</Text>
                         </TouchableOpacity>
                       )}
 
-                      {isUserCollector&& !isuserofferer && (
+                      {/* CASE: Declined → show DISABLED "Declined" button */}
+                      {offer.status === 'declined' && (
+                        <View style={[styles.fullGreenButton, { backgroundColor: '#6c757d' }]}>
+                          <Text style={[styles.fullButtonTextinoffers, { color: '#ccc' }]}>Declined</Text>
+                        </View>
+                      )}
+
+                      {/* CASE: Pending → show appropriate buttons based on user role */}
+                      {offer.status === 'pending' && (
                         <>
-                          <TouchableOpacity style={styles.redButton} onPress={() => handleDeclineOffer(offer.id)}>
-                            <Text style={styles.buttonText}>Decline</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity style={styles.greenButton} onPress={() => handleAcceptOffer(offer)}>
-                            <Text style={styles.buttonText}>Accept</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity style={styles.iconButton} onPress={() => handleChatWithUser(offer.user_id)}>
-                            <Image source={require('../../assets/images/paperplane.png')} style={styles.sendIcon} />
-                          </TouchableOpacity>
-                          <TouchableOpacity style={styles.iconButton}>
-                            <Text style={styles.moreOptionsText}>⋮</Text>
-                          </TouchableOpacity>
+                          {/* Offerer sees DELETE while still pending */}
+                          {isuserofferer && (
+                            <TouchableOpacity style={styles.deleteOfferButton} onPress={() => handleDeleteOffer(offer.id)}>
+                              <Text style={styles.deleteOfferText}>Delete</Text>
+                            </TouchableOpacity>
+                          )}
+
+                          {/* Post Owner sees ACCEPT/DECLINE + chat */}
+                          {isUserCollector && (
+                            <>
+                              <TouchableOpacity style={styles.redButton} onPress={() => handleDeclineOffer(offer.id)}>
+                                <Text style={styles.buttonText}>Decline</Text>
+                              </TouchableOpacity>
+                              <TouchableOpacity style={styles.greenButton} onPress={() => handleAcceptOffer(offer)}>
+                                <Text style={styles.buttonText}>Accept</Text>
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                  style={styles.iconButton}
+                                  onPress={() =>
+                                    handleChatWithUser(
+                                      currentUser?.id === offer.buyer_id ? offer.seller_id : offer.buyer_id
+                                    )
+                                  }
+                                >
+                                <Image source={require('../../assets/images/paperplane.png')} style={styles.sendIcon} />
+                              </TouchableOpacity>
+                              <TouchableOpacity style={styles.iconButton}>
+                                <Text style={styles.moreOptionsText}>⋮</Text>
+                              </TouchableOpacity>
+                            </>
+                          )}
                         </>
                       )}
 
-                      {/* New case: Neither post owner nor offer owner - just show status */}
-                      {!isUserCollector&& !isuserofferer && (
+                      {/* CASE: Neither post owner nor offer owner - just show status */}
+                      {!isUserCollector && !isuserofferer && (
                         <View style={[styles.fullGreenButton, { backgroundColor: '#6c757d' }]}>
                           <Text style={[styles.fullButtonTextinoffers, { color: '#ccc' }]}>
                             {offer?.status?.toUpperCase()}

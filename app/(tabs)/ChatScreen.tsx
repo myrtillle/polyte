@@ -55,8 +55,22 @@ const ChatScreen = () => {
     const [newDate, setNewDate] = useState<string>(schedule?.scheduled_date || '');
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showTimePicker, setShowTimePicker] = useState(false);
-    const [selectedDate, setSelectedDate] = useState(new Date());
-    const [selectedTime, setSelectedTime] = useState(new Date());
+    const [selectedDate, setSelectedDate] = useState(() => {
+        if (schedule?.scheduled_date) {
+            const [year, month, day] = schedule.scheduled_date.split('-').map(Number);
+            return new Date(year, month - 1, day);
+        }
+        return new Date();
+    });
+    const [selectedTime, setSelectedTime] = useState(() => {
+        if (schedule?.scheduled_time) {
+            const [hours, minutes] = schedule.scheduled_time.split(':').map(Number);
+            const date = new Date();
+            date.setHours(hours, minutes);
+            return date;
+        }
+        return new Date();
+    });
     const [receiverName, setReceiverName] = useState<string>('');
     const [address, setAddress] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
@@ -127,49 +141,54 @@ const ChatScreen = () => {
           const userA = chatData.user1_id;
           const userB = chatData.user2_id;
     
-          // Step 2: Find matching pending offer_schedules
+          console.log('🔍 User A:', userA);
+          console.log('🔍 User B:', userB);
+    
+          // Step 2: Fetch all pending offer_schedules with embedded user names
           const { data: schedules, error: scheduleErr } = await supabase
             .from('offer_schedules')
-            .select('*')
+            .select(`
+              *,
+              collector:collector_id (
+                id,
+                first_name,
+                last_name
+              ),
+              offerer:offerer_id (
+                id,
+                first_name,
+                last_name
+              )
+            `)
             .eq('status', 'pending');
-
-            console.log('📦 All offer_schedules:', schedules);
     
           if (scheduleErr || !schedules?.length) {
             console.warn('⛔ No pending schedules found');
             return;
           }
     
+          // Step 3: Find a matching schedule based on collector & offerer IDs
           for (const sched of schedules) {
-            const { data: postData, error: postErr } = await supabase
-              .from('posts')
-              .select('user_id')
-              .eq('id', sched.post_id)
-              .single();
-    
-            if (postErr || !postData) continue;
-    
-            const isCollector = [userA, userB].includes(sched.user_id);
-            const isOfferer = [userA, userB].includes(postData.user_id);
+            const isCollector = [userA, userB].includes(sched.collector_id);
+            const isOfferer = [userA, userB].includes(sched.offerer_id);
     
             if (isCollector && isOfferer) {
-              // Step 3: Get names of collector and offerer
-              const [collectorProfile, offererProfile] = await Promise.all([
-                supabase.from('personal_users').select('first_name, last_name').eq('id', sched.user_id).single(),
-                supabase.from('personal_users').select('first_name, last_name').eq('id', postData.user_id).single(),
-              ]);
-    
               const hydrated = {
                 id: sched.id,
                 scheduled_time: sched.scheduled_time,
                 scheduled_date: sched.scheduled_date,
                 status: sched.status,
                 photoUrl: sched.photo_url || '',
-                collectorName: collectorProfile.data ? `${collectorProfile.data.first_name} ${collectorProfile.data.last_name}` : 'Collector',
-                offererName: offererProfile.data ? `${offererProfile.data.first_name} ${offererProfile.data.last_name}` : 'Offerer',
-                purok: '',
-                barangay: '',
-                user_id: sched.user_id,
+                collectorName: sched.collector
+                  ? `${sched.collector.first_name} ${sched.collector.last_name}`
+                  : 'Collector',
+                offererName: sched.offerer
+                  ? `${sched.offerer.first_name} ${sched.offerer.last_name}`
+                  : 'Offerer',
+                purok: '',       // optional if not embedded yet
+                barangay: '',    // optional if not embedded yet
+                collector_id: sched.collector_id,
+                offerer_id: sched.offerer_id,
                 offer_id: sched.offer_id,
               };
     
@@ -188,6 +207,7 @@ const ChatScreen = () => {
       hydrateScheduleUsingChatId();
     }, [chatId, schedule]);
     
+    
     // console.log("🧩 ChatScreen mounted — chatId:", chatId, "schedule:", schedule);
 
     useEffect(() => {
@@ -195,7 +215,7 @@ const ChatScreen = () => {
     }, [chatId, schedule]);
     
     
-    const handleSend = async () => {
+  const handleSend = async () => {
     console.log("Send button clicked");
     console.log("chatId:", chatId, "userId:", userId, "newMessage:", newMessage);
     
@@ -211,7 +231,7 @@ const ChatScreen = () => {
         // ✅ Case 1: If schedule is available (from a transaction)
         if (schedule) {
           try {
-            const postOwnerId = schedule.user_id;
+            const postOwnerId = schedule.collector_id;
             if (!postOwnerId) {
               console.error("❌ No user_id found in schedule");
               Alert.alert("Error", "Could not determine message recipient. Please try again.");
@@ -219,19 +239,13 @@ const ChatScreen = () => {
             }
 
             if (userId === postOwnerId) {
-              console.log("User is the post owner — fetching offererId...");
-              const offererId = await offersService.getOffererId(schedule.offer_id);
-              if (!offererId) {
-                console.error("❌ Could not find offerer ID");
-                Alert.alert("Error", "Could not determine message recipient. Please try again.");
-                return;
-              }
-              receiverId = offererId;
-              console.log("Fetched offererId:", receiverId);
+              receiverId = schedule.offerer_id;
+              console.log("User is the collector — chatting with offerer:", receiverId);
             } else {
               receiverId = postOwnerId;
-              console.log("User is the offerer — using postOwnerId:", receiverId);
+              console.log("User is the offerer — chatting with collector:", receiverId);
             }
+            
           } catch (err) {
             console.error("❌ Error resolving receiver from schedule:", err);
             Alert.alert("Error", "Could not determine message recipient. Please try again.");
@@ -286,8 +300,8 @@ const ChatScreen = () => {
     }
     };
 
-    const isPostOwner = userId === schedule?.user_id;
-    const isOfferer = userId !== schedule?.user_id;
+    const isPostOwner = userId === schedule?.collector_id;
+    const isOfferer = userId === schedule?.offerer_id;
 
     const handleEditSchedule = async () => {
         if (!chatId || !schedule) {
@@ -296,44 +310,33 @@ const ChatScreen = () => {
         }
 
         // Validate date and time
-        const selectedDate = new Date(newDate);
-        const selectedTime = new Date(`2000-01-01T${newTime}`);
         const now = new Date();
+        const selectedDateTime = new Date(selectedDate);
+        selectedDateTime.setHours(selectedTime.getHours(), selectedTime.getMinutes());
 
-        // Check if date is in the past
-        if (selectedDate < new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
-            Alert.alert("Invalid Date", "Please select a future date.");
+        // Check if selected date and time is in the past
+        if (selectedDateTime < now) {
+            Alert.alert("Invalid Date/Time", "Please select a future date and time.");
             return;
-        }
-
-        // If date is today, check if time is in the past
-        if (selectedDate.toDateString() === now.toDateString()) {
-            const currentTime = now.getHours() * 60 + now.getMinutes();
-            const selectedTimeInMinutes = selectedTime.getHours() * 60 + selectedTime.getMinutes();
-            
-            if (selectedTimeInMinutes <= currentTime) {
-                Alert.alert("Invalid Time", "Please select a future time.");
-                return;
-            }
         }
 
         try {
             const { error } = await supabase
                 .from('offer_schedules')
                 .update({
-                    scheduled_time: newTime,
-                    scheduled_date: newDate
+                    scheduled_time: selectedTime.toTimeString().split(' ')[0],
+                    scheduled_date: selectedDate.toISOString().split('T')[0]
                 })
                 .eq('offer_id', chatId);
 
             if (error) throw error;
 
             // Update local state
-            schedule.scheduled_time = newTime;
-            schedule.scheduled_date = newDate;
+            schedule.scheduled_time = selectedTime.toTimeString().split(' ')[0];
+            schedule.scheduled_date = selectedDate.toISOString().split('T')[0];
 
             // Send notification to the other user
-            const otherUserId = schedule.user_id === userId ? schedule.offer_id : schedule.user_id;
+            const otherUserId = userId === schedule.collector_id ? schedule.offerer_id : schedule.collector_id;
             await notificationService.sendNotification(
                 otherUserId as string,
                 'Schedule Updated',
@@ -354,7 +357,7 @@ const ChatScreen = () => {
     };
 
     const handleAgree = async () => {
-        if (!schedule?.offer_id || !schedule?.user_id) {
+        if (!schedule?.offer_id || !schedule?.offerer_id) {
             Alert.alert("Error", "Missing schedule information");
             return;
         }
@@ -369,7 +372,7 @@ const ChatScreen = () => {
 
             // Send notification to the post owner
             await notificationService.sendNotification(
-                schedule.user_id,
+                schedule.collector_id,
                 'Schedule Agreed! 🎉',
                 'Great news! The schedule has been agreed upon. Time to make our planet greener! 🌱',
                 'schedule_agreed',
@@ -569,19 +572,20 @@ const ChatScreen = () => {
                         )}
                         
                         <View style={styles.scheduleDetails}>
-                            <View style={styles.scheduleRow}>
+                            {/* <View style={styles.scheduleRow}>
                                 <MaterialIcons name="person" size={20} color="#00D964" />
                                 <Text style={styles.scheduleText}>
-                                    Scheduled by: {schedule.offererName}
+                                    {schedule.offererName} set the collection schedule at
+                                    
                                 </Text>
-                            </View>
+                            </View> */}
 
-                            <View style={styles.scheduleRow}>
+                            {/* <View style={styles.scheduleRow}>
                                 <MaterialIcons name="person-outline" size={20} color="#00D964" />
                                 <Text style={styles.scheduleText}>
                                     Collector: {schedule.collectorName}
                                 </Text>
-                            </View>
+                            </View> */}
 
                             <View style={styles.scheduleRow}>
                                 <MaterialIcons name="access-time" size={20} color="#00D964" />
@@ -746,7 +750,7 @@ const ChatScreen = () => {
                             onPress={() => setShowDatePicker(true)}
                         >
                             <Text style={styles.dateTimeButtonText}>
-                                Date: {selectedDate.toDateString()}
+                                Date: {selectedDate.toLocaleDateString()}
                             </Text>
                         </TouchableOpacity>
 
@@ -760,7 +764,13 @@ const ChatScreen = () => {
                                     setShowDatePicker(false);
                                     if (date) {
                                         setSelectedDate(date);
-                                        setNewDate(date.toISOString().split('T')[0]);
+                                        // If the selected date is today, ensure time is in the future
+                                        if (date.toDateString() === new Date().toDateString()) {
+                                            const now = new Date();
+                                            if (selectedTime < now) {
+                                                setSelectedTime(now);
+                                            }
+                                        }
                                     }
                                 }}
                             />
@@ -785,7 +795,6 @@ const ChatScreen = () => {
                                     setShowTimePicker(false);
                                     if (time) {
                                         setSelectedTime(time);
-                                        setNewTime(time.toTimeString().split(' ')[0]);
                                     }
                                 }}
                             />

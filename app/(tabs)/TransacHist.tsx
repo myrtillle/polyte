@@ -39,6 +39,7 @@ const TransacHist = () => {
   useEffect(() => {
     const fetchData = async () => {
       const data = await transactionService.fetchAllTransactions();
+      console.log("my transactions: ", data);
       setTransactions(data || []);
     };
     fetchData();

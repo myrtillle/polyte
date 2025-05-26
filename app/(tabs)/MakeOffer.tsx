@@ -164,7 +164,7 @@ const MakeOffer = () => {
     }
     
     // Validate required fields
-    if (!price || !offeredWeight || selectedItems.length === 0) {
+    if (!price || offeredWeight <= 0 || selectedItems.length === 0) {
       Alert.alert("Missing Fields", "Please fill in all required fields before sending your offer.");
       return;
     }
@@ -192,18 +192,23 @@ const MakeOffer = () => {
       return;
     }
 
+    const isSeekingPost = post.category_id === 1;
+
     const offerData = {
       post_id: post.id,
-      user_id: currentUser.id,
+      seller_id: currentUser.id,
+      buyer_id: post.user_id,
       offered_items: selectedItems.map(item => item.name),
       offered_weight: offeredWeight,
       requested_weight: post.kilograms,
-      price: priceNum, // Use the validated price number
-      message: message || '', // Ensure message is never null
-      images: images || [], // Ensure images is never null
+      price: priceNum,
+      message: message || '',
+      images: images || [],
       status: "pending",
+      // buyer_id: isSeekingPost ? post.user_id : currentUser.id,
+      // seller_id: isSeekingPost ? currentUser.id : post.user_id,
     };
-  
+
     console.log("📌 Offer being sent:", JSON.stringify(offerData, null, 2));
   
     const { data, error } = await supabase
@@ -285,12 +290,33 @@ const MakeOffer = () => {
       try {
         const { data: existingOffers, error } = await supabase
           .from('offers')
-          .select('id')
+          .select('id, status')
           .eq('post_id', post.id)
           .eq('user_id', currentUser.id);
 
         if (error) {
           console.error("Error checking existing offers:", error);
+          return;
+        }
+
+        // Check if there's an accepted offer for this post
+        const { data: acceptedOffers } = await supabase
+          .from('offers')
+          .select('id')
+          .eq('post_id', post.id)
+          .eq('status', 'accepted');
+
+        if (acceptedOffers && acceptedOffers.length > 0) {
+          Alert.alert(
+            "Post Already Accepted",
+            "This post has already been accepted by someone else.",
+            [
+              { 
+                text: "Go Back", 
+                onPress: () => navigation.goBack()
+              }
+            ]
+          );
           return;
         }
 
@@ -326,7 +352,20 @@ const MakeOffer = () => {
 
   return (
     <View style={styles.container}>
+<<<<<<< Updated upstream
  
+=======
+    {/* <View style={styles.headerContainer}>
+      <IconButton
+        icon="arrow-left"
+        size={24}
+        iconColor="white"
+        onPress={() => navigation.goBack()}
+        style={{ position: 'absolute', left: 0 }}
+      />
+      <Text style={styles.headerTitle}>Make Offer</Text>
+    </View> */}
+>>>>>>> Stashed changes
 
     <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Plastic Types Selection */}
@@ -358,11 +397,28 @@ const MakeOffer = () => {
     <TextInput
       value={offeredWeight.toString()}
       onChangeText={text => {
-        const value = Number(text);
-        if (value > post.kilograms) {
-          Alert.alert("Invalid Input", `You cannot offer more than ${post.kilograms} kg.`);
+        // Remove any non-numeric characters
+        const numericValue = text.replace(/[^0-9]/g, '');
+        
+        // Convert to number
+        const value = Number(numericValue);
+        
+        // Validate the value
+        if (numericValue === '') {
+          setOfferedWeight(0); // Allow empty input
           return;
         }
+        
+        if (value > post.kilograms) {
+          Alert.alert(
+            "Invalid Input", 
+            `You cannot offer more than ${post.kilograms} kg.`,
+            [{ text: "OK" }]
+          );
+          setOfferedWeight(post.kilograms);
+          return;
+        }
+        
         setOfferedWeight(value);
       }}
       keyboardType="numeric"

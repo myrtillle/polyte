@@ -8,19 +8,30 @@ import { Platform } from 'react-native';
 
 type RawTransactionData = {
   id: string;
-  user_id: string;
+  buyer_id: string;
+  seller_id: string;
   post_id: string;
-  images: string[]; 
+  images: string[];
   offered_items: string[];
   offered_weight: number;
   price: number;
   offer_schedules: {
-    id: string,
+    id: string;
     scheduled_date: string;
     scheduled_time: string;
     status: string;
     collection_img: string | null;
-  }[];
+    collector?: {
+      id: string;
+      first_name: string;
+      last_name: string;
+    };
+    offerer?: {
+      id: string;
+      first_name: string;
+      last_name: string;
+    };
+  }[];  
   posts: {
     category_id: number;
     location_text: string;
@@ -35,7 +46,11 @@ type RawTransactionData = {
       puroks?: [{ purok_name: string }];
     };
   };
-  personal_users: {
+  buyer: {
+    first_name: string;
+    last_name: string;
+  };
+  seller: {
     first_name: string;
     last_name: string;
   };
@@ -43,6 +58,7 @@ type RawTransactionData = {
 
 type TransactionDetail = {
   offer_id: string;
+  schedule_id: string;
   scheduled_date: string;
   scheduled_time: string;
   status: string;
@@ -58,7 +74,6 @@ type TransactionDetail = {
   items: string[];
   weight: number;
   price: number;
-  schedule_id: string;
   category_id: number;
   location: string;
 };
@@ -134,7 +149,8 @@ export const transactionService = {
       .select(`
         id,
         offered_items,
-        user_id,
+        buyer_id,
+        seller_id,
         offer_schedules (
           status,
           scheduled_date,
@@ -151,7 +167,7 @@ export const transactionService = {
     }
   
     const filtered = (data || []).filter((offer: any) =>
-      offer.user_id === user.id || offer.posts?.user_id === user.id
+      offer.seller_id === user.id || offer.buyer_id === user.id || offer.posts?.user_id === user.id
     );
     
     return filtered.map((offer: any) => {
@@ -169,54 +185,71 @@ export const transactionService = {
   async fetchTransactionDetails(offerId: string) {
     console.log('📦 fetchTransactionDetails() called with:', offerId);
     console.log('🔎 typeof offerId:', typeof offerId);
-
+  
     const { data, error } = await supabase
-    .from('offers')
-    .select(`
-      id,
-      user_id,
-      post_id,
-      images,
-      offered_items,
-      offered_weight,
-      price,
-      offer_schedules (*),
-      posts:posts_with_text_location (
-        category_id,
-        location_text,
-        collection_modes:collection_modes!posts_collection_mode_id_fkey ( name ),
-        personal_users:personal_users!posts_personal_user_fkey (
-          id,
+      .from('offers')
+      .select(`
+        id,
+        buyer_id,
+        seller_id,
+        post_id,
+        images,
+        offered_items,
+        offered_weight,
+        price,
+        offer_schedules (
+          *,
+          collector:collector_id (
+            id,
+            first_name,
+            last_name
+          ),
+          offerer:offerer_id (
+            id,
+            first_name,
+            last_name
+          )
+        ),
+        posts:posts_with_text_location (
+          category_id,
+          location_text,
+          collection_modes:collection_modes!posts_collection_mode_id_fkey ( name ),
+          personal_users:personal_users!posts_personal_user_fkey (
+            id,
+            first_name,
+            last_name,
+            barangays!barangay_id ( name ),
+            puroks!purok_id ( purok_name )
+          )
+        ),
+        buyer:buyer_id (
           first_name,
-          last_name,
-          barangays!barangay_id ( name ),
-          puroks!purok_id ( purok_name )
+          last_name
+        ),
+        seller:seller_id (
+          first_name,
+          last_name
         )
-      ),
-      personal_users:personal_users!offers_user_id_fkey (  
-        first_name,
-        last_name
-      )
-    `)
-    .eq('id', offerId)
-    .single<RawTransactionData>();
-    
+      `)
+      .eq('id', offerId)
+      .single<RawTransactionData>();
+  
     console.log('✅ Basic offer lookup:', data);
-    
+  
     if (error || !data) {
       console.error('❌ Failed to fetch transaction details:', error?.message);
       return null;
     }
-
+  
     console.log('📦 We have data, continuing flatten:', data);
-
+  
     const schedule = data.offer_schedules?.[0];
     const post = data.posts;
-    const collector = post?.personal_users;
+    const post_user = post?.personal_users;
+    const collector = schedule?.collector;
+    const offerer = schedule?.offerer;
     const collectionMode = post?.collection_modes?.name;
-    const offerer = data.personal_users;
-
-
+  
     const result: TransactionDetail = {
       offer_id: data.id,
       schedule_id: schedule?.id,
@@ -224,12 +257,12 @@ export const transactionService = {
       scheduled_time: schedule?.scheduled_time,
       status: schedule?.status,
       method: collectionMode || 'Unknown',
-      purok: collector?.puroks?.[0]?.purok_name || 'Unknown',
-      barangay: collector?.barangays?.[0]?.name || 'Unknown',
-      offerer_id: data.user_id, // this is the offerer's ID from the offers table
-      offerer_name: `${offerer?.first_name ?? ''} ${offerer?.last_name ?? ''}`.trim(),
-      collector_id: collector?.id,
+      purok: post_user?.puroks?.[0]?.purok_name || 'Unknown',
+      barangay: post_user?.barangays?.[0]?.name || 'Unknown',
+      collector_id: collector?.id || '',
       collector_name: `${collector?.first_name ?? ''} ${collector?.last_name ?? ''}`.trim(),
+      offerer_id: offerer?.id || '',
+      offerer_name: `${offerer?.first_name ?? ''} ${offerer?.last_name ?? ''}`.trim(),
       photo_url: data.images?.[0] || null,
       proof_image_url: schedule?.collection_img || null,
       items: data.offered_items ?? [],
@@ -238,10 +271,11 @@ export const transactionService = {
       category_id: post?.category_id ?? 1,
       location: post?.location_text ?? null,
     };
-
+  
     console.log('✅ Returning flattened transaction result:', result);
     return result;
   },
+  
 
   async confirmDelivery  (
     offerId: string,

@@ -548,11 +548,11 @@ export default function ViewTransaction() {
           <View>
             <Text style={styles.subLabel}>TO BE COLLECTED BY :</Text>
             <Text style={styles.collectorName}>
-              {isSellingPost ? transaction?.collector_name : transaction?.offerer_name}
+              {transaction?.collector_name}
             </Text>
             <Text style={styles.subLabel}>FROM:</Text>
             <Text style={styles.offererName}>
-              {isSellingPost ? transaction?.offerer_name : transaction?.collector_name}
+              {transaction?.offerer_name}
             </Text>
 
             {/* {!hasAgreed && isOfferer && (
@@ -646,7 +646,7 @@ export default function ViewTransaction() {
             </View>
             <Image source={cashIcon} style={{ width: 200, height: 60, alignSelf: 'center', marginBottom: 8, marginTop: 0, resizeMode: 'contain' }} />
 
-            {isOfferer && (
+            {isPostOwner && (
               <TouchableOpacity 
                 style={[
                   styles.confirmButton,

@@ -72,7 +72,7 @@ const ScheduleOffer = () => {
         return;
       }
 
-      await scheduleService.createSchedule(offer.id, post.id, post.user_id, formattedDate, formattedTime);
+      await scheduleService.createSchedule(offer.id, post.id, offer.seller_id, offer.buyer_id, formattedDate, formattedTime);
       await updateOffer({ 
         id: offer.id, 
         status: 'accepted' 
@@ -84,7 +84,7 @@ const ScheduleOffer = () => {
       Alert.alert('Success', 'Schedule saved successfully!');
 
       await notificationService.sendNotification(
-        offer.user_id,
+        offer.buyer_id,
         'Offer Accepted',
         `Seeker has accepted your offer and a collection schedule has been set. Please review and confirm it.`,
         'offer_accepted',

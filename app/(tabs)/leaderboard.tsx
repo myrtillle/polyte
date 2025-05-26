@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Modal, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, ActivityIndicator, Modal, Image, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { leaderboardService } from '@/services/leaderboardService';
 import { Ionicons } from '@expo/vector-icons';
+import { MotiView } from 'moti';
 
 interface LeaderboardEntry {
   name: string;
@@ -17,12 +18,18 @@ export default function LeaderboardScreen() {
   const [timeFilter, setTimeFilter] = useState<'ALL TIME' | 'THIS MONTH' | 'THIS YEAR' | 'THIS WEEK'>('ALL TIME');
   const [viewDropdownVisible, setViewDropdownVisible] = useState(false);
   const [timeDropdownVisible, setTimeDropdownVisible] = useState(false);
+  const fadeAnim = new Animated.Value(0);
 
   const now = new Date();
   const formattedDate = now.toLocaleString('default', { month: 'long', year: 'numeric' });
 
   useEffect(() => {
     loadLeaderboard();
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 1000,
+      useNativeDriver: true,
+    }).start();
   }, [viewType, activeMetric, timeFilter]);
 
   const loadLeaderboard = async () => {
@@ -35,8 +42,23 @@ export default function LeaderboardScreen() {
   };
 
   const renderItem = ({ item, index }: { item: LeaderboardEntry; index: number }) => (
-    <View style={[styles.itemRow, index === 0 ? styles.topPurok : styles.regularPurok]}>
+    <MotiView
+      from={{ opacity: 0, translateY: 20 }}
+      animate={{ opacity: 1, translateY: 0 }}
+      transition={{ delay: index * 100 }}
+      style={[styles.itemRow, index === 0 ? styles.topPurok : styles.regularPurok]}
+    >
       <View style={styles.itemNameWrapper}>
+        {/* {index === 0 && (
+          <MotiView
+            from={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: 'spring', delay: 200 }}
+            style={styles.crownContainer}
+          >
+            <Ionicons name="trophy" size={24} color="#FFD700" /> 
+          </MotiView>
+        )} */}
         <Text style={[styles.purokName, index === 0 && styles.topText]} numberOfLines={1}>
           {item.name}
         </Text>
@@ -48,22 +70,22 @@ export default function LeaderboardScreen() {
             : `${item.totalValue.toLocaleString()} kg`}
         </Text>
       </View>
-    </View>
+    </MotiView>
   );
 
   return (
     <LinearGradient colors={['#023F0F', '#05A527']} style={styles.container}>
-      {/* <View style={styles.searchBar}>
-        <Ionicons name="search" size={18} color="#ccc" style={{ marginLeft: 10 }} />
-        <Text style={styles.searchPlaceholder}>PLASTIC, OBRERO USEP</Text>
-        <Ionicons name="notifications" size={20} color="#00FF66" style={{ marginRight: 12 }} />
-      </View> */}
-      <View style={styles.headerBar}>
-  <Text style={styles.headerTitle}>LEADERBOARDS</Text>
-</View>
+      <Animated.View style={[styles.headerBar, { opacity: fadeAnim }]}>
+        <Text style={styles.headerTitle}>LEADERBOARDS</Text>
+      </Animated.View>
 
-     
-        <TouchableOpacity style={styles.dropdownBox} onPress={() => setViewDropdownVisible(true)}>
+      <MotiView
+        from={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ type: 'spring' }}
+        style={styles.dropdownBox}
+      >
+        <TouchableOpacity onPress={() => setViewDropdownVisible(true)} style={styles.dropdownContent}>
           <Image
             source={require('../../assets/images/trophy.png')}
             style={styles.dropdownTrophy}
@@ -77,6 +99,7 @@ export default function LeaderboardScreen() {
           </View>
           <Ionicons name="chevron-down" size={20} color="white" />
         </TouchableOpacity>
+      </MotiView>
 
       <View style={styles.filterTabs}>
         <TouchableOpacity 
@@ -101,9 +124,13 @@ export default function LeaderboardScreen() {
       {loading ? (
         <ActivityIndicator size="large" color="#00FF66" style={{ marginTop: 40 }} />
       ) : leaderboard.length === 0 ? (
-        <View style={styles.emptyContainer}>
+        <MotiView
+          from={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          style={styles.emptyContainer}
+        >
           <Text style={styles.emptyText}>No hero recyclers for this time period!</Text>
-        </View>
+        </MotiView>
       ) : (
         <FlatList
           data={leaderboard}
@@ -113,10 +140,15 @@ export default function LeaderboardScreen() {
         />
       )}
 
-      {/* View Dropdown */}
+      {/* View Dropdown Modal */}
       <Modal transparent visible={viewDropdownVisible} animationType="fade">
         <TouchableOpacity style={styles.modalBackdrop} onPress={() => setViewDropdownVisible(false)}>
-          <View style={styles.modalDropdown}>
+          <MotiView
+            from={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: 'spring' }}
+            style={styles.modalDropdown}
+          >
             {[
               { label: 'Users', value: 'user' },
               { label: 'Puroks', value: 'purok' },
@@ -142,14 +174,19 @@ export default function LeaderboardScreen() {
                 </Text>
               </TouchableOpacity>
             ))}
-          </View>
+          </MotiView>
         </TouchableOpacity>
       </Modal>
 
-      {/* Time Filter Dropdown */}
+      {/* Time Filter Dropdown Modal */}
       <Modal transparent visible={timeDropdownVisible} animationType="fade">
         <TouchableOpacity style={styles.modalBackdrop} onPress={() => setTimeDropdownVisible(false)}>
-          <View style={styles.modalDropdown}>
+          <MotiView
+            from={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: 'spring' }}
+            style={styles.modalDropdown}
+          >
             {['All time', 'This month', 'This year', 'This week'].map((range) => (
               <TouchableOpacity
                 key={range}
@@ -172,7 +209,7 @@ export default function LeaderboardScreen() {
                 </Text>
               </TouchableOpacity>
             ))}
-          </View>
+          </MotiView>
         </TouchableOpacity>
       </Modal>
     </LinearGradient>
@@ -337,7 +374,7 @@ const styles = StyleSheet.create({
   },
 
   topPurok: {
-    backgroundColor: '#D4FF6D', // bright highlight color
+    backgroundColor: '#D4FF6D',
     borderWidth: 1.5,
     borderColor: '#D4FF6D',
     shadowColor: '#D4FF6D',
@@ -345,6 +382,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.8,
     shadowRadius: 10,
     elevation: 8,
+    transform: [{ scale: 1.05 }],
   },
 
   regularPurok: {
@@ -359,6 +397,11 @@ const styles = StyleSheet.create({
     color: '#ccc',
     fontWeight: 'bold',
     fontSize: 13,
+  },
+  topscore: {
+    color: '#023F0F',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
   topText: {
     color: '#023F0F',
@@ -403,5 +446,20 @@ const styles = StyleSheet.create({
     height: 32,
     marginRight: 12,
     marginLeft: 2,
+  },
+  crownContainer: {
+    position: 'absolute',
+    top: -20,
+    left: '50%',
+    marginLeft: -12,
+    backgroundColor: '#235F30',
+    borderRadius: 20,
+    padding: 4,
+    zIndex: 1,
+  },
+  dropdownContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
 });
