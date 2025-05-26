@@ -13,11 +13,12 @@ import locationIcon from '../../assets/images/greenmark.png';
 import pickupIcon from '../../assets/images/pickup.png';
 import dropoffIcon from '../../assets/images/dropoff.png';
 import meetupIcon from '../../assets/images/meetup.png';
-import cashIcon from '../../assets/images/GCASHandMAYA2.png';
 import proofIcon from '../../assets/images/images3d.png';
 import { Button, Divider, IconButton } from 'react-native-paper';
 import Constants from 'expo-constants';
 import { messagesService } from '@/services/messagesService';
+import gcashIcon from '../../assets/images/gcash.png';
+import mayaIcon from '../../assets/images/maya.png';
 
 
 const getModeData = (modeName: string) => {
@@ -454,7 +455,7 @@ export default function ViewTransaction() {
           )}
 
           {isOfferer && !hasAgreed && (
-            <Text style={{ color: '#ccc', fontSize: 12, marginTop: 6, marginBottom: 4, borderRadius:5, }}>
+            <Text style={{ color: '#ccc', fontSize: 12, marginTop: 6, marginBottom: 4 }}>
               Not convenient? Discuss the schedule with the seeker.
             </Text>
           )}
@@ -646,24 +647,45 @@ export default function ViewTransaction() {
             <View style={styles.offerPriceRow}>
               <Text style={styles.offerPriceText}>₱ {transaction?.price?.toFixed(2) ?? 'N/A'}</Text>
             </View>
-            <Image source={cashIcon} style={{ width: 200, height: 60, alignSelf: 'center', marginBottom: 8, marginTop: 0, resizeMode: 'contain' }} />
-
+            
             {isPostOwner && (
-              <TouchableOpacity 
-                style={[
-                  styles.confirmButton,
-                  { backgroundColor: transaction?.status === 'awaiting_payment' ? '#00D964' : '#888' }
-                ]} 
-                disabled={transaction?.status !== 'awaiting_payment'}
-                onPress={handleMockPayment}
-              >
-                <Text style={[
-                  styles.confirmText,
-                  transaction?.status === 'awaiting_payment' ? { color: '#023F0F' } : { color: '#666' }
-                ]}>
-                  {transaction?.status === 'awaiting_payment' ? 'PAY' : 'PAYMENT PROCESSED'}
-                </Text>
-              </TouchableOpacity>
+              <>
+                <Text style={{ color: '#fff', fontSize: 14, fontWeight: 'normal', textAlign: 'center', marginBottom: 10 }}>Pay Via</Text>
+                <View style={{ flexDirection: 'row', gap: 10, marginBottom: 8 }}>
+                  <TouchableOpacity
+                    style={[
+                      styles.confirmButton,
+                      { flex: 1, backgroundColor: transaction?.status === 'awaiting_payment' ? '#00B2FF' : '#888', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, borderRadius: 8 }
+                    ]}
+                    disabled={transaction?.status !== 'awaiting_payment'}
+                    onPress={handleMockPayment}
+                  >
+                    <Image source={gcashIcon} style={{ width: 36, height: 36, marginRight: 6 }} resizeMode="contain" />
+                    <Text style={[
+                      styles.confirmText,
+                      transaction?.status === 'awaiting_payment' ? { color: '#023F0F' } : { color: '#666' }
+                    ]}>
+                      (GCash)
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.confirmButton,
+                      { flex: 1, backgroundColor: transaction?.status === 'awaiting_payment' ? '#00D964' : '#888', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, borderRadius: 8 }
+                    ]}
+                    disabled={transaction?.status !== 'awaiting_payment'}
+                    onPress={handleMockPayment}
+                  >
+                    <Image source={mayaIcon} style={{ width: 36, height: 36, marginRight: 6 }} resizeMode="contain" />
+                    <Text style={[
+                      styles.confirmText,
+                      transaction?.status === 'awaiting_payment' ? { color: '#fff' } : { color: '#666' }
+                    ]}>
+                     (Maya)
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </>
             )}
 
             {isPostOwner && transaction?.status === 'for_collecion' && (
@@ -874,21 +896,28 @@ export default function ViewTransaction() {
 
         {/* Confirmation Popup */}
         {confirmVisible && (
-          <View style={styles.modalBackdrop} >
-            <View style={styles.modalBox}>
-              <Text style={styles.modalText}>Are you sure you want to complete this transaction?</Text>
-              <View style={styles.modalActions}>
+          <View style={styles.modalBackdrop}>
+            <View style={[styles.modalBox, { alignItems: 'center', backgroundColor: '#023F0F' }]}>  
+              <View style={{ alignItems: 'center', marginBottom: 10 }}>
+                <Text style={{ fontSize: 18, fontWeight: 'bold', color: 'white', marginBottom: 4, textAlign: 'center' }}>
+                  Complete Transaction?
+                </Text>
+                <Text style={{ color: 'white', fontSize: 14, textAlign: 'center', marginBottom: 8 }}>
+                  Are you sure you want to mark this transaction as completed? This action cannot be undone.
+                </Text>
+              </View>
+              <View style={[styles.modalActions, { gap: 12, marginTop: 8, flexDirection: 'row' }]}> 
                 <TouchableOpacity
                   onPress={() => setConfirmVisible(false)}
-                  style={[styles.modalButton, { backgroundColor: '#ccc' }]}
+                  style={[styles.modalButton, { backgroundColor: '#eee', borderWidth: 1, borderColor: '#ccc', flex: 1 }]}
                 >
-                  <Text>Cancel</Text>
+                  <Text style={{ color: '#023F0F', fontWeight: 'bold' }}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={handlePostOwnerConfirm}
-                  style={[styles.modalButton, { backgroundColor: '#00D964' }]}
+                  style={[styles.modalButton, { backgroundColor: '#00D964', borderWidth: 1, borderColor: '#00B24A', flex: 1 }]}
                 >
-                  <Text style={{ fontWeight: 'bold', color: '#003d1a' }}>Confirm</Text>
+                  <Text style={{ fontWeight: 'bold', color: '#023F0F' }}>Confirm</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -1147,6 +1176,7 @@ const styles = StyleSheet.create({
     borderRadius: 100,
     alignItems: 'center'
   },
+  
   confirmText: {
     color: 'darkgray',
     fontWeight: 'bold'

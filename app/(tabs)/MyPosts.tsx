@@ -184,9 +184,7 @@ export default function MyPostsScreen() {
             iconColor="#888E96"
           />
         </View>
-        <View style={styles.notificationWrapper}>
-          <IconButton icon="bell" iconColor="#00FF57" size={24} onPress={() => {}} />
-        </View>
+        
       </View>
     </View>
   );

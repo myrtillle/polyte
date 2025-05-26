@@ -213,6 +213,7 @@ export default function PersonalSignUp() {
         mode="outlined" 
         style={styles.input} 
         outlineStyle={{ borderRadius: 25 }}
+        textColor="white"
       />
       <TextInput 
         label="Firstname" 
@@ -222,18 +223,21 @@ export default function PersonalSignUp() {
         mode="outlined" 
         style={styles.input} 
         outlineStyle={{ borderRadius: 25 }}
+        textColor="white"
       />
-      <TextInput 
-        label="Contact Number" 
-        value={contactNum}  
-        theme={inputTheme} 
-        onChangeText={setContactNum} 
-        mode="outlined" 
-        style={styles.input} 
-        keyboardType="phone-pad"
-        placeholder="09XXXXXXXXX"
-        outlineStyle={{ borderRadius: 25 }}
-      />
+    <TextInput 
+  label="Contact Number" 
+  value={contactNum}  
+  theme={inputTheme} // ✅ add this
+  onChangeText={setContactNum} 
+  mode="outlined" 
+  style={styles.input} 
+  keyboardType="phone-pad"
+  placeholder="09XXXXXXXXX"
+  outlineStyle={{ borderRadius: 25 }}
+  textColor="white"
+/>
+
 
       {/* Account Credentials Section */}
       <Text style={styles.sectionTitle}>Account Credentials</Text>
@@ -246,6 +250,7 @@ export default function PersonalSignUp() {
         style={styles.input} 
         autoCapitalize="none" 
         outlineStyle={{ borderRadius: 25 }}
+        textColor="white"
       />
       <TextInput 
         label="Email" 
@@ -256,6 +261,7 @@ export default function PersonalSignUp() {
         style={styles.input} 
         autoCapitalize="none" 
         outlineStyle={{ borderRadius: 25 }}
+        textColor="white"
       />
       <TextInput 
         label="Password" 
@@ -266,6 +272,7 @@ export default function PersonalSignUp() {
         style={styles.input} 
         secureTextEntry 
         outlineStyle={{ borderRadius: 25 }}
+        textColor="white"
       />
       <TextInput 
         label="Confirm Password" 
@@ -276,6 +283,7 @@ export default function PersonalSignUp() {
         style={styles.input} 
         secureTextEntry 
         outlineStyle={{ borderRadius: 25 }}
+        textColor="white"
       />
 
       {/* Address Information Section */}
@@ -347,16 +355,21 @@ export default function PersonalSignUp() {
 
 const inputTheme = {
   colors: {
-    outline: '#93a267',
-    primary: '#485935',
+    outline: '#00D964',
+    primary: '#00D964',
+    text: 'white',
+    placeholder: '#00D964', // ✅ Green placeholder
+    onSurfaceVariant: '#00D964', // ✅ Helps in some RNP versions
   },
 };
+
+
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    backgroundColor: '#fbfbfb',
+    backgroundColor: '#023F0F',
   },
   logoContainer: {
     alignItems: 'flex-start',
@@ -371,40 +384,40 @@ const styles = StyleSheet.create({
   },
   signUpText: {
     fontSize: 20,
-    color: '#485935',
+    color: 'white',
     marginTop: 2,
     fontWeight: 'bold',
   },
   sectionTitle: {
     fontSize: 16,
-    color: '#485935',
+    color: 'white',
     marginTop: 20,
     marginBottom: 10,
     fontWeight: '600',
     paddingLeft: 10,
   },
   input: {
-    backgroundColor: '#fbfbfb',
+    backgroundColor: '#023F0F',
     paddingHorizontal: 10,
     height: 55,
     fontSize: 12,
-    color: '#485935',
+    color: 'white',
     textAlignVertical: 'center',
     marginBottom: 20,
   },
   pickerContainer: {
-    backgroundColor: '#fbfbfb',
+    backgroundColor: '#1A3620',
     borderRadius: 30,
     marginBottom: 16,
     paddingHorizontal: 15,
     paddingVertical: 8,
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#93a267',
+    borderColor: '#00D964',
     overflow: 'hidden',
   },
   picker: {
-    color: '#485935',
+    color: 'white',
     fontSize: 14,
     width: '100%',
     height: 50,
@@ -413,7 +426,7 @@ const styles = StyleSheet.create({
   },
   button: {
     marginTop: 24,
-    backgroundColor: '#93a267',
+    backgroundColor: '#00D964',
     borderRadius: 25,
     height: 55,
     justifyContent: 'center',
@@ -421,7 +434,7 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 12,
     fontWeight: 'bold',
-    color: '#fbfbfb',
+    color: '#023F0F',
     textTransform: 'uppercase',
   },
   errorContainer: {
@@ -431,7 +444,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   error: {
-    color: '#485935',
+    color: 'white',
     fontSize: 12,
     textAlign: 'center',
     alignSelf: 'center',
@@ -450,7 +463,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   loginLinkText: {
-    color: '#93a267',
+    color: '#00D964',
     fontSize: 14,
     fontWeight: '500',
     textAlign: 'center',

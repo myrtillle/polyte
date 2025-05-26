@@ -80,7 +80,7 @@ export default function ForgotPasswordScreen() {
         style={styles.input}
         autoCapitalize="none"
         outlineStyle={{ borderRadius: 25 }}
-        theme={{ colors: { primary: '#485935', outline: '#93a267' } }}
+        theme={{ colors: { primary: '#00D964', outline: '#00D964', text: 'white', placeholder: '#00D964' } }}
       />
 
       <Button
@@ -109,33 +109,34 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 24,
-    backgroundColor: '#fbfbfb',
+    backgroundColor: '#023F0F',
     justifyContent: 'center',
   },
   title: {
     fontSize: 18,
-    color: '#485935',
+    color: 'white',
     marginBottom: 16,
     textAlign: 'center',
   },
   success: {
-    color: '#93a267',
+    color: '#00D964',
     textAlign: 'center',
     marginBottom: 16,
   },
   input: {
     marginBottom: 16,
-    backgroundColor: '#fbfbfb',
+    backgroundColor: '#023F0F',
     height: 55,
+    color: 'white',
   },
   button: {
-    backgroundColor: '#93a267',
+    backgroundColor: '#00D964',
     borderRadius: 25,
     paddingVertical: 6,
     height: 55,
   },
   buttonText: {
-    color: '#fbfbfb',
+    color: '#023F0F',
     fontWeight: 'bold',
     fontSize: 12,
     textTransform: 'uppercase',
@@ -144,7 +145,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   backButtonText: {
-    color: '#93a267',
+    color: '#00D964',
     fontSize: 12,
   },
 });

@@ -149,6 +149,8 @@ export default function LoginScreen() {
       style={styles.input}
       outlineStyle={{ borderRadius: 25 }}
       theme={inputTheme}
+    
+      textColor="white"
     />
 
       <TextInput
@@ -160,20 +162,22 @@ export default function LoginScreen() {
        style={styles.input}
        outlineStyle={{ borderRadius: 25 }}
        theme={inputTheme}
+      
+       textColor="white"
       />
       <Button
         mode="contained"
         onPress={handleLogin}
         loading={loading}
         style={styles.button}
-        labelStyle={styles.buttonText}
+        labelStyle={[styles.buttonText, { color: '#023F0F' }]}
       >
         LOGIN
       </Button>
       <Button
         mode="text"
         onPress={() => navigation.navigate('ForgotPassword')}
-        labelStyle={{ color: '#93a267', fontSize: 12 }}
+        labelStyle={{ color: '#00D964', fontSize: 12 }}
       >
         Forgot Password?
       </Button>
@@ -182,7 +186,7 @@ export default function LoginScreen() {
         <Button
           mode="text"
           onPress={() => navigation.navigate('Signup')}
-          labelStyle={{ color: '#93a267', fontSize: 12, marginLeft: -8 }}
+          labelStyle={{ color: '#00D964', fontSize: 12, marginLeft: -8 }}
         >
           Sign Up
         </Button>
@@ -192,15 +196,20 @@ export default function LoginScreen() {
 }
 const inputTheme = {
   colors: {
-    outline: '#93a267', // Medium green for input borders
-    primary: '#485935', // Dark green for focused state
+    outline: '#00D964',
+    primary: '#00D964',
+    text: 'white',
+    placeholder: '#00D964', // ✅ Green placeholder
+    onSurfaceVariant: '#00D964', // ✅ Helps in some RNP versions
   },
 };
+
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 16,
-    backgroundColor: '#fbfbfb', // Off-white background
+    backgroundColor: '#023F0F', // Dark green background
     justifyContent: 'center',
   },
   logoContainer: {
@@ -215,22 +224,22 @@ const styles = StyleSheet.create({
   },
   loginText: {
     fontSize: 20,
-    color: '#485935', // Dark green text
+    color: 'white',
     marginTop: 2,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 24,
-    color: '#485935', // Dark green text
+    color: 'white',
     textAlign: 'center',
   },
   input: {
-    backgroundColor: '#fbfbfb', // Off-white background
+    backgroundColor: '#023F0F', // Dark green background
     paddingHorizontal: 10,
     height: 55,
     fontSize: 12,
-    color: '#485935', // Dark green text
+    color: 'white',
     textAlignVertical: 'center',
     marginBottom: 20,
   },
@@ -240,7 +249,7 @@ const styles = StyleSheet.create({
   },
   button: {
     marginTop: 24,
-    backgroundColor: '#93a267', // Medium green button
+    backgroundColor: '#00D964', // Accent green button
     borderRadius: 25,
     height: 55,
     justifyContent: 'center',
@@ -248,11 +257,11 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 12,
     fontWeight: 'thin',
-    color: '#fbfbfb', // Off-white text
+    color: '#023F0F', // Dark green text for contrast
     textTransform: 'uppercase',
   },
   error: {
-    color: '#485935', // Dark green for errors
+    color: 'white',
     fontSize: 12,
     marginBottom: 0,
     textAlign: 'center',
@@ -266,35 +275,35 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   signupText: {
-    color: '#485935', // Dark green text
+    color: 'white',
   },
   signupButton: {
     marginLeft: -8,
   },
   signupButtonText: {
-    color: '#93a267', // Medium green for links
+    color: '#00D964', // Accent green for links
   },
   messageContainer: {
     padding: 16,
     marginBottom: 16,
     borderRadius: 8,
-    backgroundColor: '#f0f5e6', // Light green background
+    backgroundColor: '#1A3620', // Darker green background
     borderWidth: 1,
-    borderColor: '#93a267',
+    borderColor: '#00D964',
     marginHorizontal: 10,
   },
   successMessage: {
-    color: '#485935', // Darker green for better contrast
+    color: 'white',
     textAlign: 'center',
     fontSize: 14,
     fontWeight: '500',
   },
   resendButton: {
     marginTop: 16,
-    backgroundColor: '#cadbb7', // Light green for secondary buttons
+    backgroundColor: '#00D96422', // Faint green for secondary
   },
   retryText: {
-    color: '#93a267',
+    color: '#00D964',
     fontSize: 12,
     marginTop: 4,
     textAlign: 'center',
@@ -304,7 +313,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 8,
     paddingHorizontal: 10,
-    backgroundColor: '#f8f8f8',
+    backgroundColor: '#1A3620',
     borderRadius: 8,
     padding: 8,
   },
