@@ -352,20 +352,7 @@ const MakeOffer = () => {
 
   return (
     <View style={styles.container}>
-<<<<<<< Updated upstream
  
-=======
-    {/* <View style={styles.headerContainer}>
-      <IconButton
-        icon="arrow-left"
-        size={24}
-        iconColor="white"
-        onPress={() => navigation.goBack()}
-        style={{ position: 'absolute', left: 0 }}
-      />
-      <Text style={styles.headerTitle}>Make Offer</Text>
-    </View> */}
->>>>>>> Stashed changes
 
     <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Plastic Types Selection */}

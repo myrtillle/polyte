@@ -121,16 +121,27 @@ export default function ProfileScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.headerWrapper}>
-          <Image
-            source={{ 
-              uri: profile?.profile_photo_url || 'https://i.pravatar.cc/100'
+          <View
+            style={{
+              borderColor: '#00FF57',
+              borderWidth: 3,
+              borderRadius: 50,
+              padding: 2,
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
-            style={styles.profileImage}
-            onError={(e) => {
-              console.error('❌ Image loading error:', e.nativeEvent.error);
-              console.log('📸 Attempted to load image from:', profile?.profile_photo_url);
-            }}
-          />
+          >
+            <Image
+              source={{ 
+                uri: profile?.profile_photo_url || 'https://i.pravatar.cc/100'
+              }}
+              style={styles.profileImage}
+              onError={(e) => {
+                console.error('❌ Image loading error:', e.nativeEvent.error);
+                console.log('📸 Attempted to load image from:', profile?.profile_photo_url);
+              }}
+            />
+          </View>
           <View style={styles.headerTextContainer}>
             <Text style={styles.profileName}>{profile.first_name} {profile.last_name}</Text>
             <Text style={styles.profileLocation}> {profile.purok}, {profile.barangay}</Text>
@@ -182,15 +193,15 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.allTimeStatsOuterContainer}>
-          <Text style={styles.sectionTitle}>YOUR RECYCLING JOURNEY</Text>
+          <Text style={styles.sectionTitle}>Your Recyling Journey</Text>
           <View style={styles.allTimeStatsContainer}>
             <View style={styles.statBox}>
               <View style={styles.statLabelRow}>
-                <Text style={styles.statLabel}>CARBON EMISSION SAVED</Text>
+                <Text style={styles.statLabel}>Carbon Emission Saved</Text>
                 <Image source={bioIcon} style={styles.statIcon} />
               </View>
               <Text style={styles.statValue}>
-                <Text style={styles.co2Emphasis}>{co2Saved.toFixed(2)}</Text> kg of CO2
+                <Text style={{ color: '#00FF57', fontSize: 20, fontWeight: 'bold' }}>{co2Saved.toFixed(2)}</Text> kg of CO2
               </Text>
             </View>
             <View style={styles.statBox}>
@@ -199,14 +210,14 @@ export default function ProfileScreen() {
                 <Image source={trashbagIcon} style={styles.statIcon} />
               </View>
               <View style={styles.statRowSplit}>
-                <Text style={styles.statSplit}><Text style={styles.boldText}>DONATED</Text> {collectionStats.donated}</Text>
-                <Text style={styles.statSplit}><Text style={styles.boldText}>COLLECTED</Text> {collectionStats.collected}</Text>
+                <Text style={styles.statSplit}><Text style={styles.boldText}>DONATED</Text> <Text style={{ color: '#00FF57' }}>{collectionStats.donated}</Text></Text>
+                <Text style={styles.statSplit}><Text style={styles.boldText}>COLLECTED</Text> <Text style={{ color: '#00FF57' }}>{collectionStats.collected}</Text></Text>
               </View>
             </View>
             <View style={styles.statBox}>
-              <Text style={styles.statLabel}>AVERAGE MONTHLY CONTRIBUTION</Text>
-              <Text style={styles.statValue}>{averageMonthly.toFixed(1)}</Text>
-              <Text style={styles.statSuffix}>SACKS PER MONTH</Text>
+              <Text style={styles.statLabel}>Average Monthly Contribution</Text>
+              <Text style={[styles.statValue, { color: '#00FF57' }]}>{averageMonthly.toFixed(1)}</Text>
+              <Text style={styles.statSuffix}>Kilograms per month</Text>
             </View>
           </View>
         </View>
@@ -237,7 +248,7 @@ const styles = StyleSheet.create({
   statIcon: {
     width: 16,
     height: 16,
-
+    marginBottom:10,
   },
 
   ratingRow: {
@@ -360,7 +371,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
-    textTransform: 'uppercase',
+   
     marginBottom: 10,
   },
   allTimeStatsContainer: {
@@ -377,7 +388,7 @@ const styles = StyleSheet.create({
   statLabel: {
     color: '#ccc',
     fontSize: 12,
-    marginBottom: 6,
+    marginBottom: 10,
   },
   statValue: {
     color: '#fff',
@@ -425,6 +436,7 @@ const styles = StyleSheet.create({
     width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom:6,
   },
   claimRewardText: {
     color: '#023F0F',
@@ -451,6 +463,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     width: '100%',
     marginBottom: 2,
+   
   },
   halfButton: {
     flex: 1,

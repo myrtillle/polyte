@@ -842,20 +842,45 @@ export default function PostScreen() {
           <View style={styles.addressCard}>
             <Text style={styles.addressLabel}>Selected Location:</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
-              <Image source={GreenMark} style={{ width: 20, height: 20, marginRight: 8 }} />
+              <Image source={GreenMark} style={{ width: 20, height: 20, marginRight: 8 }} resizeMode="contain" />
               <Text style={styles.addressText}>{address || 'Loading address...'}</Text>
             </View>
           </View>
           <View style={{ flex: 1 }} />
-          <View style={styles.mapActionRow}>
-            <Button mode="outlined" onPress={() => setStep(1)} style={styles.mapActionButton} labelStyle={styles.mapActionButtonLabel}>
+          <View style={{ flexDirection: 'row', gap: 6, marginHorizontal: 18, marginTop: 24 }}>
+            <Button
+              mode="outlined"
+              onPress={() => setStep(1)}
+              style={{
+                flex: 1,
+                borderRadius: 15,
+                borderWidth: 2,
+                borderColor: '#888',
+                height: 55,
+                marginRight: 3,
+                justifyContent: 'center',
+              }}
+              labelStyle={{ fontWeight: 'bold', fontSize: 16, color: '#888', letterSpacing: 1 }}
+            >
               Back
             </Button>
-            <Button mode="contained" onPress={handleSubmit} loading={loading} style={[styles.mapActionButton, styles.mapActionButtonPrimary]} labelStyle={styles.mapActionButtonLabelDark}>
+            <Button
+              mode="contained"
+              onPress={handleSubmit}
+              loading={loading}
+              style={{
+                flex: 1,
+                borderRadius: 15,
+                backgroundColor: '#00FF57',
+                height: 55,
+                marginLeft: 3,
+                justifyContent: 'center',
+              }}
+              labelStyle={{ fontWeight: 'bold', fontSize: 16, color: '#222', letterSpacing: 1 }}
+            >
               Submit Post
             </Button>
           </View>
-          <View style={{ height: 16 }} />
         </View>
       )}
 

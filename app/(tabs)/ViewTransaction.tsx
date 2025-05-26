@@ -454,20 +454,21 @@ export default function ViewTransaction() {
           )}
 
           {isOfferer && !hasAgreed && (
-            <Text style={{ color: '#ccc', fontSize: 12, marginTop: 6, marginBottom: 4 }}>
+            <Text style={{ color: '#ccc', fontSize: 12, marginTop: 6, marginBottom: 4, borderRadius:5, }}>
               Not convenient? Discuss the schedule with the seeker.
             </Text>
           )}
 
           {isOfferer && (
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
               <TouchableOpacity
                 style={{
+                  flex: 1,
                   backgroundColor: hasAgreed ? '#888' : '#00D964',
-                  paddingHorizontal: 10,
-                  paddingVertical: 6,
+                  paddingVertical: 12,
                   borderRadius: 20,
-                  marginRight: 8,
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}
                 onPress={hasAgreed ? undefined : handleAgreeToSchedule}
                 disabled={hasAgreed}
@@ -475,18 +476,19 @@ export default function ViewTransaction() {
                 <Text style={{
                   color: '#023F0F',
                   fontWeight: 'bold',
-                  fontSize: 12,
+                  fontSize: 14,
                 }}>
                   {hasAgreed ? 'AGREED' : 'AGREE'}
                 </Text>
               </TouchableOpacity>
-
               <TouchableOpacity
                 style={{
+                  flex: 1,
                   backgroundColor: '#1E592B',
-                  paddingHorizontal: 10,
-                  paddingVertical: 6,
+                  paddingVertical: 12,
                   borderRadius: 20,
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }}
                 disabled={hasAgreed}
                 onPress={goToChat}
@@ -494,7 +496,7 @@ export default function ViewTransaction() {
                 <Text style={{
                   color: 'white',
                   fontWeight: 'bold',
-                  fontSize: 12,
+                  fontSize: 14,
                 }}>
                   CHAT SEEKER
                 </Text>
@@ -1140,7 +1142,8 @@ const styles = StyleSheet.create({
   confirmButton: {
     backgroundColor: '#00D964',
     paddingVertical: 14,
-    paddingHorizontal:60,
+    paddingHorizontal:20,
+ 
     borderRadius: 100,
     alignItems: 'center'
   },
