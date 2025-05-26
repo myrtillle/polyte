@@ -679,6 +679,7 @@ export default function ViewTransaction() {
             <TouchableOpacity
               style={[
                 styles.confirmButton,
+                { paddingHorizontal: 60 },
                 transaction?.status === 'completed' && { backgroundColor: '#888' }
               ]}
               disabled={transaction?.status === 'completed'}
@@ -688,7 +689,7 @@ export default function ViewTransaction() {
                 }
               }}
             >
-              <Text style={styles.confirmText}>
+              <Text style={[styles.confirmText, { color: 'white' }]}>
                 {transaction?.status === 'completed' ? 'TRANSACTION COMPLETED' : 'COMPLETE TRANSACTION'}
               </Text>
             </TouchableOpacity>
@@ -699,7 +700,7 @@ export default function ViewTransaction() {
         {transaction?.status === 'completed' && (
           <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'center', marginTop: 10 }}>
             <TouchableOpacity
-              style={[styles.confirmButton, { backgroundColor: '#FFD700' }]}
+              style={[styles.confirmButton, { backgroundColor: '#FFD700', paddingHorizontal: 60 }]}
               onPress={() => profileNavigation.navigate('Ratings', { offerId })}
             >
               <Text style={[styles.confirmText, { color: '#023F0F' }]}>Rate {isOfferer ? 'Seeker' : 'Offerer'}</Text>

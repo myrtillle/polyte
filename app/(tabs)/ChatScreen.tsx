@@ -547,7 +547,7 @@ const ChatScreen = () => {
                       alignItems: 'center',
                     }}
                   >
-                    <Text style={{ color: 'white', fontSize: 12, fontWeight: 'bold' }}>🔙 BACK TO POST</Text>
+                    <Text style={{ color: 'white', fontSize: 12, fontWeight: 'bold' }}> BACK TO POST</Text>
                   </TouchableOpacity>
                 </View>
             )}
@@ -967,8 +967,8 @@ avatar: {
   },
 
   bannerText: {
-    color: '#fff',
-    backgroundColor: '#235F30',
+    color: '#000201',
+  
     fontWeight: 'bold',
     fontSize: 14,
     textTransform: 'uppercase',

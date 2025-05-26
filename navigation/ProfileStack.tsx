@@ -75,7 +75,20 @@ export default function ProfileStack() {
         }}
       />
       <Stack.Screen name="EditPost" component={EditPost} />
-      <Stack.Screen name="TransaCompleted" component={TransaCompleted} />
+      <Stack.Screen name="TransaCompleted" component={TransaCompleted} 
+        options={{
+          headerShown: true,
+          title: 'TRANSACTION COMPLETE',
+          headerStyle: {
+            backgroundColor: '#023F0F',
+          },
+          headerTintColor: '#fff',
+          headerTitleStyle: {
+            fontWeight: 'bold',
+            fontSize: 16,
+          }
+        }}
+      />
       <Stack.Screen name="Ratings" component={Ratings} 
         options={{
           headerShown: true,
