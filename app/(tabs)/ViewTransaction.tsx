@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, ScrollView, RefreshControl, Modal, } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, ScrollView, RefreshControl, Modal } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { transactionService } from '@/services/transactionService';
@@ -13,12 +13,12 @@ import locationIcon from '../../assets/images/greenmark.png';
 import pickupIcon from '../../assets/images/pickup.png';
 import dropoffIcon from '../../assets/images/dropoff.png';
 import meetupIcon from '../../assets/images/meetup.png';
+import cashIcon from '../../assets/images/GCASHandMAYA2.png';
 import proofIcon from '../../assets/images/images3d.png';
 import { Button, Divider, IconButton } from 'react-native-paper';
 import Constants from 'expo-constants';
 import { messagesService } from '@/services/messagesService';
-import gcashIcon from '../../assets/images/gcash.png';
-import mayaIcon from '../../assets/images/maya.png';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
 
 const getModeData = (modeName: string) => {
@@ -35,6 +35,7 @@ const getModeData = (modeName: string) => {
 interface proofImage {
   photo: string;
 }
+
 export default function ViewTransaction() {
   const route = useRoute();
   const homeNavigation = useNavigation<StackNavigationProp<HomeStackParamList>>();
@@ -45,7 +46,7 @@ export default function ViewTransaction() {
 
   const [transaction, setTransaction] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [currentUser, setCurrentUser] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ id: string } | null>(null);
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [proofModalVisible, setProofModalVisible] = useState(false);
   const [setPaid] = useState(false);
@@ -55,11 +56,27 @@ export default function ViewTransaction() {
     photo: ''
   });
   const [address, setAddress] = useState<string | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(() => {
+    if (transaction?.scheduled_date) {
+      const [year, month, day] = transaction.scheduled_date.split('-').map(Number);
+      return new Date(year, month - 1, day);
+    }
+    return new Date();
+  });
+  const [selectedTime, setSelectedTime] = useState(() => {
+    if (transaction?.scheduled_time) {
+      const [hours, minutes] = transaction.scheduled_time.split(':').map(Number);
+      const date = new Date();
+      date.setHours(hours, minutes);
+      return date;
+    }
+    return new Date();
+  });
   // console.log('🔍 Navigated with offerId:', offerId);
   console.log('📦 ViewTransaction received offerId:', offerId);
   
-  const isSellingPost = transaction?.category_id === 2; // Category 2 means Selling
-
   const paid = transaction?.status === 'awaiting_payment' || transaction?.status === 'for_completion' || transaction?.status === 'completed';
 
   
@@ -87,18 +104,22 @@ export default function ViewTransaction() {
     };
   }, [offerId]);
   
-  useEffect(() => {
-
-    const getUser = async () => {
-      const { data, error } = await supabase.auth.getUser();
-      if (error || !data.user) {
-        console.error("Error getting user:", error?.message || "No user found");
-      } else {
-        setCurrentUser(data.user.id);
-      }
-    };
-    getUser();
-  }, []);
+    // Logged in user
+    useEffect(() => {
+      const getUser = async () => {
+        console.log("🔍 Fetching authenticated user...");
+        const { data, error } = await supabase.auth.getUser();
+    
+        if (error) {
+          console.error("❌ Error fetching user:", error.message);
+        } else {
+          console.log("✅ Authenticated User:", data.user);
+          setCurrentUser(data.user);
+        }
+      };
+    
+      getUser();
+    }, []);     
   
   const handleRefresh = async () => {
     try {
@@ -112,8 +133,8 @@ export default function ViewTransaction() {
     }
   };
   
-  const isOfferer = currentUser === transaction?.offerer_id;
-  const isPostOwner = !isOfferer;
+  // const isOfferer = transaction?.offerer_id;
+  // const isCollector = !isOfferer;
   const hasProof = !!transaction?.proof_image_url;
   const hasAgreed = transaction?.status !== 'pending';
   const canComplete = hasProof && paid;
@@ -122,8 +143,22 @@ export default function ViewTransaction() {
   const canConfirm = transaction?.status === 'proof_uploaded';
 
   // Determine roles based on post category
-  const isBuyer = isSellingPost ? isOfferer : isPostOwner;
-  const isSeller = isSellingPost ? isPostOwner : isOfferer;
+  // const isBuyer = isSellingPost ? isCollector : isOfferer;
+  // const isSeller = isSellingPost ? isOfferer : isCollector;
+
+  //post category
+  const isSellingPost = transaction?.category_id === 2;
+
+  //offerer collector check
+  // const isSeller = currentUser?.id === schedule?.offerer_id;
+  // const isBuyer = currentUser?.id === schedule?.collector_id;
+
+  const isOfferer = currentUser?.id === transaction?.offerer_id;
+  const isCollector = currentUser?.id === transaction?.collector_id;
+
+  // Determine roles based on post category
+  const isBuyer = isSellingPost ? isCollector : isOfferer;
+  const isSeller = isSellingPost ? isOfferer : isCollector;
 
   const handlePostOwnerConfirm = async () => {
     const success = await transactionService.completeTransaction(offerId);
@@ -133,28 +168,6 @@ export default function ViewTransaction() {
 
       const updated = await transactionService.fetchTransactionDetails(offerId);
       setTransaction(updated);
-      
-      await notificationService.sendNotification(
-        transaction.collector_id,
-        'Transaction Completed',
-        'The offerer has marked the transaction as completed.',
-        'transaction_completed',
-        {
-          type: 'offer',
-          id: offerId
-        }
-      );
-
-      await notificationService.sendNotification(
-        transaction.offerer_id,
-        'Transaction Completed',
-        'Your transaction has been successfully completed by the post owner.',
-        'transaction_completed',
-        {
-          type: 'offer',
-          id: offerId
-        }
-      );
 
       setConfirmVisible(false);
       profileNavigation.navigate('TransaCompleted', {
@@ -192,7 +205,7 @@ export default function ViewTransaction() {
         console.log('🧩 canComplete status:', canComplete);
         console.log('🖼️ Has proof?', hasProof);
         console.log('💸 Paid?', paid);
-        console.log('🔐 User role:', isOfferer ? 'OFFERER' : 'POST OWNER');
+        console.log('🔐 User role:', isBuyer ? 'BUYER' : 'SELLER');
         console.log('📦 Current status:', transaction?.status);
       } else {
         Alert.alert('Error', 'Failed to update payment status.');
@@ -229,7 +242,6 @@ export default function ViewTransaction() {
     };
   };
 
-  
   useEffect(() => {
     const fetchTransactDetails = async () => {
       setLoading(true);
@@ -265,7 +277,7 @@ export default function ViewTransaction() {
     console.log('🧩 canComplete status:', canComplete);
     console.log('🖼️ Has proof?', hasProof);
     console.log('💸 Paid?', paid);
-    console.log('🔐 User role:', isOfferer ? 'OFFERER' : 'POST OWNER');
+    console.log('🔐 User role:', isBuyer ? 'BUYER' : 'SELLER');
     console.log('📦 Current status:', transaction?.status);
   }, [canComplete, hasProof, paid, transaction?.status]);
   
@@ -423,6 +435,59 @@ export default function ViewTransaction() {
     }
   };
   
+  const handleEditSchedule = async () => {
+    if (!offerId) {
+      Alert.alert("Error", "Missing schedule information");
+      return;
+    }
+
+    // Validate date and time
+    const now = new Date();
+    const selectedDateTime = new Date(selectedDate);
+    selectedDateTime.setHours(selectedTime.getHours(), selectedTime.getMinutes());
+
+    // Check if selected date and time is in the past
+    if (selectedDateTime < now) {
+      Alert.alert("Invalid Date/Time", "Please select a future date and time.");
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('offer_schedules')
+        .update({
+          scheduled_time: selectedTime.toTimeString().split(' ')[0],
+          scheduled_date: selectedDate.toISOString().split('T')[0]
+        })
+        .eq('offer_id', offerId);
+
+      if (error) throw error;
+
+      // Update local state
+      const updated = await transactionService.fetchTransactionDetails(offerId);
+      setTransaction(updated);
+
+      // Send notification to the other user
+      const otherUserId = currentUser?.id === transaction.collector_id ? transaction.offerer_id : transaction.collector_id;
+      await notificationService.sendNotification(
+        otherUserId as string,
+        'Schedule Updated',
+        'The schedule has been updated. Please check the new details.',
+        'schedule_updated',
+        {
+          type: 'transaction',
+          id: offerId
+        }
+      );
+
+      Alert.alert("Success", "Schedule updated successfully!");
+      setShowDatePicker(false);
+      setShowTimePicker(false);
+    } catch (error) {
+      console.error("Error updating schedule:", error);
+      Alert.alert("Error", "Failed to update schedule. Please try again.");
+    }
+  };
   
   return (
     <LinearGradient colors={['#023F0F', '#05A527']} style={{ flex: 1 }}>
@@ -439,37 +504,53 @@ export default function ViewTransaction() {
 
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>STATUS</Text>
-          <Text style={styles.status}>{transaction?.status?.replace(/_/g, ' ').toUpperCase()}</Text>
+          <Text style={[styles.status, { color: '#00D964', fontSize: 18, marginTop: 4 }]}>
+            {transaction?.status?.replace(/_/g, ' ').toUpperCase()}
+          </Text>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>SCHEDULED IN</Text>
-          <Text style={styles.bigText}>{transaction?.scheduled_time ?? 'N/A'} - {transaction?.scheduled_date}</Text>
-
-          {!hasAgreed && isPostOwner && (
-            <Text style={{ color: 'yellow', marginTop: 10 }}>
+          <Text style={styles.sectionTitle}>SCHEDULED AT</Text>
+          <View style={styles.scheduleRow}>
+            <Text style={[styles.bigText, { marginTop: 4, letterSpacing: 0.5 }]}>
+              {transaction?.scheduled_time ?? 'N/A'} - {transaction?.scheduled_date}
+            </Text>
+            {((isSellingPost && isSeller) || (!isSellingPost && isBuyer)) && (
+              <TouchableOpacity 
+                style={styles.editButton}
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Text style={styles.editButtonText}>Edit</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+          
+          {/* if SELLING, buyer cannot see. if SEEKING, seller cannot see */}
+          {((isSellingPost && !isBuyer) || (!isSellingPost && !isSeller)) && !hasAgreed && (
+            <Text style={{ color: '#FFD700', marginTop: 12, fontSize: 13, fontWeight: '500' }}>
               {transaction?.category_id === 1
                 ? 'Waiting for offerer to agree to the schedule.'
                 : 'Waiting for collector to agree to the schedule.'}
             </Text>
           )}
 
-          {isOfferer && !hasAgreed && (
-            <Text style={{ color: '#ccc', fontSize: 12, marginTop: 6, marginBottom: 4 }}>
+          {/* if SELLING, buyer should see. if SEEKING, seller should see */}
+          {((isSellingPost && isBuyer) || (!isSellingPost && isSeller)) && !hasAgreed && (
+            <Text style={{ color: '#ccc', fontSize: 12, marginTop: 8, fontStyle: 'italic' }}>
               Not convenient? Discuss the schedule with the seeker.
             </Text>
           )}
 
-          {isOfferer && (
-            <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+          {/* if SELLING, buyer shoul see. if SEEKING, seller should see */}
+          {((isSellingPost && isBuyer) || (!isSellingPost && isSeller)) && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12 }}>
               <TouchableOpacity
                 style={{
-                  flex: 1,
                   backgroundColor: hasAgreed ? '#888' : '#00D964',
-                  paddingVertical: 12,
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
                   borderRadius: 20,
-                  alignItems: 'center',
-                  justifyContent: 'center',
+                  marginRight: 8,
                 }}
                 onPress={hasAgreed ? undefined : handleAgreeToSchedule}
                 disabled={hasAgreed}
@@ -477,98 +558,88 @@ export default function ViewTransaction() {
                 <Text style={{
                   color: '#023F0F',
                   fontWeight: 'bold',
-                  fontSize: 14,
+                  fontSize: 13,
+                  letterSpacing: 0.5,
                 }}>
                   {hasAgreed ? 'AGREED' : 'AGREE'}
                 </Text>
               </TouchableOpacity>
+
               <TouchableOpacity
                 style={{
-                  flex: 1,
                   backgroundColor: '#1E592B',
-                  paddingVertical: 12,
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
                   borderRadius: 20,
-                  alignItems: 'center',
-                  justifyContent: 'center',
                 }}
-                disabled={hasAgreed}
                 onPress={goToChat}
               >
                 <Text style={{
                   color: 'white',
                   fontWeight: 'bold',
-                  fontSize: 14,
+                  fontSize: 13,
+                  letterSpacing: 0.5,
                 }}>
-                  CHAT SEEKER
+                  {isBuyer ? 'CHAT SELLER' : 'CHAT SEEKER'}
                 </Text>
               </TouchableOpacity>
             </View>
           )}
 
-          <Text style={styles.subLabel}>ITEMS</Text>
-          <View style={styles.itemList}>
-          {transaction?.items?.length > 0 ? (
-            transaction.items.map((item: string, index: number) => (
-              <View key={index} style={styles.itemChip}>
-                <Text style={styles.itemChipText}>{item}</Text>
-              </View>
-            ))
-          ) : (
-            <Text style={styles.subValue}>N/A</Text>
-          )}
+          <Text style={[styles.subLabel, { marginTop: 16 }]}>ITEMS</Text>
+          <View style={[styles.itemList, { marginTop: 6 }]}>
+            {transaction?.items?.length > 0 ? (
+              transaction.items.map((item: string, index: number) => (
+                <View key={index} style={[styles.itemChip, { marginBottom: 6 }]}>
+                  <Text style={[styles.itemChipText, { letterSpacing: 0.3 }]}>{item}</Text>
+                </View>
+              ))
+            ) : (
+              <Text style={[styles.subValue, { fontStyle: 'italic' }]}>N/A</Text>
+            )}
+          </View>
+
+          <Text style={[styles.subLabel, { marginTop: 12 }]}>LOCATION</Text>
+          <View style={[styles.addressRow, { marginTop: 6 }]}>
+            <Image source={locationIcon} style={styles.locationIcon} resizeMode="contain" />
+            <Text style={[styles.subValue, { maxWidth: 280, lineHeight: 20 }]} 
+              numberOfLines={2}
+              ellipsizeMode="tail"
+            >
+              {address ?? 'Loading location...'}
+            </Text>
+          </View>
+
+          <Text style={[styles.subLabel, { marginTop: 12 }]}>COLLECTION METHOD</Text>
+          <View style={[styles.modeRow, { marginTop: 6 }]}>
+            {(() => {
+              const mode = getModeData(transaction?.method || '');
+              return (
+                <>
+                  <Image source={mode.icon} style={[styles.modeIcon, { tintColor: mode.color }]} />
+                  <Text style={[styles.modeText, { color: mode.color, letterSpacing: 0.5 }]}> 
+                    {transaction?.method?.toUpperCase()}
+                  </Text>
+                </>
+              );
+            })()}
+          </View>
         </View>
 
-         
-          <Text style={styles.subLabel}>SETTLED AT</Text>
-            <View style={styles.addressRow}>
-              <Image source={locationIcon} style={styles.locationIcon} resizeMode="contain" />
-              <Text style={[styles.subValue, { maxWidth: 280 }]} 
-                numberOfLines={2}
-                ellipsizeMode="tail"
-              >
-                {address ?? 'Loading location...'}
-              </Text>
-            </View>
-
-        <Text style={styles.subLabel}>IN METHOD OF</Text>
-        <View style={styles.modeRow}>
-          {(() => {
-            const mode = getModeData(transaction?.method || '');
-            return (
-              <>
-                <Image source={mode.icon} style={[styles.modeIcon, { tintColor: mode.color }]} />
-                <Text style={[styles.modeText, { color: mode.color }]}> 
-                  {transaction?.method?.toUpperCase()}
-                </Text>
-              </>
-            );
-          })()}
-        </View>
-
-        </View>
-
-        <View style={styles.cardRow}>
+        <View style={[styles.cardRow, { marginTop: 16 }]}>
           <View>
-            <Text style={styles.subLabel}>TO BE COLLECTED BY :</Text>
-            <Text style={styles.collectorName}>
+            <Text style={[styles.subLabel, { marginBottom: 4 }]}>TO BE COLLECTED BY</Text>
+            <Text style={[styles.collectorName, { fontSize: 16, marginBottom: 12 }]}>
               {transaction?.collector_name}
             </Text>
-            <Text style={styles.subLabel}>FROM:</Text>
-            <Text style={styles.offererName}>
+            <Text style={[styles.subLabel, { marginBottom: 4 }]}>FROM</Text>
+            <Text style={[styles.offererName, { fontSize: 16 }]}>
               {transaction?.offerer_name}
             </Text>
-
-            {/* {!hasAgreed && isOfferer && (
-              <TouchableOpacity onPress={handleAgreeToSchedule} style={[styles.confirmButton, { marginTop: 10 }]}>
-                <Text style={styles.confirmText}>AGREE TO SCHEDULE</Text>
-              </TouchableOpacity>
-            )} */}
           </View>
           {transaction?.photo_url && (
             <Image source={{ uri: transaction?.photo_url }} style={styles.photo} />
           )}
-
-      
         </View>
 
         {/* Proof of Collection */}
@@ -580,27 +651,10 @@ export default function ViewTransaction() {
           >
             <View style={styles.proofTextContainer}>
               <Text style={styles.proofCardTitle}>PROOF OF COLLECTION</Text>
-              <Text style={styles.proofCardSubtitle}>Tap Here to Upload images</Text>
+              <Text style={styles.proofCardSubtitle}>Tap Here to upload and view collection proof.</Text>
             </View>
             <Image source={proofIcon} style={styles.proofCardImage} />
           </TouchableOpacity>
-
-
-          {/* Step Tracker */}
-          {/* <View style={{ marginTop: 16 }}>
-            {steps.map((step, index) => (
-              <Text
-                key={step}
-                style={{
-                  color: index <= currentStepIndex ? '#00D964' : '#aaa',
-                  fontWeight: index === currentStepIndex ? 'bold' : 'normal',
-                  marginBottom: 6,
-                }}
-              >
-                {index + 1}. {step.replaceAll('_', ' ').toUpperCase()}
-              </Text>
-            ))}
-          </View> */}
 
           {/* tracker - reversed */}
           <View style={{ marginTop: 16, paddingLeft: 10, borderLeftWidth: 2, borderColor: '#00D964' }}>
@@ -631,13 +685,6 @@ export default function ViewTransaction() {
               );
             })}
           </View>
-
-            {/* ✅ Upload Proof Button (Offerer only + right status) */}
-            {/* {isOfferer && transaction?.status === 'for_collection' && (
-              <TouchableOpacity style={[styles.confirmButton, { marginTop: 16 }]} onPress={handleUploadProof}>
-                <Text style={styles.confirmText}>UPLOAD PROOF</Text>
-              </TouchableOpacity>
-            )} */}
         </View>
 
           {/* Payment Section */}
@@ -647,52 +694,31 @@ export default function ViewTransaction() {
             <View style={styles.offerPriceRow}>
               <Text style={styles.offerPriceText}>₱ {transaction?.price?.toFixed(2) ?? 'N/A'}</Text>
             </View>
-            
-            {isPostOwner && (
-              <>
-                <Text style={{ color: '#fff', fontSize: 14, fontWeight: 'normal', textAlign: 'center', marginBottom: 10 }}>Pay Via</Text>
-                <View style={{ flexDirection: 'row', gap: 10, marginBottom: 8 }}>
-                  <TouchableOpacity
-                    style={[
-                      styles.confirmButton,
-                      { flex: 1, backgroundColor: transaction?.status === 'awaiting_payment' ? '#00B2FF' : '#888', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, borderRadius: 8 }
-                    ]}
-                    disabled={transaction?.status !== 'awaiting_payment'}
-                    onPress={handleMockPayment}
-                  >
-                    <Image source={gcashIcon} style={{ width: 36, height: 36, marginRight: 6 }} resizeMode="contain" />
-                    <Text style={[
-                      styles.confirmText,
-                      transaction?.status === 'awaiting_payment' ? { color: '#023F0F' } : { color: '#666' }
-                    ]}>
-                      (GCash)
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.confirmButton,
-                      { flex: 1, backgroundColor: transaction?.status === 'awaiting_payment' ? '#00D964' : '#888', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8, borderRadius: 8 }
-                    ]}
-                    disabled={transaction?.status !== 'awaiting_payment'}
-                    onPress={handleMockPayment}
-                  >
-                    <Image source={mayaIcon} style={{ width: 36, height: 36, marginRight: 6 }} resizeMode="contain" />
-                    <Text style={[
-                      styles.confirmText,
-                      transaction?.status === 'awaiting_payment' ? { color: '#fff' } : { color: '#666' }
-                    ]}>
-                     (Maya)
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </>
+            <Image source={cashIcon} style={{ width: 200, height: 60, alignSelf: 'center', marginBottom: 8, marginTop: 0, resizeMode: 'contain' }} />
+
+            {isBuyer && (
+              <TouchableOpacity 
+                style={[
+                  styles.confirmButton,
+                  { backgroundColor: transaction?.status === 'awaiting_payment' ? '#00D964' : '#888' }
+                ]} 
+                disabled={transaction?.status !== 'awaiting_payment'}
+                onPress={handleMockPayment}
+              >
+                <Text style={[
+                  styles.confirmText,
+                  transaction?.status === 'awaiting_payment' ? { color: '#023F0F' } : { color: '#666' }
+                ]}>
+                  {transaction?.status === 'awaiting_payment' ? 'PAY' : 'PAYMENT PROCESSED'}
+                </Text>
+              </TouchableOpacity>
             )}
 
-            {isPostOwner && transaction?.status === 'for_collecion' && (
+            {isSeller && transaction?.status === 'for_collecion' && (
               <Text style={{ color: '#ccc', fontStyle: 'italic' }}>Please upload a proof of collection first before seeker sends payment.</Text>
             )}
 
-            {isPostOwner && transaction?.status === 'awaiting_payment' && (
+            {isSeller && transaction?.status === 'awaiting_payment' && (
               <Text style={{ color: '#ccc', fontStyle: 'italic' }}>Waiting for seeker to send payment via e-wallet.</Text>
             )}
           </View>
@@ -706,7 +732,7 @@ export default function ViewTransaction() {
                 { paddingHorizontal: 60 },
                 transaction?.status === 'completed' && { backgroundColor: '#888' }
               ]}
-              disabled={transaction?.status === 'completed'}
+              disabled={transaction?.status === 'completed' || transaction?.status !== 'for_completion'}
               onPress={() => {
                 if (transaction?.status === 'for_completion') {
                   setConfirmVisible(true);
@@ -721,75 +747,16 @@ export default function ViewTransaction() {
         )}
 
         {/* Rate Button for Both Users when Completed */}
-        {transaction?.status === 'completed' && (
           <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'center', marginTop: 10 }}>
             <TouchableOpacity
               style={[styles.confirmButton, { backgroundColor: '#FFD700', paddingHorizontal: 60 }]}
               onPress={() => profileNavigation.navigate('Ratings', { offerId })}
+              disabled= {transaction?.status !== 'completed'}
             >
-              <Text style={[styles.confirmText, { color: '#023F0F' }]}>Rate {isOfferer ? 'Seeker' : 'Offerer'}</Text>
+              <Text style={[styles.confirmText, { color: '#023F0F' }]}>Rate {isSeller ? 'Seeker' : 'Seller'}</Text>
             </TouchableOpacity>
           </View>
-        )}
 
-
-        {/* {currentUser === transaction?.offerer_id ? (
-          <TouchableOpacity
-          style={[
-            styles.confirmButton,
-            transaction?.status === 'for_confirmation' && transaction?.status === 'completed' && { backgroundColor: '#ccc' },
-          ]}
-          // disabled={transaction?.status === 'for_confirmation'}
-            onPress={() => {
-              navigation.navigate('ConfirmDelivery', {
-                offerId,
-                offererName: transaction.offerer_name,
-                collectorName: transaction.collector_name,
-                photoUrl: transaction.photo_url,
-              });
-            }}
-          >
-            <Text style={styles.confirmText}>CONFIRM DELIVERY</Text>
-          </TouchableOpacity>
-        ) : (
-          
-          <TouchableOpacity
-            style={[
-              styles.confirmButton,
-              (transaction?.proof_image_url || transaction?.status === 'for_confirmation') && {
-                backgroundColor: '#ccc',
-              },
-            ]}
-            disabled={!transaction?.proof_image_url || transaction?.status === 'completed'}
-            onPress={() => setConfirmVisible(true)}
-          > 
-            <Text style={styles.confirmText}>
-              {transaction?.status === 'completed' ? 'COMPLETED' : 'OFFER RECEIVED'}
-            </Text>
-          </TouchableOpacity>
-        )}
-
-        {confirmVisible && (
-          <View style={styles.modalBackdrop}>
-            <View style={styles.modalBox}>
-              <Text style={styles.modalText}>Are you sure you want to confirm this offer?</Text>
-              <View style={styles.modalActions}>
-                <TouchableOpacity
-                  onPress={() => setConfirmVisible(false)}
-                  style={[styles.modalButton, { backgroundColor: '#ccc' }]}
-                >
-                  <Text>Cancel</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={handlePostOwnerConfirm}
-                  style={[styles.modalButton, { backgroundColor: '#00D964' }]}
-                >
-                  <Text style={{ fontWeight: 'bold', color: '#003d1a' }}>Confirm</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        )} */}
       </ScrollView>
         
       {proofModalVisible && (
@@ -806,8 +773,8 @@ export default function ViewTransaction() {
             {hasProof ? (
               <>
                 <Image source={{ uri: transaction.proof_image_url }} style={styles.proofImage} />
-      
-                {((isSellingPost && isOfferer) || (!isSellingPost && isPostOwner)) && (
+
+                {isBuyer && (
                   <TouchableOpacity
                     style={[
                       styles.confirmButton,
@@ -896,33 +863,116 @@ export default function ViewTransaction() {
 
         {/* Confirmation Popup */}
         {confirmVisible && (
-          <View style={styles.modalBackdrop}>
-            <View style={[styles.modalBox, { alignItems: 'center', backgroundColor: '#023F0F' }]}>  
-              <View style={{ alignItems: 'center', marginBottom: 10 }}>
-                <Text style={{ fontSize: 18, fontWeight: 'bold', color: 'white', marginBottom: 4, textAlign: 'center' }}>
-                  Complete Transaction?
-                </Text>
-                <Text style={{ color: 'white', fontSize: 14, textAlign: 'center', marginBottom: 8 }}>
-                  Are you sure you want to mark this transaction as completed? This action cannot be undone.
-                </Text>
-              </View>
-              <View style={[styles.modalActions, { gap: 12, marginTop: 8, flexDirection: 'row' }]}> 
+          <View style={styles.modalBackdrop} >
+            <View style={styles.modalBox}>
+              <Text style={styles.modalText}>Are you sure you want to complete this transaction?</Text>
+              <View style={styles.modalActions}>
                 <TouchableOpacity
                   onPress={() => setConfirmVisible(false)}
-                  style={[styles.modalButton, { backgroundColor: '#eee', borderWidth: 1, borderColor: '#ccc', flex: 1 }]}
+                  style={[styles.modalButton, { backgroundColor: '#ccc' }]}
                 >
-                  <Text style={{ color: '#023F0F', fontWeight: 'bold' }}>Cancel</Text>
+                  <Text>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={handlePostOwnerConfirm}
-                  style={[styles.modalButton, { backgroundColor: '#00D964', borderWidth: 1, borderColor: '#00B24A', flex: 1 }]}
+                  style={[styles.modalButton, { backgroundColor: '#00D964' }]}
                 >
-                  <Text style={{ fontWeight: 'bold', color: '#023F0F' }}>Confirm</Text>
+                  <Text style={{ fontWeight: 'bold', color: '#003d1a' }}>Confirm</Text>
                 </TouchableOpacity>
               </View>
             </View>
           </View>
         )}  
+
+        {/* Edit Schedule Modal */}
+        <Modal
+          transparent={true}
+          visible={showDatePicker || showTimePicker}
+          animationType="slide"
+          onRequestClose={() => {
+            setShowDatePicker(false);
+            setShowTimePicker(false);
+          }}
+        >
+          <View style={styles.modalBackdrop}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Edit Schedule</Text>
+              
+              <TouchableOpacity 
+                style={styles.dateTimeButton} 
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Text style={styles.dateTimeButtonText}>
+                  Date: {selectedDate.toLocaleDateString()}
+                </Text>
+              </TouchableOpacity>
+
+              {showDatePicker && (
+                <DateTimePicker
+                  value={selectedDate}
+                  mode="date"
+                  display="default"
+                  minimumDate={new Date()}
+                  onChange={(event: DateTimePickerEvent, date?: Date) => {
+                    setShowDatePicker(false);
+                    if (date) {
+                      setSelectedDate(date);
+                      if (date.toDateString() === new Date().toDateString()) {
+                        const now = new Date();
+                        if (selectedTime < now) {
+                          setSelectedTime(now);
+                        }
+                      }
+                    }
+                  }}
+                />
+              )}
+
+              <TouchableOpacity 
+                style={styles.dateTimeButton} 
+                onPress={() => setShowTimePicker(true)}
+              >
+                <Text style={styles.dateTimeButtonText}>
+                  Time: {selectedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </Text>
+              </TouchableOpacity>
+
+              {showTimePicker && (
+                <DateTimePicker
+                  value={selectedTime}
+                  mode="time"
+                  display="default"
+                  minimumDate={selectedDate.toDateString() === new Date().toDateString() ? new Date() : undefined}
+                  onChange={(event: DateTimePickerEvent, time?: Date) => {
+                    setShowTimePicker(false);
+                    if (time) {
+                      setSelectedTime(time);
+                    }
+                  }}
+                />
+              )}
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity 
+                  style={[styles.modalButton, { backgroundColor: '#00D964' }]} 
+                  onPress={handleEditSchedule}
+                >
+                  <Text style={styles.modalButtonText}>Save</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.modalButton, { backgroundColor: '#666' }]} 
+                  onPress={() => {
+                    setShowDatePicker(false);
+                    setShowTimePicker(false);
+                  }}
+                >
+                  <Text style={styles.modalButtonText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
     </LinearGradient>
   );
 }
@@ -1045,7 +1095,7 @@ const styles = StyleSheet.create({
   offerPriceText: {
     color: '#00FF57',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 18,
   },
   
   modeRow: {
@@ -1171,12 +1221,10 @@ const styles = StyleSheet.create({
   confirmButton: {
     backgroundColor: '#00D964',
     paddingVertical: 14,
-    paddingHorizontal:20,
- 
+    paddingHorizontal:60,
     borderRadius: 100,
     alignItems: 'center'
   },
-  
   confirmText: {
     color: 'darkgray',
     fontWeight: 'bold'
@@ -1242,5 +1290,56 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
     borderWidth: 1,
   },
-  
+  scheduleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  editButton: {
+    backgroundColor: '#00D964',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    marginLeft: 8,
+  },
+  editButtonText: {
+    color: '#023F0F',
+    fontWeight: 'bold',
+    fontSize: 12,
+  },
+  modalContent: {
+    backgroundColor: '#004d00',
+    padding: 20,
+    borderRadius: 10,
+    width: '80%',
+  },
+  modalTitle: {
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 14,
+    fontSize: 18,
+  },
+  dateTimeButton: {
+    backgroundColor: '#1E592B',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#00D964',
+  },
+  dateTimeButtonText: {
+    color: 'white',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+  },
+  modalButtonText: {
+    color: 'white',
+    textAlign: 'center',
+    fontWeight: 'bold',
+  },
 });

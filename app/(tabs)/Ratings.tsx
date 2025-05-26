@@ -11,10 +11,27 @@ export default function Ratings() {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
   const [transaction, setTransaction] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<{ id: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [starScale] = useState([1, 1, 1, 1, 1].map(() => new Animated.Value(1)));
   const navigation = useNavigation<StackNavigationProp<ProfileStackParamList, 'Ratings'>>();
   const { offerId } = useRoute().params as { offerId: string };
+
+  useEffect(() => {
+    const getUser = async () => {
+      console.log("🔍 Fetching authenticated user...");
+      const { data, error } = await supabase.auth.getUser();
+  
+      if (error) {
+        console.error("❌ Error fetching user:", error.message);
+      } else {
+        console.log("✅ Authenticated User:", data.user);
+        setCurrentUser(data.user);
+      }
+    };
+  
+    getUser();
+  }, []);  
 
   useEffect(() => {
     const fetchTransaction = async () => {
@@ -24,16 +41,27 @@ export default function Ratings() {
     fetchTransaction();
   }, [offerId]);
 
+  
+  const isOfferer = currentUser?.id === transaction?.offerer_id;
+  const isCollector = currentUser?.id === transaction?.collector_id;
+
   const submitReview = async () => {
     setSubmitting(true);
     const { data: userData } = await supabase.auth.getUser();
     const reviewer_id = userData?.user?.id;
-    const reviewed_user_id = transaction?.collector_id || transaction?.offerer_id;
+
+    const reviewed_user_id = isOfferer
+      ? transaction?.collector_id
+      : isCollector
+      ? transaction?.offerer_id
+      : null;
+
     if (!reviewer_id || !reviewed_user_id) {
       Alert.alert("Error", "Missing user info. Please try again.");
       setSubmitting(false);
       return;
     }
+
     const success = await reviewService.submitReview({
       offer_id: offerId,
       reviewer_id,
@@ -66,8 +94,8 @@ export default function Ratings() {
     ]).start();
   };
 
-  const userName = transaction?.collector_name || transaction?.offerer_name || 'User';
-  const userRole = transaction?.collector_name ? 'Collector' : 'Offerer';
+  const userName = isOfferer ? transaction?.collector_name : transaction?.offerer_name || 'User';
+  const userRole = isOfferer ? 'Collector' : 'Offerer';
   const userAvatar = transaction?.photo_url || 'https://i.pravatar.cc/80';
 
   return (

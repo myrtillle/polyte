@@ -104,7 +104,8 @@ const EditOffer = () => {
     const updatedOffer = {
       id: offer.id, 
       post_id: offer.post_id, 
-      user_id: offer.user_id, 
+      seller_id: offer.seller_id, 
+      buyer_id: offer.buyer_id,
       requested_weight: offer.requested_weight, 
       price: priceNum,
       offered_weight: weightNum,

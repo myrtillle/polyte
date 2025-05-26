@@ -47,7 +47,7 @@ const ChatScreen = () => {
     const { offerId } = route.params as { offerId: string };
     const { chatId, userId, post, schedule: incomingSchedule } = (route.params || {}) as RouteParams;
     const [schedule, setSchedule] = useState<Schedule | undefined>(incomingSchedule);
-
+    const [currentUser, setCurrentUser] = useState<{ id: string } | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState<string>('');
     const [modalVisible, setModalVisible] = useState(false);
@@ -75,6 +75,23 @@ const ChatScreen = () => {
     const [address, setAddress] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [transaction, setTransaction] = useState<any>(null);
+    
+        // Logged in user
+        useEffect(() => {
+          const getUser = async () => {
+            console.log("🔍 Fetching authenticated user...");
+            const { data, error } = await supabase.auth.getUser();
+        
+            if (error) {
+              console.error("❌ Error fetching user:", error.message);
+            } else {
+              console.log("✅ Authenticated User:", data.user);
+              setCurrentUser(data.user);
+            }
+          };
+        
+          getUser();
+        }, []);  
 
     useEffect(() => {
         if (chatId && userId) {
@@ -207,8 +224,13 @@ const ChatScreen = () => {
       hydrateScheduleUsingChatId();
     }, [chatId, schedule]);
     
-    
-    // console.log("🧩 ChatScreen mounted — chatId:", chatId, "schedule:", schedule);
+    const isSellingPost = transaction?.category_id === 2;
+
+    const isOfferer = currentUser?.id === transaction?.offerer_id;
+    const isCollector = currentUser?.id === transaction?.collector_id;
+
+    const isBuyer = isSellingPost ? isCollector : isOfferer;
+    const isSeller = isSellingPost ? isOfferer : isCollector;
 
     useEffect(() => {
       console.log("🧩 useEffect triggered — chatId:", chatId, "schedule:", schedule);
@@ -299,9 +321,6 @@ const ChatScreen = () => {
         console.error("❌ Error sending message:", error);
     }
     };
-
-    const isPostOwner = userId === schedule?.collector_id;
-    const isOfferer = userId === schedule?.offerer_id;
 
     const handleEditSchedule = async () => {
         if (!chatId || !schedule) {
@@ -554,7 +573,7 @@ const ChatScreen = () => {
                   </TouchableOpacity>
                 </View>
             )}
-            {schedule && schedule.status === 'pending' && (isPostOwner || isOfferer) && (
+            {schedule && schedule.status === 'pending' && (isBuyer || isSeller) && (
                 <View style={styles.scheduleCard}>
                     <View style={styles.scheduleHeader}>
                         <Text style={styles.scheduleTitle}>COLLECTION SCHEDULE</Text>
@@ -604,7 +623,7 @@ const ChatScreen = () => {
                     </View>
 
                     <View style={styles.scheduleActions}>
-                        {isPostOwner && (
+                        {((isSellingPost && isSeller) || (!isSellingPost && isBuyer)) && (
                             <TouchableOpacity 
                                 style={[styles.scheduleButton, styles.editButton]} 
                                 onPress={() => setModalVisible(true)}
@@ -614,7 +633,8 @@ const ChatScreen = () => {
                             </TouchableOpacity>
                         )}
                         
-                        {isOfferer && (
+                        {/* if SELLING, buyer should see. if SEEKING, seller should see */}
+                        {((isSellingPost && isBuyer) || (!isSellingPost && isSeller)) && (
                             <TouchableOpacity 
                                 style={[styles.scheduleButton, styles.agreeButton]} 
                                 onPress={handleAgree}

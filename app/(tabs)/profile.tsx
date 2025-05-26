@@ -13,7 +13,12 @@ import editIcon from '../../assets/images/edit.png';
 import trashbagIcon from '../../assets/images/trashbag.png';
 import bioIcon from '../../assets/images/bio.png';
 
-
+type CollectionStats = {
+  co2Saved: string;
+  donated: number;
+  collected: number;
+  avgMonthlyContribution: string;
+};
 
 export default function ProfileScreen() {
   //navigation
@@ -24,7 +29,12 @@ export default function ProfileScreen() {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [collectionStats, setCollectionStats] = useState({ collected: 0, donated: 0 });
+  const [collectionStats, setCollectionStats] = useState<CollectionStats>({
+    co2Saved: '0.00',
+    donated: 0,
+    collected: 0,
+    avgMonthlyContribution: '0.00',
+  });
   const [userId, setUserId] = useState<string | null>(null);
 
   const co2Saved = collectionStats.donated * 1.02;
@@ -43,8 +53,6 @@ export default function ProfileScreen() {
       )
     : 1;
 
-  const averageMonthly = collectionStats.donated / monthsSinceJoined;
-
   useEffect(() => {
     const getUserId = async () => {
       const { data, error } = await supabase.auth.getUser();
@@ -54,6 +62,145 @@ export default function ProfileScreen() {
     getUserId();
   }, []);
   
+  // Add real-time profile subscription
+  useEffect(() => {
+    if (!userId) return;
+
+    const profileSubscription = supabase
+      .channel('profile-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'personal_users',
+          filter: `id=eq.${userId}`,
+        },
+        async (payload) => {
+          console.log('📡 Real-time profile update:', payload);
+          // Refresh profile data
+          const { data: updatedProfile } = await supabase
+            .from('personal_users')
+            .select('*')
+            .eq('id', userId)
+            .single();
+          
+          if (updatedProfile) {
+            setProfile(updatedProfile);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(profileSubscription);
+    };
+  }, [userId]);
+
+  // Add real-time collection stats subscription
+  useEffect(() => {
+    if (!userId) return;
+
+    const fetchAndCalculateStats = async () => {
+      console.log('🔄 Fetching stats for user:', userId);
+      const { data, error } = await supabase
+        .from('offers')
+        .select(`
+          offered_weight,
+          seller_id,
+          buyer_id,
+          offer_schedules (
+            status
+          )
+        `)
+        .or(`seller_id.eq.${userId},buyer_id.eq.${userId}`);
+
+      if (error) {
+        console.error('❌ Error fetching stats:', error.message);
+        return;
+      }
+
+      console.log('📊 Raw offers data:', data);
+
+      let totalDonated = 0;
+      let totalCollected = 0;
+
+      data?.forEach(offer => {
+        const weight = offer.offered_weight || 0;
+        const isCompleted = offer.offer_schedules?.[0]?.status === 'completed';
+
+        if (isCompleted) {
+          if (offer.seller_id === userId) {
+            totalDonated += weight;
+          }
+          if (offer.buyer_id === userId) {
+            totalCollected += weight;
+          }
+        }
+      });
+
+      const monthsSinceJoined = profile?.created_at
+        ? Math.max(
+            1,
+            (new Date().getFullYear() - new Date(profile.created_at).getFullYear()) * 12 +
+            (new Date().getMonth() - new Date(profile.created_at).getMonth())
+          )
+        : 1;
+
+      const co2Saved = (totalDonated + totalCollected) * 1.02;
+      const avgMonthlyContribution = (totalDonated + totalCollected) / monthsSinceJoined;
+
+      const newStats = {
+        co2Saved: co2Saved.toFixed(2),
+        donated: totalDonated,
+        collected: totalCollected,
+        avgMonthlyContribution: avgMonthlyContribution.toFixed(2),
+      };
+
+      console.log('📈 Calculated stats:', newStats);
+      setCollectionStats(newStats);
+    };
+
+    // Initial fetch
+    fetchAndCalculateStats();
+
+    // Set up real-time subscription
+    const statsSubscription = supabase
+      .channel('stats-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'offers',
+          filter: `seller_id=eq.${userId}`,
+        },
+        () => {
+          console.log('🔄 Offer change detected, refreshing stats...');
+          fetchAndCalculateStats();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'offer_schedules',
+          filter: `seller_id=eq.${userId}`,
+        },
+        () => {
+          console.log('🔄 Schedule change detected, refreshing stats...');
+          fetchAndCalculateStats();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(statsSubscription);
+    };
+  }, [userId, profile?.created_at]);
+  
+
   const loadProfile = async () => {
     console.log('🔄 Loading profile data...');
     try {
@@ -66,11 +213,6 @@ export default function ProfileScreen() {
       });
       setProfile(data);
 
-      if (data?.id) {
-        const stats = await profileService.fetchUserCollection(data.id);
-        console.log('✅ Collection stats loaded:', stats);
-        setCollectionStats(stats);
-      }
     } catch (err) {
       console.error('❌ Error loading profile:', err);
       Alert.alert('Error', 'Failed to load profile data');
@@ -79,12 +221,10 @@ export default function ProfileScreen() {
     }
   };
 
-  useFocusEffect(
-    React.useCallback(() => {
-      console.log('🎯 Profile screen focused');
-      loadProfile();
-    }, [])
-  );
+  useEffect(() => {
+    if (userId) loadProfile();
+  }, [userId]);
+  
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -121,27 +261,16 @@ export default function ProfileScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.headerWrapper}>
-          <View
-            style={{
-              borderColor: '#00FF57',
-              borderWidth: 3,
-              borderRadius: 50,
-              padding: 2,
-              alignItems: 'center',
-              justifyContent: 'center',
+          <Image
+            source={{ 
+              uri: profile?.profile_photo_url || 'https://i.pravatar.cc/100'
             }}
-          >
-            <Image
-              source={{ 
-                uri: profile?.profile_photo_url || 'https://i.pravatar.cc/100'
-              }}
-              style={styles.profileImage}
-              onError={(e) => {
-                console.error('❌ Image loading error:', e.nativeEvent.error);
-                console.log('📸 Attempted to load image from:', profile?.profile_photo_url);
-              }}
-            />
-          </View>
+            style={styles.profileImage}
+            onError={(e) => {
+              console.error('❌ Image loading error:', e.nativeEvent.error);
+              console.log('📸 Attempted to load image from:', profile?.profile_photo_url);
+            }}
+          />
           <View style={styles.headerTextContainer}>
             <Text style={styles.profileName}>{profile.first_name} {profile.last_name}</Text>
             <Text style={styles.profileLocation}> {profile.purok}, {profile.barangay}</Text>
@@ -193,15 +322,15 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.allTimeStatsOuterContainer}>
-          <Text style={styles.sectionTitle}>Your Recyling Journey</Text>
+          <Text style={styles.sectionTitle}>YOUR RECYCLING JOURNEY</Text>
           <View style={styles.allTimeStatsContainer}>
             <View style={styles.statBox}>
               <View style={styles.statLabelRow}>
-                <Text style={styles.statLabel}>Carbon Emission Saved</Text>
+                <Text style={styles.statLabel}>CARBON EMISSION SAVED</Text>
                 <Image source={bioIcon} style={styles.statIcon} />
               </View>
               <Text style={styles.statValue}>
-                <Text style={{ color: '#00FF57', fontSize: 20, fontWeight: 'bold' }}>{co2Saved.toFixed(2)}</Text> kg of CO2
+                <Text style={styles.co2Emphasis}>{collectionStats.co2Saved}</Text> kg of CO2
               </Text>
             </View>
             <View style={styles.statBox}>
@@ -210,14 +339,14 @@ export default function ProfileScreen() {
                 <Image source={trashbagIcon} style={styles.statIcon} />
               </View>
               <View style={styles.statRowSplit}>
-                <Text style={styles.statSplit}><Text style={styles.boldText}>DONATED</Text> <Text style={{ color: '#00FF57' }}>{collectionStats.donated}</Text></Text>
-                <Text style={styles.statSplit}><Text style={styles.boldText}>COLLECTED</Text> <Text style={{ color: '#00FF57' }}>{collectionStats.collected}</Text></Text>
+                <Text style={styles.statSplit}><Text style={styles.boldText}>DONATED</Text> {collectionStats.donated}</Text>
+                <Text style={styles.statSplit}><Text style={styles.boldText}>COLLECTED</Text> {collectionStats.collected}</Text>
               </View>
             </View>
             <View style={styles.statBox}>
-              <Text style={styles.statLabel}>Average Monthly Contribution</Text>
-              <Text style={[styles.statValue, { color: '#00FF57' }]}>{averageMonthly.toFixed(1)}</Text>
-              <Text style={styles.statSuffix}>Kilograms per month</Text>
+              <Text style={styles.statLabel}>AVERAGE MONTHLY CONTRIBUTION</Text>
+              <Text style={styles.statValue}>{collectionStats.avgMonthlyContribution}</Text>
+              <Text style={styles.statSuffix}>SACKS PER MONTH</Text>
             </View>
           </View>
         </View>
@@ -248,7 +377,7 @@ const styles = StyleSheet.create({
   statIcon: {
     width: 16,
     height: 16,
-    marginBottom:10,
+
   },
 
   ratingRow: {
@@ -371,7 +500,7 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
-   
+    textTransform: 'uppercase',
     marginBottom: 10,
   },
   allTimeStatsContainer: {
@@ -388,7 +517,7 @@ const styles = StyleSheet.create({
   statLabel: {
     color: '#ccc',
     fontSize: 12,
-    marginBottom: 10,
+    marginBottom: 6,
   },
   statValue: {
     color: '#fff',
@@ -436,7 +565,6 @@ const styles = StyleSheet.create({
     width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom:6,
   },
   claimRewardText: {
     color: '#023F0F',
@@ -463,7 +591,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     width: '100%',
     marginBottom: 2,
-   
   },
   halfButton: {
     flex: 1,

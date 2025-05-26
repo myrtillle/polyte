@@ -88,7 +88,7 @@ export default function Notifications() {
       console.log("🔔 Notification data:", notif);
       console.log("📌 Post ID:", notif.post_id);
 
-      if (type === 'new_offer' || type === 'new_comment') {
+      if (type === 'new_offer' || type === 'new_comment' || type === 'new_interest') {
         // First get the offer using target_id
         const { data: offer, error: offerError } = await supabase
           .from('posts')
@@ -113,7 +113,7 @@ export default function Notifications() {
 
         homeNavigation.navigate('ViewPost', { post });
   
-      } else if (type === 'offer_accepted' || type === 'transaction_completed' || type === 'payment_send') {
+      } else if (type === 'offer_accepted' || type === 'transaction_completed' || type === 'payment_send' || type==='proof_uploaded') {
         navigation.navigate('Main', {
           screen: 'Profile',
           params: {

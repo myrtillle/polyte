@@ -370,7 +370,7 @@ export const transactionService = {
         poUserId, 
         'Proof of Collection Uploaded',
         'The offerer has uploaded a proof photo for your review.',
-        'transaction_notif',
+        'proof_uploaded',
         {
           type: 'offer',
           id: offerId
@@ -505,7 +505,7 @@ export const transactionService = {
         transaction.collector_id, // this is usually the post owner
         'Transaction Completed',
         'You’ve successfully completed a transaction. Thank you for recycling with Polyte!',
-        'transaction_notif',
+        'proof_uploaded',
         {
           type: 'offer',
           id: offerId
