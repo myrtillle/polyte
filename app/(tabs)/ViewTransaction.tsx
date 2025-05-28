@@ -14,6 +14,8 @@ import pickupIcon from '../../assets/images/pickup.png';
 import dropoffIcon from '../../assets/images/dropoff.png';
 import meetupIcon from '../../assets/images/meetup.png';
 import cashIcon from '../../assets/images/GCASHandMAYA2.png';
+import gcashIcon from '../../assets/images/gcash.png';
+import mayaIcon from '../../assets/images/maya.png';
 import proofIcon from '../../assets/images/images3d.png';
 import { Button, Divider, IconButton } from 'react-native-paper';
 import Constants from 'expo-constants';
@@ -79,7 +81,6 @@ export default function ViewTransaction() {
   
   const paid = transaction?.status === 'awaiting_payment' || transaction?.status === 'for_completion' || transaction?.status === 'completed';
 
-  
   useEffect(() => {
     const channel = supabase
       .channel('transaction-updates')
@@ -150,15 +151,12 @@ export default function ViewTransaction() {
   const isSellingPost = transaction?.category_id === 2;
 
   //offerer collector check
-  // const isSeller = currentUser?.id === schedule?.offerer_id;
-  // const isBuyer = currentUser?.id === schedule?.collector_id;
-
   const isOfferer = currentUser?.id === transaction?.offerer_id;
   const isCollector = currentUser?.id === transaction?.collector_id;
 
   // Determine roles based on post category
-  const isBuyer = isSellingPost ? isCollector : isOfferer;
-  const isSeller = isSellingPost ? isOfferer : isCollector;
+  const isBuyer = isCollector;  // Buyer is always the collector
+  const isSeller = isOfferer;   // Seller is always the offerer
 
   const handlePostOwnerConfirm = async () => {
     const success = await transactionService.completeTransaction(offerId);
@@ -201,7 +199,7 @@ export default function ViewTransaction() {
         const updated = await transactionService.fetchTransactionDetails(offerId);
         setTransaction(updated);
         // setPaid(true);
-
+        
         console.log('🧩 canComplete status:', canComplete);
         console.log('🖼️ Has proof?', hasProof);
         console.log('💸 Paid?', paid);
@@ -214,6 +212,17 @@ export default function ViewTransaction() {
       setUploading(false);
   };
 
+  console.log('🔍 Role debug →', {
+    currentUser: currentUser?.id,
+    offerer: transaction?.offerer_id,
+    collector: transaction?.collector_id,
+    isSellingPost,
+    isOfferer,
+    isCollector,
+    isBuyer,
+    isSeller,
+  });
+  
   const GOOGLE_MAPS_API_KEY = Constants.expoConfig?.extra?.GOOGLE_MAPS_API_KEY || '';
   // console.log("🔑 Google Maps Key:", GOOGLE_MAPS_API_KEY);
 
@@ -246,22 +255,25 @@ export default function ViewTransaction() {
     const fetchTransactDetails = async () => {
       setLoading(true);
       setTransaction(null); 
-      const data = await transactionService.fetchTransactionDetails(offerId);
-      console.log('📄 Data returned from transactionService:', data);
+      try {
+        const data = await transactionService.fetchTransactionDetails(offerId);
+        console.log('📄 Data returned from transactionService:', data);
+        setTransaction(data);
 
-      setTransaction(data);
-
-      if (data?.location) {
-        const coords = extractCoords(data.location);
-        console.log('🔍 Coords:', coords);
-        if (coords) {
-          const result = await reverseGeocode(coords.latitude, coords.longitude);
-          console.log('🔍 Result:', result);
-          setAddress(result || null);
+        if (data?.location) {
+          const coords = extractCoords(data.location);
+          console.log('🔍 Coords:', coords);
+          if (coords) {
+            const result = await reverseGeocode(coords.latitude, coords.longitude);
+            console.log('🔍 Result:', result);
+            setAddress(result || null);
+          }
         }
+      } catch (error) {
+        console.error('Error fetching transaction details:', error);
+      } finally {
+        setLoading(false);
       }
-      
-      setLoading(false);
     };
     
     if (offerId) {
@@ -269,10 +281,23 @@ export default function ViewTransaction() {
     }
     
     setConfirmVisible(false);
-    // setPaid(false);
-
   }, [offerId]);
 
+  // Separate useEffect for handling date and time updates
+  useEffect(() => {
+    if (transaction?.scheduled_date) {
+      const [year, month, day] = transaction.scheduled_date.split('-').map(Number);
+      setSelectedDate(new Date(year, month - 1, day));
+    }
+  
+    if (transaction?.scheduled_time) {
+      const [hours, minutes] = transaction.scheduled_time.split(':').map(Number);
+      const now = new Date();
+      now.setHours(hours, minutes);
+      setSelectedTime(now);
+    }
+  }, [transaction?.scheduled_date, transaction?.scheduled_time]);
+  
   useEffect(() => {
     console.log('🧩 canComplete status:', canComplete);
     console.log('🖼️ Has proof?', hasProof);
@@ -517,20 +542,30 @@ export default function ViewTransaction() {
             </Text>
             {((isSellingPost && isSeller) || (!isSellingPost && isBuyer)) && (
               <TouchableOpacity 
-                style={styles.editButton}
-                onPress={() => setShowDatePicker(true)}
+                style={[
+                  styles.editButton,
+                  transaction?.status !== 'pending' && styles.editButtonDisabled
+                ]}
+                disabled={transaction?.status !== 'pending'}
+                onPress={() => {
+                  setShowDatePicker(true);
+                  setShowTimePicker(false);
+                }}
               >
-                <Text style={styles.editButtonText}>Edit</Text>
+                <Text style={[
+                  styles.editButtonText,
+                  transaction?.status !== 'pending' && styles.editButtonTextDisabled
+                ]}>Edit</Text>
               </TouchableOpacity>
             )}
           </View>
           
           {/* if SELLING, buyer cannot see. if SEEKING, seller cannot see */}
-          {((isSellingPost && !isBuyer) || (!isSellingPost && !isSeller)) && !hasAgreed && (
+          {((isSellingPost && isSeller) || (!isSellingPost && isBuyer)) && !hasAgreed && (
             <Text style={{ color: '#FFD700', marginTop: 12, fontSize: 13, fontWeight: '500' }}>
               {transaction?.category_id === 1
-                ? 'Waiting for offerer to agree to the schedule.'
-                : 'Waiting for collector to agree to the schedule.'}
+                ? 'Waiting for seller to agree to the schedule.'
+                : 'Waiting for buyer to agree to the schedule.'}
             </Text>
           )}
 
@@ -542,8 +577,9 @@ export default function ViewTransaction() {
           )}
 
           {/* if SELLING, buyer shoul see. if SEEKING, seller should see */}
-          {((isSellingPost && isBuyer) || (!isSellingPost && isSeller)) && (
+          
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12 }}>
+            {((isSellingPost && isBuyer) || (!isSellingPost && isSeller)) && (
               <TouchableOpacity
                 style={{
                   backgroundColor: hasAgreed ? '#888' : '#00D964',
@@ -564,7 +600,7 @@ export default function ViewTransaction() {
                   {hasAgreed ? 'AGREED' : 'AGREE'}
                 </Text>
               </TouchableOpacity>
-
+            )}
               <TouchableOpacity
                 style={{
                   backgroundColor: '#1E592B',
@@ -584,7 +620,7 @@ export default function ViewTransaction() {
                 </Text>
               </TouchableOpacity>
             </View>
-          )}
+          
 
           <Text style={[styles.subLabel, { marginTop: 16 }]}>ITEMS</Text>
           <View style={[styles.itemList, { marginTop: 6 }]}>
@@ -693,27 +729,67 @@ export default function ViewTransaction() {
             
             <View style={styles.offerPriceRow}>
               <Text style={styles.offerPriceText}>₱ {transaction?.price?.toFixed(2) ?? 'N/A'}</Text>
-            </View>
-            <Image source={cashIcon} style={{ width: 200, height: 60, alignSelf: 'center', marginBottom: 8, marginTop: 0, resizeMode: 'contain' }} />
 
-            {isBuyer && (
-              <TouchableOpacity 
-                style={[
-                  styles.confirmButton,
-                  { backgroundColor: transaction?.status === 'awaiting_payment' ? '#00D964' : '#888' }
-                ]} 
-                disabled={transaction?.status !== 'awaiting_payment'}
-                onPress={handleMockPayment}
-              >
-                <Text style={[
-                  styles.confirmText,
-                  transaction?.status === 'awaiting_payment' ? { color: '#023F0F' } : { color: '#666' }
-                ]}>
-                  {transaction?.status === 'awaiting_payment' ? 'PAY' : 'PAYMENT PROCESSED'}
-                </Text>
-              </TouchableOpacity>
+            </View>
+
+            {isBuyer && ( 
+              <View style={{ flexDirection: 'row', gap: 10, marginBottom: 8 }}>               
+                  <TouchableOpacity
+                    style={[
+                      styles.confirmButton,
+                      { 
+                        flex: 1, 
+                        backgroundColor: transaction?.status === 'awaiting_payment' ? '#00B2FF' : '#888', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        flexDirection: 'row', 
+                        gap: 8, 
+                        borderRadius: 8,
+                        paddingVertical: 12,
+                        paddingHorizontal: 16
+                      }
+                    ]}
+                    disabled={transaction?.status !== 'awaiting_payment'}
+                    onPress={handleMockPayment}
+                  >
+                    <Image source={gcashIcon} style={{ width: 45, height: 45 }} resizeMode="contain" />
+                    <Text style={[
+                      styles.confirmText,
+                      transaction?.status === 'awaiting_payment' ? { color: '#023F0F' } : { color: '#666' }
+                    ]}>
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.confirmButton,
+                      { 
+                        flex: 1, 
+                        backgroundColor: transaction?.status === 'awaiting_payment' ? '#00D964' : '#888', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        flexDirection: 'row', 
+                        gap: 8, 
+                        borderRadius: 8,
+                        paddingVertical: 12,
+                        paddingHorizontal: 16
+                      }
+                    ]}
+                    disabled={transaction?.status !== 'awaiting_payment'}
+                    onPress={handleMockPayment}
+                  >
+                    <Image source={mayaIcon} style={{ width: 60, height: 45 }} resizeMode="contain" />
+                    <Text style={[
+                      styles.confirmText,
+                      transaction?.status === 'awaiting_payment' ? { color: '#fff' } : { color: '#666' }
+                    ]}>
+                    </Text>
+                  </TouchableOpacity>
+              </View>   
             )}
 
+            {isBuyer && transaction?.status === 'proof_uploaded' && (
+              <Text style={{ color: '#ccc', fontStyle: 'italic' }}>Please confirm the collection proof uploaded before proceeding to payment.</Text>
+            )}
             {isSeller && transaction?.status === 'for_collecion' && (
               <Text style={{ color: '#ccc', fontStyle: 'italic' }}>Please upload a proof of collection first before seeker sends payment.</Text>
             )}
@@ -900,7 +976,11 @@ export default function ViewTransaction() {
               
               <TouchableOpacity 
                 style={styles.dateTimeButton} 
-                onPress={() => setShowDatePicker(true)}
+                disabled={transaction?.status !== 'pending'}
+                onPress={() => {
+                  setShowDatePicker(true);
+                  setShowTimePicker(false);
+                }}
               >
                 <Text style={styles.dateTimeButtonText}>
                   Date: {selectedDate.toLocaleDateString()}
@@ -923,6 +1003,8 @@ export default function ViewTransaction() {
                           setSelectedTime(now);
                         }
                       }
+                      // Show time picker after date is selected
+                      setShowTimePicker(true);
                     }
                   }}
                 />
@@ -930,7 +1012,10 @@ export default function ViewTransaction() {
 
               <TouchableOpacity 
                 style={styles.dateTimeButton} 
-                onPress={() => setShowTimePicker(true)}
+                onPress={() => {
+                  setShowTimePicker(true);
+                  setShowDatePicker(false);
+                }}
               >
                 <Text style={styles.dateTimeButtonText}>
                   Time: {selectedTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -1302,10 +1387,16 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     marginLeft: 8,
   },
+  editButtonDisabled: {
+    backgroundColor: '#666',
+  },
   editButtonText: {
     color: '#023F0F',
     fontWeight: 'bold',
     fontSize: 12,
+  },
+  editButtonTextDisabled: {
+    color: '#999',
   },
   modalContent: {
     backgroundColor: '#004d00',

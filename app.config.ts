@@ -25,9 +25,10 @@ export default {
       },
       adaptiveIcon: {
         foregroundImage: './assets/logo.png',
-        backgroundColor: '#ffffff',
+        backgroundColor: 'transparent',
       },
       package: 'com.myrtille.polytev2',
+      versionCode: 1,
       permissions: [
         'INTERNET', 
         'READ_EXTERNAL_STORAGE', 

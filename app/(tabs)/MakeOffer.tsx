@@ -288,35 +288,15 @@ const MakeOffer = () => {
       if (!currentUser?.id || !post?.id) return;
 
       try {
+        // Check if current user has already made an offer for this post
         const { data: existingOffers, error } = await supabase
           .from('offers')
           .select('id, status')
           .eq('post_id', post.id)
-          .eq('user_id', currentUser.id);
+          .or(`seller_id.eq.${currentUser.id},buyer_id.eq.${currentUser.id}`);
 
         if (error) {
           console.error("Error checking existing offers:", error);
-          return;
-        }
-
-        // Check if there's an accepted offer for this post
-        const { data: acceptedOffers } = await supabase
-          .from('offers')
-          .select('id')
-          .eq('post_id', post.id)
-          .eq('status', 'accepted');
-
-        if (acceptedOffers && acceptedOffers.length > 0) {
-          Alert.alert(
-            "Post Already Accepted",
-            "This post has already been accepted by someone else.",
-            [
-              { 
-                text: "Go Back", 
-                onPress: () => navigation.goBack()
-              }
-            ]
-          );
           return;
         }
 
@@ -396,13 +376,13 @@ const MakeOffer = () => {
           return;
         }
         
-        if (value > post.kilograms) {
+        if (value > post.remaining_weight) {
           Alert.alert(
             "Invalid Input", 
-            `You cannot offer more than ${post.kilograms} kg.`,
+            `You cannot offer more than ${post.remaining_weight} kg.`,
             [{ text: "OK" }]
           );
-          setOfferedWeight(post.kilograms);
+          setOfferedWeight(post.remaining_weight);
           return;
         }
         
@@ -411,7 +391,7 @@ const MakeOffer = () => {
       keyboardType="numeric"
       style={[styles.kilogramsInput, { minWidth: 80 }]}
     />
-    <Text style={{ color: '#ccc', fontSize: 12 }}>of {post.kilograms} kg</Text>
+    <Text style={{ color: '#ccc', fontSize: 12 }}>of {post.remaining_weight} kg</Text>
   </View>
 </View>
 

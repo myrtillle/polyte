@@ -224,13 +224,36 @@ const ChatScreen = () => {
       hydrateScheduleUsingChatId();
     }, [chatId, schedule]);
     
+    useEffect(() => {
+      if (schedule) {
+        console.log("🛠 Prefilling modal from schedule:", schedule);
+        
+        const [year, month, day] = schedule.scheduled_date?.split('-') || [];
+        const [hours, minutes] = schedule.scheduled_time?.split(':') || [];
+    
+        if (year && month && day) {
+          const date = new Date(Number(year), Number(month) - 1, Number(day));
+          setSelectedDate(date);
+        }
+    
+        if (hours && minutes) {
+          const time = new Date();
+          time.setHours(Number(hours), Number(minutes));
+          setSelectedTime(time);
+        }
+      }
+    }, [schedule]);
+    
     const isSellingPost = transaction?.category_id === 2;
 
-    const isOfferer = currentUser?.id === transaction?.offerer_id;
-    const isCollector = currentUser?.id === transaction?.collector_id;
+    const isOfferer = currentUser?.id === schedule?.offerer_id;
+    const isCollector = currentUser?.id === schedule?.collector_id;
+    
+    console.log("currentUser: ", currentUser);
+    console.log("isOfferer or isCollector?", isOfferer, isCollector);
 
-    const isBuyer = isSellingPost ? isCollector : isOfferer;
-    const isSeller = isSellingPost ? isOfferer : isCollector;
+    const isBuyer = isCollector;
+    const isSeller = isOfferer;
 
     useEffect(() => {
       console.log("🧩 useEffect triggered — chatId:", chatId, "schedule:", schedule);
@@ -515,62 +538,72 @@ const ChatScreen = () => {
         <View style={styles.messagescon}>
 
             {post && (
-                <View style={{ backgroundColor: '#1E592B', padding: 10, borderRadius: 8, marginBottom: 10 }}>
-                  {post.photos?.[0] && (
-                    <Image source={{ uri: post.photos[0] }} style={{ height: 100, borderRadius: 6, marginBottom: 8 }} />
-                  )}
+                <View style={styles.scheduleCard}>
+                    <View style={styles.scheduleHeader}>
+                        <Text style={styles.scheduleTitle}>POST DETAILS</Text>
+                        <View style={styles.scheduleStatus}>
+                            <Text style={styles.statusText}>{post.collection_mode?.name || 'POST'}</Text>
+                        </View>
+                    </View>
 
-                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>{post.description}</Text>
-                  
-                  {post.collection_mode?.name && (
-                    <Text style={{ color: '#00FF66', fontWeight: 'bold', marginTop: 4 }}>
-                      Mode: {post.collection_mode.name}
-                    </Text>
-                  )}
+                    <View style={styles.scheduleContent}>
+                        <View style={styles.scheduleDetails}>
+                            <View style={styles.scheduleRow}>
+                                <MaterialIcons name="person" size={20} color="#00D964" />
+                                <Text style={styles.scheduleText}>
+                                    Posted by: {post.user?.first_name} {post.user?.last_name}
+                                </Text>
+                            </View>
 
-                  <Text style={{ color: '#fff' }}>
-                  Weight: {post.kilograms} kg
-                  </Text>
+                            <View style={styles.scheduleRow}>
+                                <MaterialIcons name="scale" size={20} color="#00D964" />
+                                <Text style={styles.scheduleText}>
+                                    Weight: {post.kilograms} kg
+                                </Text>
+                            </View>
 
-                  {post.price !== undefined && post.category_id === 2 && (
-                    <Text style={{ color: '#fff' }}>
-                      Price: ₱ {post.price}
-                    </Text>
-                  )}
+                            {post.price !== undefined && post.category_id === 2 && (
+                                <View style={styles.scheduleRow}>
+                                    <MaterialIcons name="payments" size={20} color="#00D964" />
+                                    <Text style={styles.scheduleText}>
+                                        Price: ₱ {post.price}
+                                    </Text>
+                                </View>
+                            )}
 
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 4 }}>
-                  {(post.post_item_types ?? []).map((type, index) => (
-                      <Chip
-                      key={index}
-                      style={{ backgroundColor: '#235F30', marginRight: 6, marginTop: 4 }}
-                      textStyle={{ color: 'white', fontSize: 10 }}
-                      >
-                      {type.name}
-                      </Chip>
-                  ))}
-                  </View>
+                            {/* <View style={styles.scheduleRow}>
+                                <MaterialIcons name="schedule" size={20} color="#00D964" />
+                                <Text style={styles.scheduleText}>
+                                    Posted: {formatTimeAgo(post.created_at)}
+                                </Text>
+                            </View> */}
 
-                  {coords && (
-                    <Text style={{ color: '#ccc' }}>
-                      Location: {address || `${coords.latitude.toFixed(5)}, ${coords.longitude.toFixed(5)}`}
-                    </Text>
-                  )}
-                  <Text style={{ color: '#ccc', fontSize: 10 }}>
-                  Posted: {formatTimeAgo(post.created_at)}
-                  </Text>
+                            <View style={styles.scheduleRow}>
+                                <MaterialIcons name="category" size={20} color="#00D964" />
+                                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
+                                    {(post.post_item_types ?? []).map((type, index) => (
+                                        <Chip
+                                            key={index}
+                                            style={{ backgroundColor: '#235F30' }}
+                                            textStyle={{ color: 'white', fontSize: 10 }}
+                                        >
+                                            {type.name}
+                                        </Chip>
+                                    ))}
+                                </View>
+                            </View>
+                        </View>
+                    </View>
 
-                  <TouchableOpacity
-                    onPress={() => homeNavigation.navigate('ViewPost', { postId: post.id })}
-                    style={{
-                      marginTop: 10,
-                      padding: 6,
-                      borderRadius: 4,
-                      backgroundColor: '#2C5735',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <Text style={{ color: 'white', fontSize: 12, fontWeight: 'bold' }}> BACK TO POST</Text>
-                  </TouchableOpacity>
+                    <View style={styles.scheduleActions}>
+                        <TouchableOpacity
+                            style={[styles.scheduleButton, styles.viewButton]}
+                            onPress={() => homeNavigation.navigate('ViewPost', { postId: post.id })}
+                        >
+                            <MaterialIcons name="visibility" size={20} color="white" />
+                            <Text style={styles.buttonText}>View Post</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
             )}
             {schedule && schedule.status === 'pending' && (isBuyer || isSeller) && (

@@ -51,21 +51,47 @@ const ViewPost = () => {
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [previewImages, setPreviewImages] = useState<string[]>([]);
   const [previewIndex, setPreviewIndex] = useState<number>(0);
+  const [showWeightGoalDialog, setShowWeightGoalDialog] = useState(false);
   
+  // function formatTimeAgo(dateString: string) {
+  //   const now = new Date();
+  //   const postDate = new Date(dateString);
+  //   const diffInSeconds = Math.floor((now.getTime() - postDate.getTime()) / 1000);
+  
+  //   if (diffInSeconds < 60) return 'just now';
+  //   const diffInMinutes = Math.floor(diffInSeconds / 60);
+  //   if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+  //   const diffInHours = Math.floor(diffInMinutes / 60);
+  //   if (diffInHours < 24) return `${diffInHours}h ago`;
+  //   const diffInDays = Math.floor(diffInHours / 24);
+  //   return `${diffInDays}d ago`;
+  // }
+
   function formatTimeAgo(dateString: string) {
     const now = new Date();
-    const postDate = new Date(dateString);
-    const diffInSeconds = Math.floor((now.getTime() - postDate.getTime()) / 1000);
+    const past = new Date(dateString);
+    const diff = (now.getTime() - past.getTime()) / 1000;
   
-    if (diffInSeconds < 60) return 'just now';
-    const diffInMinutes = Math.floor(diffInSeconds / 60);
-    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
-    const diffInHours = Math.floor(diffInMinutes / 60);
-    if (diffInHours < 24) return `${diffInHours}h ago`;
-    const diffInDays = Math.floor(diffInHours / 24);
-    return `${diffInDays}d ago`;
+    const units = [
+      { max: 60, value: 1, name: 'second' },
+      { max: 3600, value: 60, name: 'minute' },
+      { max: 86400, value: 3600, name: 'hour' },
+      { max: 604800, value: 86400, name: 'day' },
+      { max: 2620800, value: 604800, name: 'week' },
+      { max: 31449600, value: 2620800, name: 'month' },
+      { max: Infinity, value: 31449600, name: 'year' },
+    ];
+  
+    for (const unit of units) {
+      if (diff < unit.max) {
+        const count = Math.floor(diff / unit.value);
+        return `${count}${unit.name[0]} ago`;
+      }
+    }
+  
+    return 'a while ago';
   }
-
+  
   const getModeData = (modeName: string) => {
     const lower = modeName.toLowerCase();
     if (lower.includes('pickup')) {
@@ -92,6 +118,12 @@ const ViewPost = () => {
   
       // ✅ Fetch post details (including post_item_types)
       const fetchedPost = await postsService.getPostById(postId);
+      console.log("📦 Fetched post data:", {
+        id: fetchedPost.id,
+        kilograms: fetchedPost.kilograms,
+        remaining_weight: fetchedPost.remaining_weight,
+        status: fetchedPost.status
+      });
       setPost(fetchedPost);
       
       setLoading(false);
@@ -399,8 +431,10 @@ const ViewPost = () => {
 
   const isUserOfferer = (offer: Offer) => {
     if (!currentUser) return false;
+    // For seeking posts (category_id === 1), current user is seller
+    // For selling posts (category_id === 2), current user is buyer
     return currentUser.id === offer.seller_id;
-  };  
+  };
   
   const isUserCollector = (offer: Offer) => {
     if (!currentUser) return false;
@@ -661,7 +695,45 @@ const ViewPost = () => {
     };
   }, []);  
 
-  // console.log('ViewPost  Post Object:', post);
+  // Add this useEffect to handle notifications
+  useEffect(() => {
+    const subscription = supabase
+      .channel('notifications')
+      .on('postgres_changes', 
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'notifications',
+          filter: `user_id=eq.${currentUser?.id}`
+        }, 
+        (payload) => {
+          const notification = payload.new;
+          if (notification.type === 'offer' && notification.data?.type === 'offer') {
+            setShowWeightGoalDialog(true);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(subscription);
+    };
+  }, [currentUser?.id]);
+
+  const handleMarkAsSolved = async () => {
+    if (!post) return;
+    try {
+      await postsService.markPostAsSolved(post.id);
+      setShowWeightGoalDialog(false);
+      Alert.alert('Success', 'Post marked as solved!');
+      // Optionally refresh the post data
+      fetchPostAndOffers();
+    } catch (error) {
+      console.error('Error marking post as solved:', error);
+      Alert.alert('Error', 'Failed to mark post as solved. Please try again.');
+    }
+  };
+
   // Move this block AFTER all hooks
   if (loading) return <Text style={{ color: 'black' }}>Loading post...</Text>;
 
@@ -675,6 +747,38 @@ const ViewPost = () => {
   } else {
     console.log("Rendering ViewPost with post data:", post);  
   }
+
+  const renderWeightGoalDialog = () => (
+    <Modal
+      visible={showWeightGoalDialog}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setShowWeightGoalDialog(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <Text style={styles.modalTitle}>Weight Goal Met! 🎉</Text>
+          <Text style={styles.modalText}>
+            Your post has reached its weight goal! Would you like to mark it as solved?
+          </Text>
+          <View style={styles.modalButtons}>
+            <TouchableOpacity
+              style={[styles.modalButton, styles.greenButton]}
+              onPress={handleMarkAsSolved}
+            >
+              <Text style={styles.modalButtonText}>Mark as Solved</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modalButton, styles.grayButton]}
+              onPress={() => setShowWeightGoalDialog(false)}
+            >
+              <Text style={styles.modalButtonText}>Not Yet</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
 
   return (
     <View style={styles.container}> 
@@ -803,8 +907,22 @@ const ViewPost = () => {
           <View style={[styles.detailRow, styles.detailRowFlexItem]}>
             <MaterialIcons name="scale" size={20} color="#00FF57" />
             <View style={styles.detailTextContainer}>
-              <Text style={styles.detailLabel}>Weight</Text>
-              <Text style={styles.detailValue}>{post.kilograms} kg</Text>
+              <Text style={styles.detailLabel}>Remaining weight needed</Text>
+              <View style={styles.weightContainer}>
+                <Text style={styles.detailValue}>
+                  {post.remaining_weight ?? post.kilograms} / {post.kilograms} kg
+                </Text>
+                <View style={styles.weightBar}>
+                  <View 
+                    style={[
+                      styles.weightProgress, 
+                      { 
+                        width: `${((post.kilograms - (post.remaining_weight )) / post.kilograms) * 100}%` 
+                      }
+                    ]} 
+                  />
+                </View>
+              </View>
             </View>
           </View>
           {isSellingPost && (
@@ -1195,7 +1313,8 @@ const ViewPost = () => {
                   isUserOfferer: isuserofferer,
                   isUserCollector,
                   userId: currentUser?.id,
-                  postOwnerId: post?.user_id
+                  postOwnerId: post?.user_id,
+                  sellerName: offer.seller?.username
                 });
 
                 if (post?.category_id === 2) {
@@ -1206,7 +1325,7 @@ const ViewPost = () => {
                         <View style={styles.leftInfo}>
                           <Image source={{ uri: offer.buyer?.profile_photo_url || 'https://i.pravatar.cc/36' }} style={styles.offerAvatar} />
                           <View>
-                            <Text style={styles.offerUserText}>{offer.buyer?.first_name} {offer.buyer?.last_name}</Text>
+                            <Text style={styles.offerUserText}>{offer.buyer?.username || 'Anonymous'}</Text>
                             <Text style={styles.offerTimeText}>{formatTimeAgo(offer.created_at)}</Text>
                           </View>
                         </View>
@@ -1242,65 +1361,53 @@ const ViewPost = () => {
                         {/* CASE: Pending → show appropriate buttons based on user role */}
                         {offer.status === 'pending' && (
                           <>
-                            {/* Only post owner sees actions for selling posts */}
-                            {post?.category_id === 2 ? (
-                              isUserCollector && (
-                                <>
-                                  <TouchableOpacity style={styles.redButton} onPress={() => handleDeclineOffer(offer.id)}>
-                                    <Text style={styles.buttonText}>Decline</Text>
-                                  </TouchableOpacity>
-                                  <TouchableOpacity style={styles.greenButton} onPress={() => handleAcceptOffer(offer)}>
-                                    <Text style={styles.buttonText}>Accept</Text>
-                                  </TouchableOpacity>
-                                  <TouchableOpacity
-                                    style={styles.iconButton}
-                                    onPress={() =>
-                                      handleChatWithUser(
-                                        currentUser?.id === offer.buyer_id ? offer.seller_id : offer.buyer_id
-                                      )
-                                    }
-                                  >
-                                    <Image source={require('../../assets/images/paperplane.png')} style={styles.sendIcon} />
-                                  </TouchableOpacity>
-                                  <TouchableOpacity style={styles.iconButton}>
-                                    <Text style={styles.moreOptionsText}>⋮</Text>
-                                  </TouchableOpacity>
-                                </>
-                              )
-                            ) : (
-                              // For seeking posts, keep old logic
+                            {/* Offerer sees DELETE while still pending */}
+                            {isUserOfferer(offer) && (
+                              <View style={styles.offerActionRow}>
+                                <TouchableOpacity style={styles.deleteOfferButton} onPress={() => handleDeleteOffer(offer.id)}>
+                                  <Text style={styles.deleteOfferText}>Delete</Text>
+                                </TouchableOpacity>
+                                
+                                <TouchableOpacity style={styles.editOfferButton} onPress={() => handleEditOffer(offer)}>
+                                  <MaterialIcons name="edit" size={22} color="white" />
+                                </TouchableOpacity>
+                              </View>
+                            )}
+
+                            {/* Post Owner sees ACCEPT/DECLINE + chat */}
+                            {isUserCollector && (
                               <>
-                                {isuserofferer && (
-                                  <TouchableOpacity style={styles.deleteOfferButton} onPress={() => handleDeleteOffer(offer.id)}>
-                                    <Text style={styles.deleteOfferText}>Delete</Text>
-                                  </TouchableOpacity>
-                                )}
-                                {isUserCollector && (
-                                  <>
-                                    <TouchableOpacity style={styles.redButton} onPress={() => handleDeclineOffer(offer.id)}>
-                                      <Text style={styles.buttonText}>Decline</Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity style={styles.greenButton} onPress={() => handleAcceptOffer(offer)}>
-                                      <Text style={styles.buttonText}>Accept</Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                        style={styles.iconButton}
-                                        onPress={() =>
-                                          handleChatWithUser(
-                                            currentUser?.id === offer.buyer_id ? offer.seller_id : offer.buyer_id
-                                          )
-                                        }
-                                      >
-                                      <Image source={require('../../assets/images/paperplane.png')} style={styles.sendIcon} />
-                                    </TouchableOpacity>
-                                    <TouchableOpacity style={styles.iconButton}>
-                                      <Text style={styles.moreOptionsText}>⋮</Text>
-                                    </TouchableOpacity>
-                                  </>
-                                )}
+                                <TouchableOpacity style={styles.redButton} onPress={() => handleDeclineOffer(offer.id)}>
+                                  <Text style={styles.buttonText}>Decline</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={styles.greenButton} onPress={() => handleAcceptOffer(offer)}>
+                                  <Text style={styles.buttonText}>Accept</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                  style={styles.iconButton}
+                                  onPress={() =>
+                                    handleChatWithUser(
+                                      currentUser?.id === offer.buyer_id ? offer.seller_id : offer.buyer_id
+                                    )
+                                  }
+                                >
+                                  <Image source={require('../../assets/images/paperplane.png')} style={styles.sendIcon} />
+                                </TouchableOpacity>
+                                <TouchableOpacity style={styles.iconButton}>
+                                  <Text style={styles.moreOptionsText}>⋮</Text>
+                                </TouchableOpacity>
                               </>
                             )}
                           </>
+                        )}
+
+                        {/* CASE: Neither post owner nor offer owner - just show status */}
+                        {!isUserCollector && !isuserofferer && (
+                          <View style={[styles.fullGreenButton, { backgroundColor: '#6c757d' }]}>
+                            <Text style={[styles.fullButtonTextinoffers, { color: '#ccc' }]}>
+                              {offer?.status?.toUpperCase()}
+                            </Text>
+                          </View>
                         )}
                       </View>
                     </View>
@@ -1315,7 +1422,7 @@ const ViewPost = () => {
                         <View style={styles.leftInfo}>
                           <Image source={{ uri: offer.seller?.profile_photo_url || 'https://i.pravatar.cc/36' }} style={styles.offerAvatar} />
                           <View>
-                            <Text style={styles.offerUserText}>{offer.seller?.first_name} {offer.seller?.last_name}</Text>
+                            <Text style={styles.offerUserText}>{offer.seller?.username || 'Anonymous'}</Text>
                             <Text style={styles.offerTimeText}>{formatTimeAgo(offer.created_at)}</Text>
                           </View>
                         </View>
@@ -1326,12 +1433,12 @@ const ViewPost = () => {
                       {offer.message || 'No description provided'}
                     </Text>
 
-                    <Text style={styles.offerWeight}>
+                    <Text style={styles.offerPriceText}>
                       {offer.offered_weight} / {offer.requested_weight} KG
                     </Text>
 
                     <View style={styles.offerPriceRow}>
-                      <Image source={cashIcon} style={styles.offerPesoIcon} />
+                      {/* <Image source={cashIcon} style={styles.offerPesoIcon} /> */}
                       <Text style={styles.offerPriceText}>₱ {offer.price.toFixed(2)}</Text>
                     </View>
 
@@ -1370,65 +1477,53 @@ const ViewPost = () => {
                       {/* CASE: Pending → show appropriate buttons based on user role */}
                       {offer.status === 'pending' && (
                         <>
-                          {/* Only post owner sees actions for selling posts */}
-                          {post?.category_id === 2 ? (
-                            isUserCollector && (
-                              <>
-                                <TouchableOpacity style={styles.redButton} onPress={() => handleDeclineOffer(offer.id)}>
-                                  <Text style={styles.buttonText}>Decline</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity style={styles.greenButton} onPress={() => handleAcceptOffer(offer)}>
-                                  <Text style={styles.buttonText}>Accept</Text>
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                  style={styles.iconButton}
-                                  onPress={() =>
-                                    handleChatWithUser(
-                                      currentUser?.id === offer.buyer_id ? offer.seller_id : offer.buyer_id
-                                    )
-                                  }
-                                >
-                                  <Image source={require('../../assets/images/paperplane.png')} style={styles.sendIcon} />
-                                </TouchableOpacity>
-                                <TouchableOpacity style={styles.iconButton}>
-                                  <Text style={styles.moreOptionsText}>⋮</Text>
-                                </TouchableOpacity>
-                              </>
-                            )
-                          ) : (
-                            // For seeking posts, keep old logic
+                          {/* Offerer sees DELETE while still pending */}
+                          {isUserOfferer(offer) && (
+                            <View style={styles.offerActionRow}>
+                              <TouchableOpacity style={styles.deleteOfferButton} onPress={() => handleDeleteOffer(offer.id)}>
+                                <Text style={styles.deleteOfferText}>Delete</Text>
+                              </TouchableOpacity>
+                              
+                              <TouchableOpacity style={styles.editOfferButton} onPress={() => handleEditOffer(offer)}>
+                                <MaterialIcons name="edit" size={22} color="white" />
+                              </TouchableOpacity>
+                            </View>
+                          )}
+
+                          {/* Post Owner sees ACCEPT/DECLINE + chat */}
+                          {isUserCollector && (
                             <>
-                              {isuserofferer && (
-                                <TouchableOpacity style={styles.deleteOfferButton} onPress={() => handleDeleteOffer(offer.id)}>
-                                  <Text style={styles.deleteOfferText}>Delete</Text>
-                                </TouchableOpacity>
-                              )}
-                              {isUserCollector && (
-                                <>
-                                  <TouchableOpacity style={styles.redButton} onPress={() => handleDeclineOffer(offer.id)}>
-                                    <Text style={styles.buttonText}>Decline</Text>
-                                  </TouchableOpacity>
-                                  <TouchableOpacity style={styles.greenButton} onPress={() => handleAcceptOffer(offer)}>
-                                    <Text style={styles.buttonText}>Accept</Text>
-                                  </TouchableOpacity>
-                                  <TouchableOpacity
-                                      style={styles.iconButton}
-                                      onPress={() =>
-                                        handleChatWithUser(
-                                          currentUser?.id === offer.buyer_id ? offer.seller_id : offer.buyer_id
-                                        )
-                                      }
-                                    >
-                                    <Image source={require('../../assets/images/paperplane.png')} style={styles.sendIcon} />
-                                  </TouchableOpacity>
-                                  <TouchableOpacity style={styles.iconButton}>
-                                    <Text style={styles.moreOptionsText}>⋮</Text>
-                                  </TouchableOpacity>
-                                </>
-                              )}
+                              <TouchableOpacity style={styles.redButton} onPress={() => handleDeclineOffer(offer.id)}>
+                                <Text style={styles.buttonText}>Decline</Text>
+                              </TouchableOpacity>
+                              <TouchableOpacity style={styles.greenButton} onPress={() => handleAcceptOffer(offer)}>
+                                <Text style={styles.buttonText}>Accept</Text>
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                style={styles.iconButton}
+                                onPress={() =>
+                                  handleChatWithUser(
+                                    currentUser?.id === offer.buyer_id ? offer.seller_id : offer.buyer_id
+                                  )
+                                }
+                              >
+                                <Image source={require('../../assets/images/paperplane.png')} style={styles.sendIcon} />
+                              </TouchableOpacity>
+                              <TouchableOpacity style={styles.iconButton}>
+                                <Text style={styles.moreOptionsText}>⋮</Text>
+                              </TouchableOpacity>
                             </>
                           )}
                         </>
+                      )}
+
+                      {/* CASE: Neither post owner nor offer owner - just show status */}
+                      {!isUserCollector && !isuserofferer && (
+                        <View style={[styles.fullGreenButton, { backgroundColor: '#6c757d' }]}>
+                          <Text style={[styles.fullButtonTextinoffers, { color: '#ccc' }]}>
+                            {offer?.status?.toUpperCase()}
+                          </Text>
+                        </View>
                       )}
                     </View>
                   </View>
@@ -1438,6 +1533,7 @@ const ViewPost = () => {
   </ScrollView>
         ) : null
       )}
+      {renderWeightGoalDialog()}
     </View>
   );
   };
@@ -2248,6 +2344,69 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 24,
     fontWeight: 'bold',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: '#1E592B',
+    borderRadius: 12,
+    padding: 20,
+    width: '80%',
+    alignItems: 'center',
+  },
+  modalTitle: {
+    color: '#00FF57',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 12,
+  },
+  modalText: {
+    color: 'white',
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    gap: 10,
+  },
+  modalButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  greenBtn: {
+    backgroundColor: '#00FF57',
+  },
+  grayButton: {
+    backgroundColor: '#666',
+  },
+  modalButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  weightContainer: {
+    marginTop: 4,
+  },
+  weightBar: {
+    height: 4,
+    backgroundColor: '#1E592B',
+    borderRadius: 2,
+    overflow: 'hidden',
+    marginTop: 4,
+  },
+  weightProgress: {
+    height: '100%',
+    backgroundColor: '#00D964',
+    borderRadius: 2,
   },
 });
 

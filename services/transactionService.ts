@@ -365,17 +365,6 @@ export const transactionService = {
       }
 
       const poUserId = offer.posts.user_id;
-
-      await notificationService.sendNotification(
-        poUserId, 
-        'Proof of Collection Uploaded',
-        'The offerer has uploaded a proof photo for your review.',
-        'proof_uploaded',
-        {
-          type: 'offer',
-          id: offerId
-        },
-      );
         
       if (updateError) {
         console.error("❌ Failed to update offer_schedules with image + status:", updateError.message);
@@ -490,10 +479,12 @@ export const transactionService = {
       if (pointError) {
         console.error("❌ Failed to insert points:", pointError);
       }
+
+      //for non post owner
       await notificationService.sendNotification(
         transaction.offerer_id,
         'Transaction Completed',
-        'Your transaction has been marked as completed. Thank you for recycling with Polyte!',
+        'Your transaction is complete. Thank you for recycling with Polyte!',
         'transaction_notif',
         {
           type: 'offer',
@@ -501,10 +492,11 @@ export const transactionService = {
         },
       );
       
+      //for the one who set the schedule/post owner
       await notificationService.sendNotification(
-        transaction.collector_id, // this is usually the post owner
+        transaction.collector_id,
         'Transaction Completed',
-        'You’ve successfully completed a transaction. Thank you for recycling with Polyte!',
+        'Your transaction is complete. Thank you for recycling with Polyte!',
         'proof_uploaded',
         {
           type: 'offer',

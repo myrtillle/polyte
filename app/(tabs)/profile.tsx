@@ -53,6 +53,16 @@ export default function ProfileScreen() {
       )
     : 1;
 
+  // Add useFocusEffect to reload profile when screen is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      if (userId) {
+        console.log('🔄 Screen focused, reloading profile...');
+        loadProfile();
+      }
+    }, [userId])
+  );
+
   useEffect(() => {
     const getUserId = async () => {
       const { data, error } = await supabase.auth.getUser();
@@ -71,23 +81,15 @@ export default function ProfileScreen() {
       .on(
         'postgres_changes',
         {
-          event: 'UPDATE',
+          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
           schema: 'public',
           table: 'personal_users',
           filter: `id=eq.${userId}`,
         },
         async (payload) => {
           console.log('📡 Real-time profile update:', payload);
-          // Refresh profile data
-          const { data: updatedProfile } = await supabase
-            .from('personal_users')
-            .select('*')
-            .eq('id', userId)
-            .single();
-          
-          if (updatedProfile) {
-            setProfile(updatedProfile);
-          }
+          // Refresh profile data immediately
+          await loadProfile();
         }
       )
       .subscribe();

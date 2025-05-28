@@ -224,7 +224,7 @@ export default function HomeScreen() {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color="#00FF57" />
       </View>
     );
   }

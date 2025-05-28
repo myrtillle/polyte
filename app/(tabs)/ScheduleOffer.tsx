@@ -82,9 +82,13 @@ const ScheduleOffer = () => {
       console.log("Post ID before navigation:", post?.id);
 
       Alert.alert('Success', 'Schedule saved successfully!');
-
+      
+      // Determine who should receive the notification based on post type
+      const isSellingPost = post.category_id === 2;
+      const notificationRecipientId = isSellingPost ? offer.seller_id : offer.buyer_id;
+      
       await notificationService.sendNotification(
-        offer.buyer_id,
+        notificationRecipientId,
         'Offer Accepted',
         `Seeker has accepted your offer and a collection schedule has been set. Please review and confirm it.`,
         'offer_accepted',

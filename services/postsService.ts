@@ -24,6 +24,7 @@ export interface Post {
   user_id: string;
   description: string;
   kilograms: number;
+  remaining_weight: number;
   price: number;
   category_id: number;
   collection_mode_id: number;
@@ -77,6 +78,7 @@ export interface CreatePostData {
   photos: string[];
   location: string;
   price: number;
+  remaining_weight: number;
 }
 
 interface UpdatePostData {
@@ -160,11 +162,13 @@ export const postsService = {
   },
   
   async getPostById(postId: string) {
-    const { data, error } = await supabase.rpc('get_post_by_id_with_location', { pid: postId });
+    const { data, error } = await supabase.rpc('get_posts_by_id_with_location', { pid: postId });
     if (error) throw error;
   
     const post = ((data ?? [])[0] ?? null) as RawFetchedPost;
-  
+    
+    console.log('📦 Post data:', data);
+
     return {
       ...post,
       user: post.post_user
@@ -176,6 +180,7 @@ export const postsService = {
             full_name: `${post.post_user.first_name ?? ''} ${post.post_user.last_name ?? ''}`.trim(),
             barangay: post.post_user.barangay ?? '',
             purok: post.post_user.purok ?? '',
+            profile_photo_url: post.post_user.profile_photo_url
           }
         : undefined,
     } as Post;
@@ -193,7 +198,8 @@ export const postsService = {
         category_id: post.category_id,
         status: 'active',
         photos: postData.photos, 
-        price: postData.price ?? null
+        price: postData.price ?? null,
+        remaining_weight: postData.remaining_weight
       }])
       .select(`
         *,
@@ -287,7 +293,7 @@ export const postsService = {
     // Required fields validation
     if (!postData.category_id) errors.push('Category is required');
     if (!postData.collection_mode_id) errors.push('Collection mode is required');
-    if (!postData.item_type_ids || postData.item_type_ids.length < 2) {
+    if (!postData.item_type_ids || postData.item_type_ids.length < 1) {
       errors.push('Please select at least 2 types of plastics');
     }
     if (!postData.description?.trim()) errors.push('Description is required');
@@ -478,5 +484,56 @@ export const postsService = {
       .eq('id', postId);
 
     if (error) throw error;
+  },
+
+  async updatePostWeight(postId: string, offeredWeight: number) {
+    try {
+      // First get the current post
+      const { data: post, error: fetchError } = await supabase
+        .from('posts')
+        .select('kilograms, remaining_weight, status')
+        .eq('id', postId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const newRemainingWeight = Math.max(0, (post.remaining_weight || post.kilograms) - offeredWeight);
+      const isFullyMet = newRemainingWeight === 0;
+
+      // Update the post's remaining weight
+      const { error: updateError } = await supabase
+        .from('posts')
+        .update({ 
+          remaining_weight: newRemainingWeight,
+          // If weight is fully met, update status to 'pending_solution'
+          status: isFullyMet ? 'pending_solution' : post.status
+        })
+        .eq('id', postId);
+
+      if (updateError) throw updateError;
+
+      return {
+        remainingWeight: newRemainingWeight,
+        isFullyMet
+      };
+    } catch (error) {
+      console.error('Error updating post weight:', error);
+      throw error;
+    }
+  },
+
+  async markPostAsSolved(postId: string) {
+    try {
+      const { error } = await supabase
+        .from('posts')
+        .update({ status: 'solved' })
+        .eq('id', postId);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error marking post as solved:', error);
+      throw error;
+    }
   },
 }; 

@@ -425,6 +425,7 @@ export default function PostScreen() {
       const postData: CreatePostData = {
         ...formData,
         kilograms: parseFloat(formData.kilograms),
+        remaining_weight: parseFloat(formData.kilograms),
         user_id: userId,
         category_id: formData.category_id!,
         collection_mode_id: formData.collection_mode_id!,
@@ -486,8 +487,8 @@ export default function PostScreen() {
       errors.push('Please select a category');
     }
 
-    if (!formData.item_type_ids || formData.item_type_ids.length < 2) {
-      errors.push('Please select at least 2 types of plastics');
+    if (!formData.item_type_ids || formData.item_type_ids.length < 1) {
+      errors.push('Please select at least 1 type of plastic');
     }
 
     if (!formData.kilograms || parseFloat(formData.kilograms) <= 0) {
