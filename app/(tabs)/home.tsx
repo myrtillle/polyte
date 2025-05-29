@@ -70,7 +70,7 @@ export default function HomeScreen() {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const [unreadCount, setUnreadCount] = useState(0);
-  const [showBadge, setShowBadge] = useState(true);
+  const [showBadge, setShowBadge] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [address, setAddress] = useState<string | null>(null);
 
@@ -210,11 +210,44 @@ export default function HomeScreen() {
       if (userId) {
         const count = await notificationService.getUnreadCount(userId);
         setUnreadCount(count);
+        setShowBadge(count > 0);
       }
     };
   
     fetchUnread();
   }, []);
+
+  // Add real-time subscription for notifications
+  useEffect(() => {
+    if (!currentUserId) return;
+
+    const notificationSubscription = supabase
+      .channel('notifications-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${currentUserId}`,
+        },
+        async () => {
+          const count = await notificationService.getUnreadCount(currentUserId);
+          setUnreadCount(count);
+          setShowBadge(count > 0);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(notificationSubscription);
+    };
+  }, [currentUserId]);
+
+  const handleNotificationPress = () => {
+    setShowBadge(false); // Hide badge when notification icon is clicked
+    homeNavigation.navigate('Notifications');
+  };
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -256,8 +289,8 @@ export default function HomeScreen() {
         source={require('../../assets/images/polyte-logo.png')} 
         style={styles.logo} 
       />
-      <TouchableOpacity style={styles.notificationWrapper}>
-        <IconButton icon="bell" iconColor="#00FF57" size={24} onPress={() => homeNavigation.navigate('Notifications')} />
+      <TouchableOpacity style={styles.notificationWrapper} onPress={handleNotificationPress}>
+        <IconButton icon="bell" iconColor="#00FF57" size={24} />
         {unreadCount > 0 && showBadge && (
           <View style={styles.badge}>
             <View style={styles.badgeDot} />

@@ -96,7 +96,7 @@ export default function Ratings() {
 
   const userName = isOfferer ? transaction?.collector_name : transaction?.offerer_name || 'User';
   const userRole = isOfferer ? 'Collector' : 'Offerer';
-  const userAvatar = transaction?.photo_url || 'https://i.pravatar.cc/80';
+  const userAvatar = transaction?.profile_photo_url || 'https://i.pravatar.cc/80';
 
   return (
     <View style={styles.container}>
@@ -158,7 +158,9 @@ const styles = StyleSheet.create({
   avatar: {
     width: 56,
     height: 56,
-    borderRadius: 0,
+    borderRadius: 50,
+    borderColor: '#00D964',
+    borderWidth: 3,
     marginRight: 16,
     backgroundColor: '#ccc',
   },

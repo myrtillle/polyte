@@ -1,5 +1,5 @@
 // ViewPostScreen.tsx
-import React,  { useState, useEffect }  from 'react';
+import React,  { useState, useEffect, useRef }  from 'react';
 import { View, Text, StyleSheet, Image, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Modal } from 'react-native';
 import { RouteProp, useFocusEffect } from '@react-navigation/native';
 import { HomeStackParamList, MessagesStackParamList, ProfileStackParamList, RootStackParamList } from '../../types/navigation';
@@ -19,6 +19,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import { notificationService } from '@/services/notificationService';
 import { messagesService } from '@/services/messagesService';
 import Constants from 'expo-constants';
+import ConfettiCannon from 'react-native-confetti-cannon';
 
 
 type ViewPostRouteProp = RouteProp<HomeStackParamList, 'ViewPost'>;
@@ -30,6 +31,7 @@ const ViewPost = () => {
   const homeNavigation = useNavigation<StackNavigationProp<HomeStackParamList>>();
   const profileNavigation = useNavigation<StackNavigationProp<ProfileStackParamList>>();
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+  const rootNavigation = useNavigation<StackNavigationProp<RootStackParamList>>();
 
   const { postId } = route.params;
   // Only ONE state for post  
@@ -52,7 +54,11 @@ const ViewPost = () => {
   const [previewImages, setPreviewImages] = useState<string[]>([]);
   const [previewIndex, setPreviewIndex] = useState<number>(0);
   const [showWeightGoalDialog, setShowWeightGoalDialog] = useState(false);
+  const [showCelebrationModal, setShowCelebrationModal] = useState(false);
+  // const [confettiRef, setConfettiRef] = useState<any>(null);
   
+  const confettiRef = useRef<ConfettiCannon>(null);
+
   // function formatTimeAgo(dateString: string) {
   //   const now = new Date();
   //   const postDate = new Date(dateString);
@@ -440,6 +446,10 @@ const ViewPost = () => {
     if (!currentUser) return false;
     return currentUser.id === offer.buyer_id;
   };   
+
+  const isOfferAccepted = (offer: Offer) => {
+    return offer.status === 'accepted';
+  };
   
   const isActualPostOwner = () => {
     console.log(`Checking if ${currentUser?.id} is owner of post ${post?.id}: ${post?.user_id === currentUser?.id}`);
@@ -458,7 +468,13 @@ const ViewPost = () => {
   };
 
   const handleSeeDetails = (offer: Offer) => {
-    profileNavigation.navigate("ViewTransaction", { offerId: offer.id });
+    rootNavigation.navigate('Main', {
+                screen: 'Profile',
+                params: {
+                    screen: 'ViewTransaction',
+                    params: { offerId: offer.id }
+                }
+              });
   };
 
   const handleInterested = async () => {
@@ -466,43 +482,130 @@ const ViewPost = () => {
       console.error("Cannot express interest: No authenticated user!");
       return;
     }
-  
+
     if (!post?.id) {
       console.error("Cannot express interest: No valid post!");
       return;
     }
-  
+
     try {
-      const { data, error } = await supabase
+      // Check if user already has an interest for this post
+      const { data: existingOffers, error: checkError } = await supabase
+        .from('offers')
+        .select(`
+          id, 
+          status,
+          offer_schedules (
+            status
+          )
+        `)
+        .eq('post_id', post.id)
+        .eq('buyer_id', currentUser.id); // For selling posts, current user is buyer
+
+      if (checkError) {
+        console.error("Error checking existing interests:", checkError);
+        Alert.alert("Error", "Failed to check existing interests. Please try again.");
+        return;
+      }
+
+      if (existingOffers && existingOffers.length > 0) {
+        const existingOffer = existingOffers[0];
+        const scheduleStatus = existingOffer.offer_schedules?.[0]?.status;
+        
+        // If the interest is pending or accepted, show message
+        if (existingOffer.status === 'pending' || existingOffer.status === 'accepted' || 
+            scheduleStatus === 'pending' || scheduleStatus === 'accepted') {
+          Alert.alert(
+            "Existing Interest",
+            "You have already shown interest in this post.",
+            [{ text: "OK", style: "cancel" }]
+          );
+          return;
+        }
+        
+        // If the interest was declined or completed, allow showing interest again
+        if (existingOffer.status === 'declined' || existingOffer.status === 'completed' || 
+            scheduleStatus === 'declined' || scheduleStatus === 'completed') {
+          const { data: insertData, error: insertError } = await supabase
+            .from('offers')
+            .insert([
+              {
+                post_id: post.id,
+                buyer_id: currentUser.id,
+                seller_id: post.user_id,
+                offered_items: post.post_item_types,
+                offered_weight: 0,
+                requested_weight: 0,
+                price: post.price,
+                message: 'Interested in collecting your plastics!',
+                images: [],
+                status: 'pending',
+              },
+            ])
+            .select();
+
+          if (insertError) {
+            console.error('❌ Failed to register interest:', insertError.message);
+            Alert.alert('Error', 'Failed to show interest. Please try again.');
+            return;
+          }
+
+          const insertedOffer = insertData?.[0];
+          if (!insertedOffer) {
+            console.warn('⚠️ No offer returned after insertion.');
+            return;
+          }
+
+          console.log('✅ Interest registered successfully:', insertedOffer);
+
+          // Send notification to post owner
+          await notificationService.sendNotification(
+            post.user_id,
+            'New Interest',
+            'Someone is interested in your post',
+            'new_interest',
+            {
+              type: 'offer',
+              id: post.id
+            }
+          );
+
+          Alert.alert('Success', 'You are now listed as interested!');
+          return;
+        }
+      }
+
+      // If no existing interest, proceed with new interest
+      const { data: insertData, error: insertError } = await supabase
         .from('offers')
         .insert([
           {
             post_id: post.id,
-            buyer_id: currentUser.id, // For selling posts, current user is buyer
-            seller_id: post.user_id,  // For selling posts, post owner is seller
-            offered_items: [],
+            buyer_id: currentUser.id,
+            seller_id: post.user_id,
+            offered_items: post.post_item_types,
             offered_weight: 0,
             requested_weight: 0,
-            price: 0,
+            price: post.price,
             message: 'Interested in collecting your plastics!',
             images: [],
             status: 'pending',
           },
         ])
         .select();
-  
-      if (error) {
-        console.error('❌ Failed to register interest:', error.message);
+
+      if (insertError) {
+        console.error('❌ Failed to register interest:', insertError.message);
         Alert.alert('Error', 'Failed to show interest. Please try again.');
         return;
       }
-  
-      const insertedOffer = data?.[0];
+
+      const insertedOffer = insertData?.[0];
       if (!insertedOffer) {
         console.warn('⚠️ No offer returned after insertion.');
         return;
       }
-  
+
       console.log('✅ Interest registered successfully:', insertedOffer);
 
       // Send notification to post owner
@@ -513,22 +616,15 @@ const ViewPost = () => {
         'new_interest',
         {
           type: 'offer',
-          id: insertedOffer.id
+          id: post.id
         }
       );
-  
+
       Alert.alert('Success', 'You are now listed as interested!');
-      // Optionally, refresh offers list here if needed
-      // await fetchOffersAgain();
     } catch (err) {
       console.error('❌ Unexpected error in handleInterested:', err);
       Alert.alert('Error', 'Something went wrong.');
     }
-  };
-  
-  const isOfferAccepted = (offer: Offer) => {
-    console.log(`🔍 Checking if offer ${offer.id} is accepted:`, offer.status === 'accepted');
-    return offer.status === 'accepted';
   };
 
   const handleMakeOffer = async () => {
@@ -536,56 +632,122 @@ const ViewPost = () => {
       Alert.alert("Error", "Cannot make offer: Missing user or post information.");
       return;
     }
-
+  
     try {
-      // Check if user already has an offer for this post
-      const { data: existingOffers, error } = await supabase
+      console.log("🔍 Checking offers for post:", post.id, "by user:", currentUser.id);
+  
+      // Step 1: Fetch existing offers
+      const { data: existingOffers, error: checkError } = await supabase
         .from('offers')
-        .select('id')
+        .select(`
+          id,
+          status,
+          offer_schedules (
+            status
+          )
+        `)
         .eq('post_id', post.id)
-        .eq('seller_id', currentUser.id); // For seeking posts, current user is seller
-
-      if (error) {
-        console.error("Error checking existing offers:", error);
+        .eq('seller_id', currentUser.id);
+  
+      if (checkError) {
+        console.error("❌ Error checking offers:", checkError);
         Alert.alert("Error", "Failed to check existing offers. Please try again.");
         return;
       }
-
+  
+      console.log("📦 Found offers:", existingOffers);
+  
       if (existingOffers && existingOffers.length > 0) {
-        Alert.alert(
-          "Existing Offer",
-          "You have already made an offer for this post. You can edit your existing offer instead.",
-          [
-            { text: "Cancel", style: "cancel" },
-            {
-              text: "Edit Offer",
-              onPress: () => {
-                const existingOffer = offers.find(
-                  o => o.seller_id === currentUser.id
-                );
-                if (existingOffer) {
-                  handleEditOffer(existingOffer);
+        // Step 2: Fetch offer_schedules per offer
+        const scheduleResults = await Promise.all(
+          existingOffers.map((offer) =>
+            supabase
+              .from('offer_schedules')
+              .select('status')
+              .eq('offer_id', offer.id)
+              .maybeSingle()
+          )
+        );
+  
+        console.log("📆 Schedule results:", scheduleResults.map(r => r.data));
+  
+        // Step 3: Check for active offers
+          
+        // Step 4: Check for completed or declined offers
+        const hasValidOldOffer = existingOffers.some((offer, index) => {
+          const schedStatus = scheduleResults[index]?.data?.status;
+          console.log(`✅ Valid check Offer ${offer.id}: status=${offer.status}, schedule_status=${schedStatus}`);
+          return (
+            offer.status === 'declined' || offer.status === 'completed' ||
+            schedStatus === 'declined' || schedStatus === 'completed'
+          );
+        });
+  
+        if (hasValidOldOffer) {
+          console.log("✅ Valid old offer found. Proceeding to MakeOffer.");
+          if (!post?.post_item_types?.length) {
+            Alert.alert("Error", "Plastic item types are missing.");
+            return;
+          }
+          homeNavigation.navigate('MakeOffer', { post });
+          return;
+        }
+        
+        // ✅ This prevents false positives
+        const hasBlockingOffer = existingOffers.some((offer, index) => {
+          const schedStatus = scheduleResults[index]?.data?.status;
+          const isInProgress = 
+            (offer.status === 'pending' || offer.status === 'accepted') &&
+            (schedStatus === 'pending' || schedStatus === 'accepted');
+
+          console.log(`🟡 Offer ${offer.id}: inProgress=${isInProgress}`);
+          return isInProgress;
+        });
+
+        if (hasBlockingOffer) {
+          const activeOffer = existingOffers.find((offer, index) => {
+            const schedStatus = scheduleResults[index]?.data?.status;
+            const isInProgress = 
+              (offer.status === 'pending' || offer.status === 'accepted') &&
+              (schedStatus === 'pending' || schedStatus === 'accepted');
+            return isInProgress;
+          });
+
+          console.log("⛔ Blocking offer detected. Preventing duplicate offer.");
+          Alert.alert(
+            "Existing Offer",
+            "You have already made an offer for this post. You can edit your existing offer instead.",
+            [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Edit Offer",
+                onPress: () => {
+                  const foundOffer = offers.find(o => o.id === activeOffer?.id);
+                  if (foundOffer) handleEditOffer(foundOffer);
                 }
               }
-            }
-          ]
-        );
-        return;
+            ]
+          );
+          return;
+        }
+  
+        console.log("⚠️ No valid old offer matched.");
       }
-      
-
-      // If no existing offer, proceed to make offer screen
+  
+      // Step 5: No existing offers at all
+      console.log("🆕 No previous offers found. Proceeding to MakeOffer.");
       if (!post?.post_item_types?.length) {
         Alert.alert("Error", "Plastic item types are missing.");
         return;
       }
+  
       homeNavigation.navigate('MakeOffer', { post });
     } catch (error) {
-      console.error("Error in handleMakeOffer:", error);
+      console.error("❌ Unexpected error in handleMakeOffer:", error);
       Alert.alert("Error", "An unexpected error occurred. Please try again.");
     }
   };
-
+  
   const hasUserShownInterest = () => {
     if (!currentUser?.id || !offers) return false;
     return offers.some(offer => offer.buyer_id === currentUser.id); // For selling posts, check if current user is buyer
@@ -720,19 +882,16 @@ const ViewPost = () => {
     };
   }, [currentUser?.id]);
 
-  const handleMarkAsSolved = async () => {
-    if (!post) return;
-    try {
-      await postsService.markPostAsSolved(post.id);
-      setShowWeightGoalDialog(false);
-      Alert.alert('Success', 'Post marked as solved!');
-      // Optionally refresh the post data
-      fetchPostAndOffers();
-    } catch (error) {
-      console.error('Error marking post as solved:', error);
-      Alert.alert('Error', 'Failed to mark post as solved. Please try again.');
-    }
-  };
+  useFocusEffect(
+    React.useCallback(() => {
+      if (post?.remaining_weight === 0) {
+        setShowCelebrationModal(true);
+        setTimeout(() => {
+          confettiRef.current?.start();
+        }, 100);
+      }
+    }, [post?.id]) // depend on post.id to avoid early triggers
+  );
 
   // Move this block AFTER all hooks
   if (loading) return <Text style={{ color: 'black' }}>Loading post...</Text>;
@@ -759,9 +918,9 @@ const ViewPost = () => {
         <View style={styles.modalContent}>
           <Text style={styles.modalTitle}>Weight Goal Met! 🎉</Text>
           <Text style={styles.modalText}>
-            Your post has reached its weight goal! Would you like to mark it as solved?
+            Your post has reached its weight goal!
           </Text>
-          <View style={styles.modalButtons}>
+          {/* <View style={styles.modalButtons}>
             <TouchableOpacity
               style={[styles.modalButton, styles.greenButton]}
               onPress={handleMarkAsSolved}
@@ -774,7 +933,7 @@ const ViewPost = () => {
             >
               <Text style={styles.modalButtonText}>Not Yet</Text>
             </TouchableOpacity>
-          </View>
+          </View> */}
         </View>
       </View>
     </Modal>
@@ -907,21 +1066,29 @@ const ViewPost = () => {
           <View style={[styles.detailRow, styles.detailRowFlexItem]}>
             <MaterialIcons name="scale" size={20} color="#00FF57" />
             <View style={styles.detailTextContainer}>
-              <Text style={styles.detailLabel}>Remaining weight needed</Text>
+              <Text style={styles.detailLabel}>
+                {isSellingPost ? 'Available weight' : 'Remaining weight needed'}
+              </Text>
               <View style={styles.weightContainer}>
                 <Text style={styles.detailValue}>
-                  {post.remaining_weight ?? post.kilograms} / {post.kilograms} kg
+                  {isSellingPost ? (
+                    `${post.kilograms} kg`
+                  ) : (
+                    `${post.remaining_weight} kg to go out of ${post.kilograms} kg`
+                  )}
                 </Text>
-                <View style={styles.weightBar}>
-                  <View 
-                    style={[
-                      styles.weightProgress, 
-                      { 
-                        width: `${((post.kilograms - (post.remaining_weight )) / post.kilograms) * 100}%` 
-                      }
-                    ]} 
-                  />
-                </View>
+                {!isSellingPost && (
+                  <View style={styles.weightBar}>
+                    <View 
+                      style={[
+                        styles.weightProgress, 
+                        { 
+                          width: `${((post.kilograms - (post.remaining_weight )) / post.kilograms) * 100}%` 
+                        }
+                      ]} 
+                    />
+                  </View>
+                )}
               </View>
             </View>
           </View>
@@ -1302,15 +1469,18 @@ const ViewPost = () => {
               </Text>
             ) : (
               offers.map((offer, index) => {
-                const isuserofferer = isUserOfferer(offer);
-                const isUserCollector = isActualPostOwner();
+                const isuserOfferer = isUserOfferer(offer);
+                const isuserCollector = isUserCollector(offer);
+                const isPostOwner = isActualPostOwner();
                 const isAccepted = isOfferAccepted(offer);
-
+                
+                console.log("is user offerer? ", isuserOfferer);
+                console.log("is user collector? ", isuserCollector);
                 console.log(`📊 Offer ${offer.id} status check:`, {
                   offerId: offer.id,
                   status: offer.status,
                   isAccepted,
-                  isUserOfferer: isuserofferer,
+                  isUserOfferer: isuserOfferer,
                   isUserCollector,
                   userId: currentUser?.id,
                   postOwnerId: post?.user_id,
@@ -1343,9 +1513,10 @@ const ViewPost = () => {
                         </View>
                       )}
                       
+                       {/* Selling Post - INTERESTED USERS layout */}
                       <View style={styles.offerActionRow}>
                         {/* CASE: Accepted → show SEE DETAILS to both offerer and post owner */}
-                        {offer.status === 'accepted' && (
+                        {(isuserCollector || isuserOfferer || isPostOwner) && offer.status === 'accepted' && (
                           <TouchableOpacity style={styles.fullGreenButton} onPress={() => handleSeeDetails(offer)}>
                             <Text style={styles.fullButtonTextinoffers}>See details</Text>
                           </TouchableOpacity>
@@ -1362,7 +1533,7 @@ const ViewPost = () => {
                         {offer.status === 'pending' && (
                           <>
                             {/* Offerer sees DELETE while still pending */}
-                            {isUserOfferer(offer) && (
+                            {isuserCollector && (
                               <View style={styles.offerActionRow}>
                                 <TouchableOpacity style={styles.deleteOfferButton} onPress={() => handleDeleteOffer(offer.id)}>
                                   <Text style={styles.deleteOfferText}>Delete</Text>
@@ -1375,7 +1546,7 @@ const ViewPost = () => {
                             )}
 
                             {/* Post Owner sees ACCEPT/DECLINE + chat */}
-                            {isUserCollector && (
+                            {isPostOwner && (
                               <>
                                 <TouchableOpacity style={styles.redButton} onPress={() => handleDeclineOffer(offer.id)}>
                                   <Text style={styles.buttonText}>Decline</Text>
@@ -1402,13 +1573,13 @@ const ViewPost = () => {
                         )}
 
                         {/* CASE: Neither post owner nor offer owner - just show status */}
-                        {!isUserCollector && !isuserofferer && (
+                        {/* {!isUserCollector && !isuserofferer && (
                           <View style={[styles.fullGreenButton, { backgroundColor: '#6c757d' }]}>
                             <Text style={[styles.fullButtonTextinoffers, { color: '#ccc' }]}>
                               {offer?.status?.toUpperCase()}
                             </Text>
                           </View>
-                        )}
+                        )} */}
                       </View>
                     </View>
                   );
@@ -1458,10 +1629,11 @@ const ViewPost = () => {
                         ))}
                       </View>
                     )}
-
+               
+                    {/* // Seeking Post - Full Offer layout */}
                     <View style={styles.offerActionRow}>
                       {/* CASE: Accepted → show SEE DETAILS to both offerer and post owner */}
-                      {offer.status === 'accepted' && (
+                      {(isuserCollector || isuserOfferer || isPostOwner) && offer.status === 'accepted' && (
                         <TouchableOpacity style={styles.fullGreenButton} onPress={() => handleSeeDetails(offer)}>
                           <Text style={styles.fullButtonTextinoffers}>See details</Text>
                         </TouchableOpacity>
@@ -1478,7 +1650,7 @@ const ViewPost = () => {
                       {offer.status === 'pending' && (
                         <>
                           {/* Offerer sees DELETE while still pending */}
-                          {isUserOfferer(offer) && (
+                          {isuserOfferer && (
                             <View style={styles.offerActionRow}>
                               <TouchableOpacity style={styles.deleteOfferButton} onPress={() => handleDeleteOffer(offer.id)}>
                                 <Text style={styles.deleteOfferText}>Delete</Text>
@@ -1490,8 +1662,9 @@ const ViewPost = () => {
                             </View>
                           )}
 
+                          {/* // Seeking Post - Full Offer layout */}
                           {/* Post Owner sees ACCEPT/DECLINE + chat */}
-                          {isUserCollector && (
+                          {isPostOwner && (
                             <>
                               <TouchableOpacity style={styles.redButton} onPress={() => handleDeclineOffer(offer.id)}>
                                 <Text style={styles.buttonText}>Decline</Text>
@@ -1518,7 +1691,7 @@ const ViewPost = () => {
                       )}
 
                       {/* CASE: Neither post owner nor offer owner - just show status */}
-                      {!isUserCollector && !isuserofferer && (
+                      {!isuserCollector && !isuserOfferer && (
                         <View style={[styles.fullGreenButton, { backgroundColor: '#6c757d' }]}>
                           <Text style={[styles.fullButtonTextinoffers, { color: '#ccc' }]}>
                             {offer?.status?.toUpperCase()}
@@ -1534,6 +1707,37 @@ const ViewPost = () => {
         ) : null
       )}
       {renderWeightGoalDialog()}
+
+      {/* Celebration Modal */}
+      <Modal
+        transparent
+        visible={showCelebrationModal}
+        animationType="fade"
+        onRequestClose={() => setShowCelebrationModal(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.celebrationModal}>
+            <ConfettiCannon
+              ref={confettiRef}
+              count={200}
+              origin={{x: -10, y: 0}}
+              autoStart={false}
+              fadeOut={true}
+            />
+            <Text style={{ fontSize: 60, color: '#00FF66', fontWeight: 'bold', marginBottom: 20 }}>{post?.kilograms} kg</Text>
+            <Text style={styles.celebrationTitle}>WEIGHT GOAL ACHIEVED! 🎉</Text>
+            <Text style={styles.celebrationText}>
+              Congratulations! You've successfully recycled all the plastic waste in this post.
+            </Text>
+            <TouchableOpacity
+              style={styles.celebrationButton}
+              onPress={() => setShowCelebrationModal(false)}
+            >
+              <Text style={styles.celebrationButtonText}>AWESOME!</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
   };
@@ -2407,6 +2611,53 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: '#00D964',
     borderRadius: 2,
+  },
+  modalBackdrop: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  celebrationModal: {
+    backgroundColor: '#1A3620',
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    width: '85%',
+    borderWidth: 2,
+    borderColor: '#00FF66',
+  },
+  celebrationIcon: {
+    width: 80,
+    height: 80,
+    marginBottom: 20,
+    tintColor: '#00FF66',
+  },
+  celebrationTitle: {
+    color: '#00FF66',
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  celebrationText: {
+    color: '#fff',
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 24,
+  },
+  celebrationButton: {
+    backgroundColor: '#00FF66',
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 25,
+  },
+  celebrationButtonText: {
+    color: '#023F0F',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 

@@ -160,7 +160,7 @@ export const postsService = {
         : undefined,
     }));
   },
-  
+
   async getPostById(postId: string) {
     const { data, error } = await supabase.rpc('get_posts_by_id_with_location', { pid: postId });
     if (error) throw error;
@@ -486,54 +486,18 @@ export const postsService = {
     if (error) throw error;
   },
 
-  async updatePostWeight(postId: string, offeredWeight: number) {
-    try {
-      // First get the current post
-      const { data: post, error: fetchError } = await supabase
-        .from('posts')
-        .select('kilograms, remaining_weight, status')
-        .eq('id', postId)
-        .single();
+  // async markPostAsSolved(postId: string) {
+  //   try {
+  //     const { error } = await supabase
+  //       .from('posts')
+  //       .update({ status: 'solved' })
+  //       .eq('id', postId);
 
-      if (fetchError) throw fetchError;
-
-      const newRemainingWeight = Math.max(0, (post.remaining_weight || post.kilograms) - offeredWeight);
-      const isFullyMet = newRemainingWeight === 0;
-
-      // Update the post's remaining weight
-      const { error: updateError } = await supabase
-        .from('posts')
-        .update({ 
-          remaining_weight: newRemainingWeight,
-          // If weight is fully met, update status to 'pending_solution'
-          status: isFullyMet ? 'pending_solution' : post.status
-        })
-        .eq('id', postId);
-
-      if (updateError) throw updateError;
-
-      return {
-        remainingWeight: newRemainingWeight,
-        isFullyMet
-      };
-    } catch (error) {
-      console.error('Error updating post weight:', error);
-      throw error;
-    }
-  },
-
-  async markPostAsSolved(postId: string) {
-    try {
-      const { error } = await supabase
-        .from('posts')
-        .update({ status: 'solved' })
-        .eq('id', postId);
-
-      if (error) throw error;
-      return true;
-    } catch (error) {
-      console.error('Error marking post as solved:', error);
-      throw error;
-    }
-  },
+  //     if (error) throw error;
+  //     return true;
+  //   } catch (error) {
+  //     console.error('Error marking post as solved:', error);
+  //     throw error;
+  //   }
+  // },
 }; 

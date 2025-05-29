@@ -85,7 +85,7 @@ const ScheduleOffer = () => {
       
       // Determine who should receive the notification based on post type
       const isSellingPost = post.category_id === 2;
-      const notificationRecipientId = isSellingPost ? offer.seller_id : offer.buyer_id;
+      const notificationRecipientId = isSellingPost ? offer.buyer_id : offer.seller_id;
       
       await notificationService.sendNotification(
         notificationRecipientId,

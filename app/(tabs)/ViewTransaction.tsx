@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, ScrollView, RefreshControl, Modal } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
 import { transactionService } from '@/services/transactionService';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { ProfileStackParamList, MessagesStackParamList, RootStackParamList, HomeStackParamList } from '../../types/navigation';
@@ -21,6 +21,7 @@ import { Button, Divider, IconButton } from 'react-native-paper';
 import Constants from 'expo-constants';
 import { messagesService } from '@/services/messagesService';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import ConfettiCannon from 'react-native-confetti-cannon';
 
 
 const getModeData = (modeName: string) => {
@@ -57,9 +58,11 @@ export default function ViewTransaction() {
   const [proofImage, setProofImage] = useState<proofImage>({
     photo: ''
   });
+  const [tempProofImage, setTempProofImage] = useState<string | null>(null);
   const [address, setAddress] = useState<string | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState(() => {
     if (transaction?.scheduled_date) {
       const [year, month, day] = transaction.scheduled_date.split('-').map(Number);
@@ -76,11 +79,14 @@ export default function ViewTransaction() {
     }
     return new Date();
   });
+  const [showCelebrationModal, setShowCelebrationModal] = useState(false);
+  const [confettiRef, setConfettiRef] = useState<any>(null);
   // console.log('🔍 Navigated with offerId:', offerId);
   console.log('📦 ViewTransaction received offerId:', offerId);
   
   const paid = transaction?.status === 'awaiting_payment' || transaction?.status === 'for_completion' || transaction?.status === 'completed';
 
+  
   useEffect(() => {
     const channel = supabase
       .channel('transaction-updates')
@@ -162,7 +168,22 @@ export default function ViewTransaction() {
     const success = await transactionService.completeTransaction(offerId);
 
     if (success) {
-      Alert.alert('Confirmed', 'Transaction marked as completed.');
+      // Check if this transaction completed the weight goal
+      const { data: post } = await supabase
+        .from('posts')
+        .select('remaining_weight')
+        .eq('id', transaction.post_id)
+        .single();
+
+      if (post && post.remaining_weight === 0) {
+        // setShowCelebrationModal(true);
+        // Trigger confetti after a short delay
+        setTimeout(() => {
+          confettiRef?.start();
+        }, 500);
+      } else {
+        Alert.alert('Confirmed', 'Transaction marked as completed.');
+      }
 
       const updated = await transactionService.fetchTransactionDetails(offerId);
       setTransaction(updated);
@@ -183,7 +204,7 @@ export default function ViewTransaction() {
     const success = await transactionService.markAsForCompletion(offerId);
 
      if (success) {
-        Alert.alert('Payment Success', 'Payment has been processed.');
+        Alert.alert('Payment Success', 'Payment has been processed. You will receive a notifiction when seller marked the transaction as completed.');
 
         await notificationService.sendNotification(
           transaction.offerer_id,
@@ -304,6 +325,7 @@ export default function ViewTransaction() {
     console.log('💸 Paid?', paid);
     console.log('🔐 User role:', isBuyer ? 'BUYER' : 'SELLER');
     console.log('📦 Current status:', transaction?.status);
+    console.log("time and date: ", transaction?.scheduled_date, transaction?.scheduled_time);
   }, [canComplete, hasProof, paid, transaction?.status]);
   
   // setProofImage({ photo: asset.uri });
@@ -333,12 +355,33 @@ export default function ViewTransaction() {
         Alert.alert('Error', 'No image selected.');
         return;
       }
+
+      // Set temporary image for preview
+      setTempProofImage(asset.uri);
+      setUploading(false);
   
-      // ✅ Upload image using the same working logic (uri → { uri, name, type })
-      const uploadedUrl = await transactionService.uploadProofImage(asset.uri, offerId);
+    } catch (error) {
+      if (error instanceof Error) {
+        console.error('Upload error:', error.message);
+        Alert.alert('Error', error.message);
+      } else {
+        console.error('Unexpected upload error:', error);
+        Alert.alert('Error', 'Unexpected error occurred.');
+      }
+      setUploading(false);
+    }
+  };
+
+  const handleConfirmProof = async () => {
+    if (!tempProofImage) return;
+
+    try {
+      setUploading(true);
+      // Upload image using the same working logic
+      const uploadedUrl = await transactionService.uploadProofImage(tempProofImage, offerId);
       if (!uploadedUrl) throw new Error('Image upload failed');
   
-      // ✅ Save URL to the `proof_image_url` column via update
+      // Save URL to the `proof_image_url` column via update
       const success = await transactionService.confirmDelivery(offerId, uploadedUrl);
   
       if (success) {
@@ -351,10 +394,11 @@ export default function ViewTransaction() {
           'The offerer has uploaded a photo as proof of collection. Please review it before sending payment.',
           'proof_uploaded',
           { type: 'offer', id: offerId}
-        )
+        );
 
         setTransaction(updated);
-
+        setTempProofImage(null);
+        setProofModalVisible(false);
       } else {
         Alert.alert('Error', 'Failed to update the transaction status.');
       }
@@ -371,7 +415,11 @@ export default function ViewTransaction() {
       setUploading(false);
     }
   };
-  
+
+  const handleDeleteTempProof = () => {
+    setTempProofImage(null);
+  };
+
   const handleAgreeToSchedule = async () => {
     const success = await scheduleService.agreeToSchedule(offerId);
 
@@ -439,6 +487,7 @@ export default function ViewTransaction() {
             chatId,
             userId: senderId,
             schedule: {
+              category_id: transaction?.category_id,
               id: transaction?.schedule_id,
               scheduled_time: transaction?.scheduled_time,
               scheduled_date: transaction?.scheduled_date,
@@ -448,7 +497,8 @@ export default function ViewTransaction() {
               photoUrl: transaction?.photo_url,
               purok: transaction?.purok,
               barangay: transaction?.barangay,
-              user_id: transaction?.collector_id,
+              collector_id: transaction?.collector_id,   
+              offerer_id: transaction?.offerer_id,
               offer_id: transaction?.offer_id,
             },
           },
@@ -461,58 +511,70 @@ export default function ViewTransaction() {
   };
   
   const handleEditSchedule = async () => {
-    if (!offerId) {
-      Alert.alert("Error", "Missing schedule information");
+    if (!transaction?.offer_id) {
+      Alert.alert("Error", "Missing schedule offer ID.");
       return;
     }
-
-    // Validate date and time
-    const now = new Date();
-    const selectedDateTime = new Date(selectedDate);
-    selectedDateTime.setHours(selectedTime.getHours(), selectedTime.getMinutes());
-
-    // Check if selected date and time is in the past
-    if (selectedDateTime < now) {
-      Alert.alert("Invalid Date/Time", "Please select a future date and time.");
-      return;
-    }
-
+  
     try {
+      // Use selectedDate and selectedTime from state
+      const localDateTime = new Date(selectedDate);
+      localDateTime.setHours(selectedTime.getHours(), selectedTime.getMinutes());
+  
+      console.log("📆 Selected datetime:", localDateTime.toString());
+  
+      const now = new Date();
+      if (localDateTime < now) {
+        Alert.alert("Invalid Date/Time", "Please select a future date and time.");
+        return;
+      }
+  
+      // Format for Supabase
+      const formattedDate = localDateTime.toISOString().split("T")[0]; // yyyy-mm-dd
+      const formattedTime = localDateTime.toTimeString().split(" ")[0]; // hh:mm:ss
+  
       const { error } = await supabase
-        .from('offer_schedules')
+        .from("offer_schedules")
         .update({
-          scheduled_time: selectedTime.toTimeString().split(' ')[0],
-          scheduled_date: selectedDate.toISOString().split('T')[0]
+          scheduled_date: formattedDate,
+          scheduled_time: formattedTime
         })
-        .eq('offer_id', offerId);
-
+        .eq("offer_id", transaction.offer_id); // ← corrected from 'schedule.offer_id'
+  
       if (error) throw error;
-
-      // Update local state
-      const updated = await transactionService.fetchTransactionDetails(offerId);
-      setTransaction(updated);
-
-      // Send notification to the other user
-      const otherUserId = currentUser?.id === transaction.collector_id ? transaction.offerer_id : transaction.collector_id;
+  
+      console.log("✅ Schedule updated in DB");
+  
+      const otherUserId = currentUser?.id === transaction.collector_id
+        ? transaction.offerer_id
+        : transaction.collector_id;
+  
       await notificationService.sendNotification(
         otherUserId as string,
-        'Schedule Updated',
-        'The schedule has been updated. Please check the new details.',
-        'schedule_updated',
+        "Schedule Updated",
+        "The schedule has been updated. Please check the new details.",
+        "schedule_updated",
         {
-          type: 'transaction',
-          id: offerId
+          type: "transaction",
+          id: transaction.offer_id
         }
       );
-
+  
       Alert.alert("Success", "Schedule updated successfully!");
+      setShowEditModal(false);
       setShowDatePicker(false);
       setShowTimePicker(false);
+      
+      // Optionally refresh local state
+      const updated = await transactionService.fetchTransactionDetails(offerId);
+      setTransaction(updated);
+  
     } catch (error) {
-      console.error("Error updating schedule:", error);
+      console.error("❌ Error updating schedule:", error);
       Alert.alert("Error", "Failed to update schedule. Please try again.");
     }
   };
+  
   
   return (
     <LinearGradient colors={['#023F0F', '#05A527']} style={{ flex: 1 }}>
@@ -548,7 +610,8 @@ export default function ViewTransaction() {
                 ]}
                 disabled={transaction?.status !== 'pending'}
                 onPress={() => {
-                  setShowDatePicker(true);
+                  setShowEditModal(true);
+                  setShowDatePicker(false);
                   setShowTimePicker(false);
                 }}
               >
@@ -787,16 +850,21 @@ export default function ViewTransaction() {
               </View>   
             )}
 
-            {isBuyer && transaction?.status === 'proof_uploaded' && (
-              <Text style={{ color: '#ccc', fontStyle: 'italic' }}>Please confirm the collection proof uploaded before proceeding to payment.</Text>
-            )}
-            {isSeller && transaction?.status === 'for_collecion' && (
-              <Text style={{ color: '#ccc', fontStyle: 'italic' }}>Please upload a proof of collection first before seeker sends payment.</Text>
-            )}
+            {(() => {
+              let message = '';
 
-            {isSeller && transaction?.status === 'awaiting_payment' && (
-              <Text style={{ color: '#ccc', fontStyle: 'italic' }}>Waiting for seeker to send payment via e-wallet.</Text>
-            )}
+              if (isBuyer && transaction?.status === 'proof_uploaded') {
+                message = 'Please confirm the collection proof uploaded before proceeding to payment.';
+              } else if (isSeller && transaction?.status === 'for_collection') {
+                message = 'Please upload a proof of collection first before seeker sends payment.';
+              } else if (isSeller && transaction?.status === 'proof_uploaded') {
+                message = 'Waiting for seeker to send payment via e-wallet.';
+              }
+
+              return message ? (
+                <Text style={{ color: '#ccc', fontStyle: 'italic' }}>{message}</Text>
+              ) : null;
+            })()}
           </View>
 
         {/* Complete Transaction Button - Only for sellers */}
@@ -806,7 +874,7 @@ export default function ViewTransaction() {
               style={[
                 styles.confirmButton,
                 { paddingHorizontal: 60 },
-                transaction?.status === 'completed' && { backgroundColor: '#888' }
+                transaction?.status === 'for_completion' ? { backgroundColor: '#00D964' } : { backgroundColor: '#888' }
               ]}
               disabled={transaction?.status === 'completed' || transaction?.status !== 'for_completion'}
               onPress={() => {
@@ -815,7 +883,7 @@ export default function ViewTransaction() {
                 }
               }}
             >
-              <Text style={[styles.confirmText, { color: 'white' }]}>
+              <Text style={[styles.confirmText, { color: 'white' }, transaction?.status !== 'for_completion' && { color: '#666' }]}>
                 {transaction?.status === 'completed' ? 'TRANSACTION COMPLETED' : 'COMPLETE TRANSACTION'}
               </Text>
             </TouchableOpacity>
@@ -825,11 +893,20 @@ export default function ViewTransaction() {
         {/* Rate Button for Both Users when Completed */}
           <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'center', marginTop: 10 }}>
             <TouchableOpacity
-              style={[styles.confirmButton, { backgroundColor: '#FFD700', paddingHorizontal: 60 }]}
+              style={[
+                styles.confirmButton, 
+                { paddingHorizontal: 60 }, 
+                transaction?.status === 'completed' ? { backgroundColor: '#FFD700' } : { backgroundColor: '#888' }
+              ]}
               onPress={() => profileNavigation.navigate('Ratings', { offerId })}
-              disabled= {transaction?.status !== 'completed'}
+              disabled={transaction?.status !== 'completed'}
             >
-              <Text style={[styles.confirmText, { color: '#023F0F' }]}>Rate {isSeller ? 'Seeker' : 'Seller'}</Text>
+              <Text style={[
+                styles.confirmText, 
+                transaction?.status === 'completed' ? { color: '#023F0F' } : { color: '#666' }
+              ]}>
+                Rate {isSeller ? 'Seeker' : 'Seller'}
+              </Text>
             </TouchableOpacity>
           </View>
 
@@ -837,104 +914,108 @@ export default function ViewTransaction() {
         
       {proofModalVisible && (
         <Modal
-        transparent
-        visible={proofModalVisible}
-        animationType="slide"
-        onRequestClose={() => setProofModalVisible(false)}
-      >
-        <View style={styles.modalBackdrop}>
-          <View style={styles.proofModalContainer}>
-            <Text style={styles.proofModalHeader}> PROOF OF COLLECTION </Text>
-      
-            {hasProof ? (
-              <>
-                <Image source={{ uri: transaction.proof_image_url }} style={styles.proofImage} />
+          transparent
+          visible={proofModalVisible}
+          animationType="slide"
+          onRequestClose={() => setProofModalVisible(false)}
+        >
+          <View style={styles.modalBackdrop}>
+            <View style={styles.proofModalContainer}>
+              <Text style={styles.proofModalHeader}>PROOF OF COLLECTION</Text>
+        
+              {hasProof ? (
+                <>
+                  <Image source={{ uri: transaction.proof_image_url }} style={styles.proofImage} />
 
-                {isBuyer && (
-                  <TouchableOpacity
-                    style={[
-                      styles.confirmButton,
-                      {
-                        marginTop: 20,
-                        backgroundColor: transaction?.status === 'proof_uploaded' ? '#00D964' : '#888',
-                      },
-                    ]}
-                    disabled={transaction?.status !== 'proof_uploaded'}
-                    onPress={async () => {
-                      const success = await transactionService.markAsAwaitingPayment(offerId);
-                      if (success) {
-                        const updated = await transactionService.fetchTransactionDetails(offerId);
-                        setTransaction(updated);
-                        Alert.alert('Confirmed', 'Collection confirmed. Waiting for payment.');
-                        setProofModalVisible(false);
-                      } else {
-                        Alert.alert('Error', 'Failed to confirm collection.');
-                      }
-                    }}
-                  >
-                    <Text style={[
-                      styles.confirmText,
-                      transaction?.status === 'proof_uploaded' ? { color: '#023F0F' } : { color: '#666' }
-                    ]}>
-                      {transaction?.status === 'proof_uploaded' ? 'CONFIRM COLLECTION' : 'COLLECTION CONFIRMED'}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </>
-            ) : (
-              <View style={{ marginTop: 10 }}>
-                <Text style={styles.proofModalText}>No proof of collection uploaded yet.</Text>
-                {(() => {
-                  console.log('Debug upload button conditions:');
-                  console.log('isSellingPost:', isSellingPost);
-                  console.log('isBuyer:', isBuyer);
-                  console.log('isSeller:', isSeller);
-                  console.log('transaction status:', transaction?.status);
-                  
-                  // Seller should see upload button
-                  const shouldShowUploadButton = isSeller && transaction?.status === 'for_collection';
-                  console.log('Should show upload button:', shouldShowUploadButton);
-                  
-                  return shouldShowUploadButton ? (
-                    <TouchableOpacity 
-                      style={[styles.confirmButton, { marginTop: 10 }]} 
-                      onPress={handleUploadProof}
+                  {isBuyer && (
+                    <TouchableOpacity
+                      style={[
+                        styles.confirmButton,
+                        {
+                          marginTop: 20,
+                          backgroundColor: transaction?.status === 'proof_uploaded' ? '#00D964' : '#888',
+                          width: '100%',
+                        },
+                      ]}
+                      disabled={transaction?.status !== 'proof_uploaded'}
+                      onPress={async () => {
+                        const success = await transactionService.markAsAwaitingPayment(offerId);
+                        if (success) {
+                          const updated = await transactionService.fetchTransactionDetails(offerId);
+                          setTransaction(updated);
+                          Alert.alert('Confirmed', 'Collection confirmed. Waiting for payment.');
+                          setProofModalVisible(false);
+                        } else {
+                          Alert.alert('Error', 'Failed to confirm collection.');
+                        }
+                      }}
                     >
-                      <Text style={[styles.confirmText, { color: '#023F0F' }]}>UPLOAD PROOF</Text>
+                      <Text style={[
+                        styles.confirmText,
+                        transaction?.status === 'proof_uploaded' ? { color: '#023F0F' } : { color: '#666' }
+                      ]}>
+                        {transaction?.status === 'proof_uploaded' ? 'CONFIRM COLLECTION' : 'COLLECTION CONFIRMED'}
+                      </Text>
                     </TouchableOpacity>
-                  ) : null;
-                })()}
-
-                {/* Buyer should see confirm button */}
-                {isBuyer && transaction?.status === 'proof_uploaded' && (
-                  <TouchableOpacity
-                    style={[styles.confirmButton, { marginTop: 20 }]}
-                    onPress={async () => {
-                      const success = await transactionService.markAsAwaitingPayment(offerId);
-                      if (success) {
-                        const updated = await transactionService.fetchTransactionDetails(offerId);
-                        setTransaction(updated);
-                        Alert.alert('Confirmed', 'Collection confirmed. Waiting for payment.');
-                        setProofModalVisible(false);
-                      }
-                    }}
-                  >
-                    <Text style={styles.confirmText}>CONFIRM COLLECTION</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
-      
-            <TouchableOpacity
-              onPress={() => setProofModalVisible(false)}
-              style={[styles.modalButton, { marginTop: 20, backgroundColor: '#1E592B' }]}
-            >
-              <Text style={{ fontWeight: 'bold', color: 'white' }}>CLOSE</Text>
-            </TouchableOpacity>
+                  )}
+                </>
+              ) : (
+                <View style={{ width: '100%' }}>
+                  {tempProofImage ? (
+                    <>
+                      <Image source={{ uri: tempProofImage }} style={styles.proofImage} />
+                      <View style={styles.proofActions}>
+                        <TouchableOpacity 
+                          style={[styles.proofActionButton, { backgroundColor: '#D84343' }]} 
+                          onPress={handleDeleteTempProof}
+                        >
+                          <Text style={styles.proofActionButtonText}>DELETE</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                          style={[styles.proofActionButton, { backgroundColor: '#00D964' }]} 
+                          onPress={handleConfirmProof}
+                          disabled={uploading}
+                        >
+                          <Text style={styles.proofActionButtonText}>
+                            {uploading ? 'UPLOADING...' : 'CONFIRM & UPLOAD'}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    </>
+                  ) : (
+                    <>
+                      <Text style={styles.proofModalText}>No proof of collection uploaded yet.</Text>
+                      {(() => {
+                        const shouldShowUploadButton = isSeller && transaction?.status === 'for_collection';
+                        return shouldShowUploadButton ? (
+                          <TouchableOpacity 
+                            style={[styles.confirmButton, { marginTop: 10, width: '100%' }]} 
+                            onPress={handleUploadProof}
+                            disabled={uploading}
+                          >
+                            <Text style={[styles.confirmText, { color: '#023F0F' }]}>
+                              {uploading ? 'SELECTING...' : 'SELECT PHOTO'}
+                            </Text>
+                          </TouchableOpacity>
+                        ) : null;
+                      })()}
+                    </>
+                  )}
+                </View>
+              )}
+        
+              <TouchableOpacity
+                onPress={() => {
+                  setProofModalVisible(false);
+                  setTempProofImage(null);
+                }}
+                style={[styles.modalButton, { marginTop: 20, backgroundColor: '#1E592B', width: '100%' }]}
+              >
+                <Text style={{ fontWeight: 'bold', color: 'white' }}>CLOSE</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </Modal>
-
+        </Modal>
       )}
 
         {/* Confirmation Popup */}
@@ -963,7 +1044,7 @@ export default function ViewTransaction() {
         {/* Edit Schedule Modal */}
         <Modal
           transparent={true}
-          visible={showDatePicker || showTimePicker}
+          visible={showEditModal}
           animationType="slide"
           onRequestClose={() => {
             setShowDatePicker(false);
@@ -1004,7 +1085,7 @@ export default function ViewTransaction() {
                         }
                       }
                       // Show time picker after date is selected
-                      setShowTimePicker(true);
+                      
                     }
                   }}
                 />
@@ -1039,21 +1120,56 @@ export default function ViewTransaction() {
 
               <View style={styles.modalButtons}>
                 <TouchableOpacity 
-                  style={[styles.modalButton, { backgroundColor: '#00D964' }]} 
-                  onPress={handleEditSchedule}
-                >
-                  <Text style={styles.modalButtonText}>Save</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
                   style={[styles.modalButton, { backgroundColor: '#666' }]} 
                   onPress={() => {
+                    setShowEditModal(false);
                     setShowDatePicker(false);
                     setShowTimePicker(false);
                   }}
                 >
                   <Text style={styles.modalButtonText}>Cancel</Text>
                 </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.modalButton, { backgroundColor: '#00D964' }]} 
+                  onPress={handleEditSchedule}
+                >
+                  <Text style={styles.modalButtonText}>Save</Text>
+                </TouchableOpacity>
               </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Celebration Modal */}
+        <Modal
+          transparent
+          visible={showCelebrationModal}
+          animationType="fade"
+          onRequestClose={() => setShowCelebrationModal(false)}
+        >
+          <View style={styles.modalBackdrop}>
+            <View style={styles.celebrationModal}>
+              <ConfettiCannon
+                ref={(ref) => setConfettiRef(ref)}
+                count={200}
+                origin={{x: -10, y: 0}}
+                autoStart={false}
+                fadeOut={true}
+              />
+              <Image 
+                source={require('../../assets/images/trashbag.png')} 
+                style={styles.celebrationIcon}
+              />
+              <Text style={styles.celebrationTitle}>WEIGHT GOAL ACHIEVED! 🎉</Text>
+              <Text style={styles.celebrationText}>
+                Congratulations! You've successfully recycled all the plastic waste in this post.
+              </Text>
+              <TouchableOpacity
+                style={styles.celebrationButton}
+                onPress={() => setShowCelebrationModal(false)}
+              >
+                <Text style={styles.celebrationButtonText}>AWESOME!</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </Modal>
@@ -1127,7 +1243,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 8,
     elevation: 8,
-   
   },
   
   proofModalHeader: {
@@ -1160,6 +1275,7 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
     borderWidth: 1,
     marginTop: 8,
+    marginBottom: 16,
   },
   
 
@@ -1384,7 +1500,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#00D964',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 6,
+    borderRadius: 20,
     marginLeft: 8,
   },
   editButtonDisabled: {
@@ -1432,5 +1548,66 @@ const styles = StyleSheet.create({
     color: 'white',
     textAlign: 'center',
     fontWeight: 'bold',
+  },
+  celebrationModal: {
+    backgroundColor: '#1A3620',
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    width: '85%',
+    borderWidth: 2,
+    borderColor: '#00FF66',
+  },
+  celebrationIcon: {
+    width: 80,
+    height: 80,
+    marginBottom: 20,
+    tintColor: '#00FF66',
+  },
+  celebrationTitle: {
+    color: '#00FF66',
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  celebrationText: {
+    color: '#fff',
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 24,
+  },
+  celebrationButton: {
+    backgroundColor: '#00FF66',
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 25,
+  },
+  celebrationButtonText: {
+    color: '#023F0F',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  proofActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    gap: 12,
+    marginTop: 8,
+  },
+  proofActionButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+  },
+  proofActionButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 14,
   },
 });

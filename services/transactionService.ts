@@ -22,11 +22,13 @@ type RawTransactionData = {
     status: string;
     collection_img: string | null;
     collector?: {
+      profile_photo_url: string;
       id: string;
       first_name: string;
       last_name: string;
     };
     offerer?: {
+      profile_photo_url: string;
       id: string;
       first_name: string;
       last_name: string;
@@ -39,6 +41,7 @@ type RawTransactionData = {
       name: string;
     };
     personal_users: {
+      profile_photo_url: string;
       id: string;
       first_name: string;
       last_name: string;
@@ -47,10 +50,12 @@ type RawTransactionData = {
     };
   };
   buyer: {
+    profile_photo_url: string;
     first_name: string;
     last_name: string;
   };
   seller: {
+    profile_photo_url: string;
     first_name: string;
     last_name: string;
   };
@@ -76,6 +81,8 @@ type TransactionDetail = {
   price: number;
   category_id: number;
   location: string;
+  profile_photo_url: string;
+  post_id: string;
 };
 
 export type Transaction = {
@@ -200,11 +207,13 @@ export const transactionService = {
         offer_schedules (
           *,
           collector:collector_id (
+            profile_photo_url,
             id,
             first_name,
             last_name
           ),
           offerer:offerer_id (
+            profile_photo_url,
             id,
             first_name,
             last_name
@@ -215,6 +224,7 @@ export const transactionService = {
           location_text,
           collection_modes:collection_modes!posts_collection_mode_id_fkey ( name ),
           personal_users:personal_users!posts_personal_user_fkey (
+            profile_photo_url,
             id,
             first_name,
             last_name,
@@ -270,6 +280,8 @@ export const transactionService = {
       price: data.price ?? 0,
       category_id: post?.category_id ?? 1,
       location: post?.location_text ?? null,
+      profile_photo_url: post_user?.profile_photo_url ?? null,
+      post_id: data.post_id,
     };
   
     console.log('✅ Returning flattened transaction result:', result);
@@ -455,16 +467,50 @@ export const transactionService = {
       const transaction = await transactionService.fetchTransactionDetails(offerId);
       if (!transaction) throw new Error("Transaction not found");
 
-      const { error } = await supabase
-      .from('offer_schedules')
-      .update({ status: 'completed' })
-      .eq('offer_id', offerId);
+      // Start a transaction to ensure all updates are atomic
+      const { data: post, error: postError } = await supabase
+        .from('posts')
+        .select('remaining_weight')
+        .eq('id', transaction.post_id)
+        .single();
+
+      if (postError) throw postError;
+
+      console.log("post id:", transaction.post_id);
+      console.log("📦 current remaining_weight:", post.remaining_weight);
+      console.log("⚖️ transaction weight:", transaction.weight);
+
+      // Calculate new remaining weight
+      const newRemainingWeight = Math.max(0, post.remaining_weight - transaction.weight);
+      const shouldMarkAsSolved = newRemainingWeight === 0;
+
+      // Update post's remaining weight and status if needed
+      const { data: updatedPost, error: updatePostError } = await supabase
+        .from('posts')
+        .update({ 
+          remaining_weight: newRemainingWeight,
+          ...(shouldMarkAsSolved && { status: 'solved' })
+        })
+        .eq('id', transaction.post_id);
+
+        if (updatePostError) {
+          console.error("❌ Update post error:", updatePostError);
+          return false;
+        }        
+
+        console.log("📝 Post update result:", updatedPost);
+      // Update offer schedule status
+      const { error: updateScheduleError } = await supabase
+        .from('offer_schedules')
+        .update({ status: 'completed' })
+        .eq('offer_id', offerId);
       
-      if (error) {
-        console.error("❌ Failed to mark as completed:", error);
+      if (updateScheduleError) {
+        console.error("❌ Failed to mark as completed:", updateScheduleError);
         return false;
       }
       
+      console.log("new remaining weight:", newRemainingWeight);
       // Calculate and add points to user_polys table
       const earnedPoints = Math.round(transaction.weight * 100);
       const { error: pointError } = await supabase
@@ -480,24 +526,23 @@ export const transactionService = {
         console.error("❌ Failed to insert points:", pointError);
       }
 
-      //for non post owner
+      // Send notifications
       await notificationService.sendNotification(
         transaction.offerer_id,
         'Transaction Completed',
         'Your transaction is complete. Thank you for recycling with Polyte!',
-        'transaction_notif',
+        'transaction_completed',
         {
           type: 'offer',
           id: offerId
         },
       );
       
-      //for the one who set the schedule/post owner
       await notificationService.sendNotification(
         transaction.collector_id,
         'Transaction Completed',
         'Your transaction is complete. Thank you for recycling with Polyte!',
-        'proof_uploaded',
+        'transaction_completed',
         {
           type: 'offer',
           id: offerId

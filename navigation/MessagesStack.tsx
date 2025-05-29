@@ -8,10 +8,14 @@ const Stack = createNativeStackNavigator();
 export default function MessagesStack() {
   return (
     <Stack.Navigator>
-      <Stack.Screen name="MessagesMain" component={MessagesScreen} options={{ headerShown: false }} />
+      <Stack.Screen 
+      name="MessagesMain" 
+      component={MessagesScreen} 
+      options={{ headerShown: false, }} 
+      
+      />
       <Stack.Screen name="ChatScreen" component={ChatScreen} options={{
-        headerShown: true,
-        headerBackVisible: true,
+        headerShown: false,
         title: 'CHAT',
         headerStyle: {
           backgroundColor: '#1E592B',
@@ -20,7 +24,8 @@ export default function MessagesStack() {
         headerTitleStyle: {
           fontWeight: 'bold',
           fontSize: 16,
-        }
+        },
+        
       }} />
     </Stack.Navigator>
   );

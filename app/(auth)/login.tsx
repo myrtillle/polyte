@@ -68,8 +68,6 @@ export default function LoginScreen() {
       });
   
     } catch (error: any) {
-      console.error('Login failed:', error);
-      
       // Handle specific error types
       if (error.message?.includes('Network request failed')) {
         setError('Network error. Please check your internet connection.');

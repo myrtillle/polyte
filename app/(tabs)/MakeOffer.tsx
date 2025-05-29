@@ -283,42 +283,6 @@ const MakeOffer = () => {
     }
   }, [post]); // Runs whenever post changes  
 
-  useEffect(() => {
-    const checkExistingOffer = async () => {
-      if (!currentUser?.id || !post?.id) return;
-
-      try {
-        // Check if current user has already made an offer for this post
-        const { data: existingOffers, error } = await supabase
-          .from('offers')
-          .select('id, status')
-          .eq('post_id', post.id)
-          .or(`seller_id.eq.${currentUser.id},buyer_id.eq.${currentUser.id}`);
-
-        if (error) {
-          console.error("Error checking existing offers:", error);
-          return;
-        }
-
-        if (existingOffers && existingOffers.length > 0) {
-          Alert.alert(
-            "Existing Offer",
-            "You have already made an offer for this post. You can edit your existing offer instead.",
-            [
-              { 
-                text: "Go Back", 
-                onPress: () => navigation.goBack()
-              }
-            ]
-          );
-        }
-      } catch (error) {
-        console.error("Error in checkExistingOffer:", error);
-      }
-    };
-
-    checkExistingOffer();
-  }, [currentUser?.id, post?.id]);
 
   if (offerSent) {
     return (

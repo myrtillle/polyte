@@ -30,6 +30,9 @@ export const scheduleService = {
         .from('offer_schedules')
         .select(`
           *,
+          posts(
+            category_id
+          ),
           offers(
             *,
             buyer:buyer_id (

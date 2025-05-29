@@ -183,11 +183,22 @@ export function BottomTabNavigator() {
             </View>
           ),
         }}
-        listeners={{
-          tabPress: () => {
-            // Reset unread count when tab is pressed
+        listeners={({ navigation }) => ({
+          tabPress: (e) => {
+            e.preventDefault();
+      
+            // Reset unread count
             setUnreadCount(0);
-            // Mark all messages as seen
+      
+            // Navigate to MessagesMain
+            navigation.navigate('Main', {
+              screen: 'Messages',
+              params: {
+                screen: 'MessagesMain',
+              },
+            });
+      
+            // Mark all unseen messages as seen
             if (currentUserId) {
               supabase
                 .from('messages')
@@ -196,7 +207,7 @@ export function BottomTabNavigator() {
                 .eq('seen', false);
             }
           },
-        }}
+        })}
       />
       <Tab.Screen
         name="Profile"

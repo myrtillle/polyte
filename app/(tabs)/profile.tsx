@@ -29,6 +29,8 @@ export default function ProfileScreen() {
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isStatsUpdating, setIsStatsUpdating] = useState(false);
   const [collectionStats, setCollectionStats] = useState<CollectionStats>({
     co2Saved: '0.00',
     donated: 0,
@@ -81,15 +83,21 @@ export default function ProfileScreen() {
       .on(
         'postgres_changes',
         {
-          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+          event: '*',
           schema: 'public',
           table: 'personal_users',
           filter: `id=eq.${userId}`,
         },
         async (payload) => {
-          console.log('📡 Real-time profile update:', payload);
-          // Refresh profile data immediately
-          await loadProfile();
+          try {
+            console.log('📡 Real-time profile update:', payload);
+            setIsUpdating(true);
+            await loadProfile();
+          } catch (error) {
+            console.error('Error handling real-time update:', error);
+          } finally {
+            setIsUpdating(false);
+          }
         }
       )
       .subscribe();
@@ -104,63 +112,70 @@ export default function ProfileScreen() {
     if (!userId) return;
 
     const fetchAndCalculateStats = async () => {
-      console.log('🔄 Fetching stats for user:', userId);
-      const { data, error } = await supabase
-        .from('offers')
-        .select(`
-          offered_weight,
-          seller_id,
-          buyer_id,
-          offer_schedules (
-            status
-          )
-        `)
-        .or(`seller_id.eq.${userId},buyer_id.eq.${userId}`);
+      try {
+        setIsStatsUpdating(true);
+        console.log('🔄 Fetching stats for user:', userId);
+        const { data, error } = await supabase
+          .from('offers')
+          .select(`
+            offered_weight,
+            seller_id,
+            buyer_id,
+            offer_schedules (
+              status
+            )
+          `)
+          .or(`seller_id.eq.${userId},buyer_id.eq.${userId}`);
 
-      if (error) {
-        console.error('❌ Error fetching stats:', error.message);
-        return;
-      }
-
-      console.log('📊 Raw offers data:', data);
-
-      let totalDonated = 0;
-      let totalCollected = 0;
-
-      data?.forEach(offer => {
-        const weight = offer.offered_weight || 0;
-        const isCompleted = offer.offer_schedules?.[0]?.status === 'completed';
-
-        if (isCompleted) {
-          if (offer.seller_id === userId) {
-            totalDonated += weight;
-          }
-          if (offer.buyer_id === userId) {
-            totalCollected += weight;
-          }
+        if (error) {
+          console.error('❌ Error fetching stats:', error.message);
+          return;
         }
-      });
 
-      const monthsSinceJoined = profile?.created_at
-        ? Math.max(
-            1,
-            (new Date().getFullYear() - new Date(profile.created_at).getFullYear()) * 12 +
-            (new Date().getMonth() - new Date(profile.created_at).getMonth())
-          )
-        : 1;
+        console.log('📊 Raw offers data:', data);
 
-      const co2Saved = (totalDonated + totalCollected) * 1.02;
-      const avgMonthlyContribution = (totalDonated + totalCollected) / monthsSinceJoined;
+        let totalDonated = 0;
+        let totalCollected = 0;
 
-      const newStats = {
-        co2Saved: co2Saved.toFixed(2),
-        donated: totalDonated,
-        collected: totalCollected,
-        avgMonthlyContribution: avgMonthlyContribution.toFixed(2),
-      };
+        data?.forEach(offer => {
+          const weight = offer.offered_weight || 0;
+          const isCompleted = offer.offer_schedules?.[0]?.status === 'completed';
 
-      console.log('📈 Calculated stats:', newStats);
-      setCollectionStats(newStats);
+          if (isCompleted) {
+            if (offer.seller_id === userId) {
+              totalDonated += weight;
+            }
+            if (offer.buyer_id === userId) {
+              totalCollected += weight;
+            }
+          }
+        });
+
+        const monthsSinceJoined = profile?.created_at
+          ? Math.max(
+              1,
+              (new Date().getFullYear() - new Date(profile.created_at).getFullYear()) * 12 +
+              (new Date().getMonth() - new Date(profile.created_at).getMonth())
+            )
+          : 1;
+
+        const co2Saved = (totalDonated + totalCollected) * 1.02;
+        const avgMonthlyContribution = (totalDonated + totalCollected) / monthsSinceJoined;
+
+        const newStats = {
+          co2Saved: co2Saved.toFixed(2),
+          donated: totalDonated,
+          collected: totalCollected,
+          avgMonthlyContribution: avgMonthlyContribution.toFixed(2),
+        };
+
+        console.log('📈 Calculated stats:', newStats);
+        setCollectionStats(newStats);
+      } catch (error) {
+        console.error('Error updating stats:', error);
+      } finally {
+        setIsStatsUpdating(false);
+      }
     };
 
     // Initial fetch
@@ -351,6 +366,11 @@ export default function ProfileScreen() {
               <Text style={styles.statSuffix}>SACKS PER MONTH</Text>
             </View>
           </View>
+          {(isUpdating || isStatsUpdating) && (
+            <View style={styles.updatingOverlay}>
+              <ActivityIndicator color="#00D964" size="small" />
+            </View>
+          )}
         </View>
 
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
@@ -609,6 +629,17 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 3,
+  },
+  updatingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 16,
   },
 });
 

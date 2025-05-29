@@ -43,22 +43,6 @@ export interface Offer {
     last_name?: string;
     profile_photo_url?: string;
   };
-  buyer?: {
-    username: string;
-    id: string;
-    email: string;
-    first_name: string;
-    last_name: string;
-    profile_photo_url: string;
-  };
-  seller?: {
-    username: string;
-    id: string;
-    email: string;
-    first_name: string;
-    last_name: string;
-    profile_photo_url: string;
-  };
 }
 
 export interface Schedule {
@@ -74,6 +58,7 @@ export interface Schedule {
   offerer_id: string;
   collectorName: string;
   offererName: string;
+  category_id: number;
 }
 
 
@@ -87,34 +72,6 @@ export const createOffer = async (offerData: Offer) => {
       .single();
 
     if (offerError) throw offerError;
-
-    // Update post weight and check if fully met
-    const { remainingWeight, isFullyMet } = await postsService.updatePostWeight(
-      offerData.post_id,
-      offerData.offered_weight
-    );
-
-    // If weight is fully met, send notification to post owner
-    if (isFullyMet) {
-      const { data: post } = await supabase
-        .from('posts')
-        .select('user_id')
-        .eq('id', offerData.post_id)
-        .single();
-
-      if (post) {
-        await notificationService.sendNotification(
-          post.user_id,
-          'Weight Goal Met! 🎉',
-          'Your post has reached its weight goal! Would you like to mark it as solved?',
-          'offer',
-          {
-            type: 'offer',
-            id: offerData.post_id
-          }
-        );
-      }
-    }
 
     return { success: true, message: "Offer submitted successfully!" };
   } catch (error: any) {
@@ -177,7 +134,6 @@ export const getOffersByPost = async (postId: string) => {
     };
   });
 };
-
 
 export const getUserOffers = async (userId: string) => {
   const { data, error } = await supabase

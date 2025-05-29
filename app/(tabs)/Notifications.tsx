@@ -26,14 +26,23 @@ export default function Notifications() {
   //   }, [])
   // );
 
+  const fetchNotifications = async (userId: string) => {
+    try {
+      const notif = await notificationService.getUserNotifications(userId);
+      setNotifications(notif);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     const fetchUserAndNotifications = async () => {
       const { data: sessionData, error: sessionError } = await supabase.auth.getUser();
       if (!sessionError && sessionData?.user?.id) {
         setUserId(sessionData.user.id);
-
-        const notif = await notificationService.getUserNotifications(sessionData.user.id);
-        setNotifications(notif);
+        await fetchNotifications(sessionData.user.id);
       }
       setLoading(false);
     };
@@ -41,16 +50,40 @@ export default function Notifications() {
     fetchUserAndNotifications();
   }, []);
 
+  // Add real-time subscription
+  useEffect(() => {
+    if (!userId) return;
+
+    const notificationSubscription = supabase
+      .channel('notifications-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${userId}`,
+        },
+        async (payload) => {
+          console.log('📡 Real-time notification update:', payload);
+          await fetchNotifications(userId);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(notificationSubscription);
+    };
+  }, [userId]);
+
   useFocusEffect(
     React.useCallback(() => {
-      // Your logic for when screen is focused
       const markViewed = async () => {
         try {
           const { data: sessionData, error: sessionError } = await supabase.auth.getUser();
           if (!sessionError && sessionData?.user?.id) {
             await notificationService.markAsRead(sessionData.user.id);
-            const refreshed = await notificationService.getUserNotifications(sessionData.user.id);
-            setNotifications(refreshed);
+            await fetchNotifications(sessionData.user.id);
           }
         } catch (err) {
           console.error("Error in onViewed logic:", err);
@@ -65,8 +98,7 @@ export default function Notifications() {
     try {
       if (!userId) return;
       await notificationService.markAllAsRead(userId);
-      const refreshed = await notificationService.getUserNotifications(userId);
-      setNotifications(refreshed);
+      await fetchNotifications(userId);
     } catch (err) {
       console.error("Failed to mark notifications as read:", err);
     }
@@ -113,7 +145,7 @@ export default function Notifications() {
 
         homeNavigation.navigate('ViewPost', { post });
   
-      } else if (type === 'offer_accepted' || type === 'transaction_completed' || type === 'payment_send' || type==='proof_uploaded') {
+      } else if (type === 'schedule_updated' || type === 'offer_accepted' || type === 'transaction_completed' || type === 'payment_send' || type==='proof_uploaded') {
         navigation.navigate('Main', {
           screen: 'Profile',
           params: {

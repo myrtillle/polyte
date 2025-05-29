@@ -3,7 +3,7 @@ import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Dime
 import { TextInput, Button, Title, Text, IconButton, SegmentedButtons, Chip } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { PostStackParamList } from '@/types/navigation'; // adjust if needed
+import { PostStackParamList, ProfileStackParamList } from '@/types/navigation'; // adjust if needed
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { postsService, CreatePostData } from '../../services/postsService';
 import * as ImagePicker from 'expo-image-picker';
@@ -79,7 +79,8 @@ export default function PostScreen() {
   };
 
   const navigation = useNavigation<StackNavigationProp<PostStackParamList, 'PostMain'>>();
-
+  const profileNavigation = useNavigation<StackNavigationProp<ProfileStackParamList>>();
+  
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [itemTypes, setItemTypes] = useState<ItemType[]>([]);
@@ -444,7 +445,7 @@ export default function PostScreen() {
       }
 
       await postsService.createPost(postData);
-      navigation.goBack();
+      profileNavigation.navigate('MyPosts');
       resetForm();
       Alert.alert("Success", "Post created successfully! You can view your posts in My Posts section under your profile.");
     } catch (error) {

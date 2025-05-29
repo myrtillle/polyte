@@ -62,6 +62,7 @@ export default function MyPostsScreen() {
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+  const [showSolved, setShowSolved] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
@@ -85,6 +86,7 @@ export default function MyPostsScreen() {
       const data = await profileService.getMyPosts();
       // console.log('Fetched posts:', data);
       // console.log('Fetched posts:', JSON.stringify(data, null, 2)); 
+      console.log("MY POSTS: ", data);
       setPosts(data);
     } catch (error) {
       console.error('Error fetching posts:', error);
@@ -194,13 +196,16 @@ export default function MyPostsScreen() {
       <TouchableOpacity
         style={[
           styles.categoryButtonSmall,
-          selectedCategory === null && styles.categoryActive,
+          selectedCategory === null && !showSolved && styles.categoryActive,
         ]}
-        onPress={() => setSelectedCategory(null)}
+        onPress={() => {
+          setSelectedCategory(null);
+          setShowSolved(false);
+        }}
       >
         <Text style={[
           styles.categoryText,
-          selectedCategory === null && styles.categoryTextActive,
+          selectedCategory === null && !showSolved && styles.categoryTextActive,
         ]}>
           ALL
         </Text>
@@ -209,13 +214,16 @@ export default function MyPostsScreen() {
       <TouchableOpacity
         style={[
           styles.categoryButtonWide,
-          selectedCategory === 1 && styles.categoryActive,
+          selectedCategory === 1 && !showSolved && styles.categoryActive,
         ]}
-        onPress={() => setSelectedCategory(1)}
+        onPress={() => {
+          setSelectedCategory(1);
+          setShowSolved(false);
+        }}
       >
         <Text style={[
           styles.categoryText,
-          selectedCategory === 1 && styles.categoryTextActive,
+          selectedCategory === 1 && !showSolved && styles.categoryTextActive,
         ]}>
           SEEKING
         </Text>
@@ -224,24 +232,62 @@ export default function MyPostsScreen() {
       <TouchableOpacity
         style={[
           styles.categoryButtonWide,
-          selectedCategory === 2 && styles.categoryActive,
+          selectedCategory === 2 && !showSolved && styles.categoryActive,
         ]}
-        onPress={() => setSelectedCategory(2)}
+        onPress={() => {
+          setSelectedCategory(2);
+          setShowSolved(false);
+        }}
       >
         <Text style={[
           styles.categoryText,
-          selectedCategory === 2 && styles.categoryTextActive,
+          selectedCategory === 2 && !showSolved && styles.categoryTextActive,
         ]}>
           SELLING
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[
+          styles.categoryButtonSmall,
+          showSolved && styles.categoryActive,
+        ]}
+        onPress={() => {
+          setShowSolved(true);
+          setSelectedCategory(null);
+        }}
+      >
+        <Text style={[
+          styles.categoryText,
+          showSolved && styles.categoryTextActive,
+        ]}>
+          SOLVED
         </Text>
       </TouchableOpacity>
     </View>
   );
   
 
-  const filteredPosts = selectedCategory 
-    ? posts.filter(post => post.category_id === selectedCategory)
-    : posts;
+  const filteredPosts = posts.filter(post => {
+    console.log("Filtering post:", {
+      id: post.id,
+      status: post.status,
+      category_id: post.category_id,
+      showSolved,
+      selectedCategory
+    });
+
+    if (showSolved) {
+      return post.status === 'solved' || post.status === 'completed';
+    }
+    if (selectedCategory !== null) {
+      return post.category_id === selectedCategory;
+    }
+    return true;
+  });
+
+  console.log("Filtered posts count:", filteredPosts.length);
+  
 
 
   const renderPost = ({ item }: { item: Post }) => (
@@ -317,7 +363,7 @@ export default function MyPostsScreen() {
 
         {/* Actions */}
         <View style={styles.actionsRow}>
-          <TouchableOpacity style={styles.actionButton} onPress={() => handleSendMessage(item)}>
+          {/* <TouchableOpacity style={styles.actionButton} onPress={() => handleSendMessage(item)}>
           <Image source={paperplaneIcon} style={styles.actionIconImage} />
 
             <Text style={styles.actionText}>SEND MESSAGE</Text>
@@ -330,7 +376,7 @@ export default function MyPostsScreen() {
             <Image source={messagebubbleIcon} style={styles.actionIconImage} />
 
             <Text style={styles.actionText}>COMMENT</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
   
           <TouchableOpacity
             style={styles.actionMenu}
@@ -344,7 +390,7 @@ export default function MyPostsScreen() {
               // navigation.getParent()?.navigate('ViewPost', { post: item });
              }}
           >
-            <Text style={styles.dots}>⋮</Text>
+            <Text style={styles.dots}>View</Text>
           </TouchableOpacity>
         </View>
       </Card.Content>
@@ -489,7 +535,7 @@ const styles = StyleSheet.create({
 
 
   actionsRow: {
-    flexDirection: 'row',
+    // flexDirection: 'row',
     alignItems: 'center',
     marginTop: 12,
     gap: 8,
@@ -522,8 +568,8 @@ const styles = StyleSheet.create({
 
   actionMenu: {
     backgroundColor: '#2C5735',
-    borderRadius: 8,
-    width: 40,           
+    borderRadius: 13,
+    width: '98%',           
     height: 40, 
     justifyContent: 'center',
     alignItems: 'center',

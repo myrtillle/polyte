@@ -6,7 +6,7 @@ import { useRoute, useNavigation, NavigationProp } from '@react-navigation/nativ
 import { messagesService } from '@/services/messagesService';
 import { scheduleService } from '@/services/scheduleService';
 import { supabase } from '@/services/supabase'; 
-import { MaterialIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Chip, Divider, IconButton } from 'react-native-paper';
 import { offersService, Schedule } from '@/services/offersService';
 import { HomeStackParamList, MessagesStackParamList, ProfileStackParamList, RootStackParamList } from '@/types/navigation';
@@ -43,13 +43,14 @@ const ChatScreen = () => {
     const homeNavigation = useNavigation<StackNavigationProp<HomeStackParamList>>();
     const profileNavigation = useNavigation<StackNavigationProp<ProfileStackParamList>>();
     const rootNavigation = useNavigation<StackNavigationProp<RootStackParamList>>();
-
+    const navigation = useNavigation();
     const { offerId } = route.params as { offerId: string };
     const { chatId, userId, post, schedule: incomingSchedule } = (route.params || {}) as RouteParams;
     const [schedule, setSchedule] = useState<Schedule | undefined>(incomingSchedule);
     const [currentUser, setCurrentUser] = useState<{ id: string } | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState<string>('');
+    const [receiverPhoto, setReceiverPhoto] = useState<string | null>(null);
     const [modalVisible, setModalVisible] = useState(false);
     const [newTime, setNewTime] = useState<string>(schedule?.scheduled_time || '');
     const [newDate, setNewDate] = useState<string>(schedule?.scheduled_date || '');
@@ -75,23 +76,45 @@ const ChatScreen = () => {
     const [address, setAddress] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [transaction, setTransaction] = useState<any>(null);
+
+    useEffect(() => {
+      const fetchUpdatedSchedule = async () => {
+        if (!schedule?.id) return;
     
-        // Logged in user
-        useEffect(() => {
-          const getUser = async () => {
-            console.log("🔍 Fetching authenticated user...");
-            const { data, error } = await supabase.auth.getUser();
-        
-            if (error) {
-              console.error("❌ Error fetching user:", error.message);
-            } else {
-              console.log("✅ Authenticated User:", data.user);
-              setCurrentUser(data.user);
-            }
-          };
-        
-          getUser();
-        }, []);  
+        const { data, error } = await supabase
+          .from('offer_schedules')
+          .select('*')
+          .eq('id', schedule.id)
+          .single();
+    
+        if (data) {
+          setSchedule((prev) => ({
+            ...prev,
+            ...data,
+            status: data.status,
+          }));
+        }
+      };
+    
+      fetchUpdatedSchedule();
+    }, []);
+    
+    // Logged in user
+    useEffect(() => {
+      const getUser = async () => {
+        console.log("🔍 Fetching authenticated user...");
+        const { data, error } = await supabase.auth.getUser();
+    
+        if (error) {
+          console.error("❌ Error fetching user:", error.message);
+        } else {
+          console.log("✅ Authenticated User:", data.user);
+          setCurrentUser(data.user);
+        }
+      };
+    
+      getUser();
+    }, []);  
 
     useEffect(() => {
         if (chatId && userId) {
@@ -125,12 +148,13 @@ const ChatScreen = () => {
             console.log('🔍 Other user ID:', otherUserId);
             const { data: profile } = await supabase
               .from('personal_users')
-              .select('first_name, last_name')
+              .select('first_name, last_name, profile_photo_url')
               .eq('id', otherUserId)
               .single();
           
             if (profile) {
               setReceiverName(`${profile.first_name} ${profile.last_name}`);
+              setReceiverPhoto(profile.profile_photo_url);
             }
           };
           
@@ -166,6 +190,9 @@ const ChatScreen = () => {
             .from('offer_schedules')
             .select(`
               *,
+              posts(
+                category_id
+              ),
               collector:collector_id (
                 id,
                 first_name,
@@ -195,6 +222,7 @@ const ChatScreen = () => {
                 scheduled_time: sched.scheduled_time,
                 scheduled_date: sched.scheduled_date,
                 status: sched.status,
+                category_id: sched.posts?.category_id,
                 photoUrl: sched.photo_url || '',
                 collectorName: sched.collector
                   ? `${sched.collector.first_name} ${sched.collector.last_name}`
@@ -244,11 +272,14 @@ const ChatScreen = () => {
       }
     }, [schedule]);
     
-    const isSellingPost = transaction?.category_id === 2;
+    const isSellingPost = schedule?.category_id === 2;
 
     const isOfferer = currentUser?.id === schedule?.offerer_id;
     const isCollector = currentUser?.id === schedule?.collector_id;
     
+    console.log("schedule fetched:, ", schedule);
+    console.log("is selling post?", isSellingPost);
+    console.log("ids:", schedule?.collector_id, schedule?.offerer_id);
     console.log("currentUser: ", currentUser);
     console.log("isOfferer or isCollector?", isOfferer, isCollector);
 
@@ -346,57 +377,71 @@ const ChatScreen = () => {
     };
 
     const handleEditSchedule = async () => {
-        if (!chatId || !schedule) {
-            Alert.alert("Error", "Missing schedule information");
-            return;
-        }
-
-        // Validate date and time
-        const now = new Date();
-        const selectedDateTime = new Date(selectedDate);
-        selectedDateTime.setHours(selectedTime.getHours(), selectedTime.getMinutes());
-
-        // Check if selected date and time is in the past
-        if (selectedDateTime < now) {
-            Alert.alert("Invalid Date/Time", "Please select a future date and time.");
-            return;
-        }
-
-        try {
-            const { error } = await supabase
-                .from('offer_schedules')
-                .update({
-                    scheduled_time: selectedTime.toTimeString().split(' ')[0],
-                    scheduled_date: selectedDate.toISOString().split('T')[0]
-                })
-                .eq('offer_id', chatId);
-
-            if (error) throw error;
-
-            // Update local state
-            schedule.scheduled_time = selectedTime.toTimeString().split(' ')[0];
-            schedule.scheduled_date = selectedDate.toISOString().split('T')[0];
-
-            // Send notification to the other user
-            const otherUserId = userId === schedule.collector_id ? schedule.offerer_id : schedule.collector_id;
-            await notificationService.sendNotification(
-                otherUserId as string,
-                'Schedule Updated',
-                'The schedule has been updated. Please check the new details.',
-                'schedule_updated',
-                {
-                    type: 'transaction',
-                    id: schedule.offer_id
-                }
-            );
-
-            Alert.alert("Success", "Schedule updated successfully!");
-            setModalVisible(false);
-        } catch (error) {
-            console.error("Error updating schedule:", error);
-            Alert.alert("Error", "Failed to update schedule. Please try again.");
-        }
+      if (!schedule || !schedule.offer_id) {
+        Alert.alert("Error", "Missing schedule information");
+        return;
+      }
+    
+      const now = new Date();
+    
+      // ✅ Create a new combined datetime safely
+      const combinedDateTime = new Date(selectedDate);
+      combinedDateTime.setHours(selectedTime.getHours(), selectedTime.getMinutes(), 0, 0);
+    
+      if (combinedDateTime < now) {
+        Alert.alert("Invalid Date/Time", "Please select a future date and time.");
+        return;
+      }
+    
+      // ✅ Format values properly
+      const formattedDate = combinedDateTime.toISOString().split("T")[0]; // YYYY-MM-DD
+      const formattedTime = combinedDateTime.toTimeString().split(" ")[0]; 
+      
+      try {
+        const { error } = await supabase
+          .from('offer_schedules')
+          .update({
+            scheduled_date: formattedDate,
+            scheduled_time: formattedTime
+          })
+          .eq('offer_id', schedule.offer_id);
+    
+        if (error) throw error;
+    
+        // Update local state
+        setSchedule({
+          ...schedule,
+          scheduled_date: formattedDate,
+          scheduled_time: formattedTime
+        });
+            
+        const displayTime = new Date(`1970-01-01T${transaction?.scheduled_time}`).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true,
+        }); // "01:00 PM"
+        
+        const otherUserId = userId === schedule.collector_id ? schedule.offerer_id : schedule.collector_id;
+    
+        await notificationService.sendNotification(
+          otherUserId,
+          'Schedule Updated',
+          'The schedule has been updated. Please check the new details.',
+          'schedule_updated',
+          {
+            type: 'transaction',
+            id: schedule.offer_id
+          }
+        );
+    
+        Alert.alert("Success", "Schedule updated successfully!");
+        setModalVisible(false);
+      } catch (error) {
+        console.error("Error updating schedule:", error);
+        Alert.alert("Error", "Failed to update schedule. Please try again.");
+      }
     };
+    
 
     const handleAgree = async () => {
         if (!schedule?.offer_id || !schedule?.offerer_id) {
@@ -438,7 +483,7 @@ const ChatScreen = () => {
                     screen: 'ViewTransaction',
                     params: { offerId: schedule.offer_id }
                 }
-            }); 
+              }); 
             }, 2000);
 
         } catch (error) {
@@ -525,17 +570,18 @@ const ChatScreen = () => {
       
     return (
         <View style={{ flex: 1, backgroundColor: '#163B1F' }}>
-           <View style={styles.headerContainer}>
-          <Image
-            source={{ uri: `https://i.pravatar.cc/40?u=${chatId}` }}
-            style={styles.avatar}
-          />
-          <Text style={styles.headerTitle}>{receiverName || 'Chat'}</Text>
-        </View>
+          <View style={styles.headerContainer}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+              <Ionicons name="arrow-back" size={24} color="white" />
+            </TouchableOpacity>
+            <Image
+              source={{ uri: receiverPhoto || `https://i.pravatar.cc/40?u=${chatId}` }}
+              style={styles.avatar}
+            />
+            <Text style={styles.headerTitle}>{receiverName || 'Chat'}</Text>
+          </View>
 
-
-
-        <View style={styles.messagescon}>
+          <View style={styles.messagescon}>
 
             {post && (
                 <View style={styles.scheduleCard}>
@@ -578,7 +624,7 @@ const ChatScreen = () => {
                                 </Text>
                             </View> */}
 
-                            <View style={styles.scheduleRow}>
+                            {/* <View style={styles.scheduleRow}>
                                 <MaterialIcons name="category" size={20} color="#00D964" />
                                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
                                     {(post.post_item_types ?? []).map((type, index) => (
@@ -591,7 +637,7 @@ const ChatScreen = () => {
                                         </Chip>
                                     ))}
                                 </View>
-                            </View>
+                            </View> */}
                         </View>
                     </View>
 
@@ -642,7 +688,11 @@ const ChatScreen = () => {
                             <View style={styles.scheduleRow}>
                                 <MaterialIcons name="access-time" size={20} color="#00D964" />
                                 <Text style={styles.scheduleText}>
-                                    Time: {schedule.scheduled_time}
+                                    Time: {new Date(`1970-01-01T${schedule?.scheduled_time}`).toLocaleTimeString([], {
+                                            hour: '2-digit',
+                                            minute: '2-digit',
+                                            hour12: true,
+                                          })}
                                 </Text>
                             </View>
 
@@ -718,7 +768,13 @@ const ChatScreen = () => {
                             if (item.target_type === 'post') {
                               homeNavigation.navigate('ViewPost', { postId: item.target_id });
                             } else if (item.target_type === 'schedule') {
-                              profileNavigation.navigate('ViewTransaction', { offerId: item.target_id });
+                              rootNavigation.navigate('Main', {
+                                screen: 'Profile',
+                                params: {
+                                    screen: 'ViewTransaction',
+                                    params: { offerId: item.target_id }
+                                }
+                            }); 
                             }
                           }}>
                             <Text style={styles.bannerText}>
@@ -770,9 +826,9 @@ const ChatScreen = () => {
             />
             </View>
             <View style={styles.inputWrapper}>
-            <TouchableOpacity style={styles.iconButton}>
+            {/* <TouchableOpacity style={styles.iconButton}>
                <Image source={require('@/assets/images/imagebutton.png')} style={styles.iconImage} />
-            </TouchableOpacity>
+            </TouchableOpacity> */}
 
             <TextInput
               style={styles.inputField}
@@ -886,7 +942,7 @@ timestampLeft: {
   alignSelf: 'flex-start',
 },
 
-    userBubble: {
+userBubble: {
   alignSelf: 'flex-end',
   backgroundColor: '#00FF66',
   padding: 12,
@@ -951,6 +1007,9 @@ avatar: {
   height: 40,
   borderRadius: 20,
   marginRight: 12,
+  marginLeft: 25,
+  borderWidth: 2,
+  borderColor: '#00FF66',
 },
   // 🔷 Layout
  
@@ -968,18 +1027,18 @@ avatar: {
   backButton: {
     position: 'absolute',
     left: 2,
-    padding: 10,
+    // padding: 10,
     zIndex: 1,
+    marginRight: 50,
+    marginLeft: 10
   },
 
   headerTitle: {
     color: 'white',
     fontSize: 14,
     fontWeight: 'regular',
-    textTransform: 'uppercase',
+    // textTransform: 'uppercase',
   },
-
-
 
   // 🔷 Input Area
   inputContainer: {
