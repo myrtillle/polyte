@@ -74,6 +74,8 @@ type TransactionDetail = {
   collector_id: string;
   offerer_name: string;
   collector_name: string;
+  offerer_profile_photo_url: string | null;
+  collector_profile_photo_url: string | null;
   photo_url: string | null;
   proof_image_url: string | null;
   items: string[];
@@ -273,6 +275,8 @@ export const transactionService = {
       collector_name: `${collector?.first_name ?? ''} ${collector?.last_name ?? ''}`.trim(),
       offerer_id: offerer?.id || '',
       offerer_name: `${offerer?.first_name ?? ''} ${offerer?.last_name ?? ''}`.trim(),
+      offerer_profile_photo_url: offerer?.profile_photo_url || null,
+      collector_profile_photo_url: collector?.profile_photo_url || null,
       photo_url: data.images?.[0] || null,
       proof_image_url: schedule?.collection_img || null,
       items: data.offered_items ?? [],

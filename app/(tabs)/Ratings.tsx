@@ -96,7 +96,9 @@ export default function Ratings() {
 
   const userName = isOfferer ? transaction?.collector_name : transaction?.offerer_name || 'User';
   const userRole = isOfferer ? 'Collector' : 'Offerer';
-  const userAvatar = transaction?.profile_photo_url || 'https://i.pravatar.cc/80';
+  const userAvatar = isOfferer
+    ? transaction?.collector_profile_photo_url
+    : transaction?.offerer_profile_photo_url || 'https://i.pravatar.cc/80';
 
   return (
     <View style={styles.container}>

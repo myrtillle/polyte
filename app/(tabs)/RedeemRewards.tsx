@@ -64,7 +64,7 @@ export default function RedeemRewards() {
       await rewardsService.submitClaim(userId, selectedReward.id, selectedReward.poly_points_required);
       Alert.alert(
         'Claim Submitted',
-        'Your reward claim has been submitted. Points will be deducted only after approval.',
+        'Your reward claim request has been submitted. Please wait for admin to review your request. Points will be deducted only after approval.',
         [
           {
             text: 'OK',

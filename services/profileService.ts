@@ -84,7 +84,8 @@ export const profileService = {
     const { data: redeemed, error: redeemError } = await supabase
       .from('claimed_rewards')
       .select('points_spent')
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .eq('status', 'approved');
   
     const totalSpent = redeemed?.reduce((sum, r) => sum + (r.points_spent || 0), 0) || 0;
     if (redeemError) throw new Error(redeemError.message);
