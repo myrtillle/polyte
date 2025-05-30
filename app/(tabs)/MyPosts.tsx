@@ -26,9 +26,21 @@ type HomeNav = StackNavigationProp<HomeStackParamList, 'HomeMain'>;
 type MessageNav = StackNavigationProp<MessagesStackParamList, 'MessagesMain'>;
 
 function formatTimeAgo(date: string) {
+  // Ensure the date string is interpreted as UTC
+  const utcDateString = date.endsWith('Z') ? date : date + 'Z';
   const now = new Date();
-  const postDate = new Date(date);
+  const postDate = new Date(utcDateString);
   const diffInSeconds = Math.floor((now.getTime() - postDate.getTime()) / 1000);
+
+  console.log('🔍 Time Debug (MyPosts):', {
+    inputDate: date,
+    utcDateString: utcDateString,
+    parsedDate: postDate.toISOString(),
+    now: now.toISOString(),
+    diffInSeconds,
+    diffInMinutes: Math.floor(diffInSeconds / 60),
+    diffInHours: Math.floor(diffInSeconds / 3600)
+  });
 
   if (diffInSeconds < 60) {
     return 'just now';

@@ -568,10 +568,24 @@ const ChatScreen = () => {
         };
       }, [chatId]);
       
+    // Add useEffect for handling back button
+    useEffect(() => {
+      const backHandler = () => {
+        navigation.goBack();
+        return true;
+      };
+
+      const unsubscribe = navigation.addListener('beforeRemove', backHandler);
+      return unsubscribe;
+    }, [navigation]);
+
     return (
         <View style={{ flex: 1, backgroundColor: '#163B1F' }}>
           <View style={styles.headerContainer}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <TouchableOpacity 
+              onPress={() => navigation.goBack()} 
+              style={styles.backButton}
+            >
               <Ionicons name="arrow-back" size={24} color="white" />
             </TouchableOpacity>
             <Image

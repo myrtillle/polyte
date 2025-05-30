@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { View, Image, StyleSheet, FlatList, RefreshControl, Modal, TouchableOpacity, Alert } from 'react-native';
 import { Text, Card, Button, Chip, Searchbar, IconButton, ActivityIndicator } from 'react-native-paper';
 import { postsService } from '../../services/postsService';
@@ -27,9 +27,21 @@ interface Category {
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Main'>;
 
 function formatTimeAgo(date: string) {
+  // Ensure the date string is interpreted as UTC
+  const utcDateString = date.endsWith('Z') ? date : date + 'Z';
   const now = new Date();
-  const postDate = new Date(date);
+  const postDate = new Date(utcDateString);
   const diffInSeconds = Math.floor((now.getTime() - postDate.getTime()) / 1000);
+
+  console.log('🔍 Time Debug:', {
+    inputDate: date,
+    utcDateString: utcDateString,
+    parsedDate: postDate.toISOString(),
+    now: now.toISOString(),
+    diffInSeconds,
+    diffInMinutes: Math.floor(diffInSeconds / 60),
+    diffInHours: Math.floor(diffInSeconds / 3600)
+  });
 
   if (diffInSeconds < 60) {
     return 'just now';
@@ -73,6 +85,9 @@ export default function HomeScreen() {
   const [showBadge, setShowBadge] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [address, setAddress] = useState<string | null>(null);
+
+  // Add a ref to track if the component is mounted
+  const mounted = useRef(false);
 
   const getModeIcon = (modeName: string) => {
     switch (modeName.toLowerCase()) {
@@ -219,7 +234,15 @@ export default function HomeScreen() {
 
   // Add real-time subscription for notifications
   useEffect(() => {
-    if (!currentUserId) return;
+    // Set mounted ref to true when the component mounts
+    mounted.current = true;
+
+    if (!currentUserId) {
+      console.log('🚫 No currentUserId, skipping notification subscription.');
+      return;
+    }
+
+    console.log('Attempting to subscribe to notifications for user:', currentUserId);
 
     const notificationSubscription = supabase
       .channel('notifications-realtime')
@@ -231,15 +254,37 @@ export default function HomeScreen() {
           table: 'notifications',
           filter: `user_id=eq.${currentUserId}`,
         },
-        async () => {
-          const count = await notificationService.getUnreadCount(currentUserId);
-          setUnreadCount(count);
-          setShowBadge(count > 0);
+        async (payload) => {
+          // Check if the component is still mounted before updating state
+          if (!mounted.current) return;
+
+          // Immediately show badge for new notifications
+          if (payload.eventType === 'INSERT') {
+            setShowBadge(true);
+          }
+          
+          try {
+            const count = await notificationService.getUnreadCount(currentUserId);
+            // Check if the component is still mounted before updating state
+            if (!mounted.current) return;
+            setUnreadCount(count);
+            setShowBadge(count > 0);
+          } catch (error) {
+            console.error('Error updating notification count:', error);
+          }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Notification subscription active');
+        } else {
+          console.error('❌ Notification subscription failed:', status);
+        }
+      });
 
     return () => {
+      // Set mounted ref to false when the component unmounts
+      mounted.current = false;
       supabase.removeChannel(notificationSubscription);
     };
   }, [currentUserId]);

@@ -316,6 +316,7 @@ export default function ProfileScreen() {
           <View style={styles.polySection}>
             <Text style={styles.polyCount}>{profile.totalPoints}</Text>
             <Text style={styles.polyLabel}>TOTAL POLYS</Text>
+            {/* <Text style={styles.polyInfo}>Points are only deducted after reward approval</Text> */}
           </View>
         </View>
 
@@ -448,6 +449,12 @@ const styles = StyleSheet.create({
     color: '#aaa',
     fontSize: 12,
     textTransform: 'uppercase',
+  },
+  polyInfo: {
+    color: '#00FF66',
+    fontSize: 10,
+    marginTop: 4,
+    fontStyle: 'italic',
   },
   
 

@@ -1539,9 +1539,9 @@ const ViewPost = () => {
                                   <Text style={styles.deleteOfferText}>Delete</Text>
                                 </TouchableOpacity>
                                 
-                                <TouchableOpacity style={styles.editOfferButton} onPress={() => handleEditOffer(offer)}>
+                                {/* <TouchableOpacity style={styles.editOfferButton} onPress={() => handleEditOffer(offer)}>
                                   <MaterialIcons name="edit" size={22} color="white" />
-                                </TouchableOpacity>
+                                </TouchableOpacity> */}
                               </View>
                             )}
 

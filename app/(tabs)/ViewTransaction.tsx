@@ -688,9 +688,11 @@ export default function ViewTransaction() {
           <Text style={[styles.subLabel, { marginTop: 16 }]}>ITEMS</Text>
           <View style={[styles.itemList, { marginTop: 6 }]}>
             {transaction?.items?.length > 0 ? (
-              transaction.items.map((item: string, index: number) => (
+              transaction.items.map((item: any, index: number) => (
                 <View key={index} style={[styles.itemChip, { marginBottom: 6 }]}>
-                  <Text style={[styles.itemChipText, { letterSpacing: 0.3 }]}>{item}</Text>
+                  <Text style={[styles.itemChipText, { letterSpacing: 0.3 }]}>
+                    {typeof item === 'object' && item !== null && 'name' in item ? item.name : item}
+                  </Text>
                 </View>
               ))
             ) : (

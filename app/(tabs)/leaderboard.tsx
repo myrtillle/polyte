@@ -112,7 +112,7 @@ export default function LeaderboardScreen() {
           style={[styles.tab, activeMetric === 'weight' && styles.activeTab]}
           onPress={() => setActiveMetric('weight')}
         >
-          <Text style={[styles.tabText, activeMetric === 'weight' && styles.activeTabText]}>KG COLLECTED</Text>
+          <Text style={[styles.tabText, activeMetric === 'weight' && styles.activeTabText]}>KG RECYCLED</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.dropdownFilter} onPress={() => setTimeDropdownVisible(true)}>

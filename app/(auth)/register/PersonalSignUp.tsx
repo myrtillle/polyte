@@ -107,8 +107,9 @@ export default function PersonalSignUp() {
   const handleSignup = async () => {
     // Check for empty fields with specific messages
     const emptyFields = [];
-    if (!firstName) emptyFields.push('First name');
+   
     if (!lastName) emptyFields.push('Last name');
+    if (!firstName) emptyFields.push('First name');
     if (!username) emptyFields.push('Username');
     if (!email) emptyFields.push('Email');
     if (!password) emptyFields.push('Password');

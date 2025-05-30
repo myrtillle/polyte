@@ -20,11 +20,12 @@ export const rewardsService = {
       return sum + (record.points || 0);
     }, 0) || 0;
   
-    // Fetch redeemed points
+    // Fetch redeemed points - ONLY count approved claims
     const { data: redeemed, error: redeemError } = await supabase
       .from('claimed_rewards')
       .select('points_spent')
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .eq('status', 'approved'); // Only count approved claims
   
     if (redeemError) {
       console.error('❌ Error fetching redeemed points:', redeemError);
