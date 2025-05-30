@@ -534,7 +534,8 @@ const ViewPost = () => {
                 buyer_id: currentUser.id,
                 seller_id: post.user_id,
                 offered_items: post.post_item_types,
-                offered_weight: 0,
+                // Set offered_weight based on post category
+                offered_weight: post.kilograms,
                 requested_weight: 0,
                 price: post.price,
                 message: 'Interested in collecting your plastics!',
@@ -584,7 +585,8 @@ const ViewPost = () => {
             buyer_id: currentUser.id,
             seller_id: post.user_id,
             offered_items: post.post_item_types,
-            offered_weight: 0,
+            // Set offered_weight based on post category
+            offered_weight: post?.category_id === 2 ? post.kilograms : 0,
             requested_weight: 0,
             price: post.price,
             message: 'Interested in collecting your plastics!',

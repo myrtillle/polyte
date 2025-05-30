@@ -275,6 +275,7 @@ export default function HomeScreen() {
         }
       )
       .subscribe((status) => {
+        console.log('🔔 Notification subscription status:', status);
         if (status === 'SUBSCRIBED') {
           console.log('✅ Notification subscription active');
         } else {
