@@ -59,43 +59,44 @@ const ViewPost = () => {
   
   const confettiRef = useRef<ConfettiCannon>(null);
 
-  // function formatTimeAgo(dateString: string) {
-  //   const now = new Date();
-  //   const postDate = new Date(dateString);
-  //   const diffInSeconds = Math.floor((now.getTime() - postDate.getTime()) / 1000);
-  
-  //   if (diffInSeconds < 60) return 'just now';
-  //   const diffInMinutes = Math.floor(diffInSeconds / 60);
-  //   if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
-  //   const diffInHours = Math.floor(diffInMinutes / 60);
-  //   if (diffInHours < 24) return `${diffInHours}h ago`;
-  //   const diffInDays = Math.floor(diffInHours / 24);
-  //   return `${diffInDays}d ago`;
-  // }
-
   function formatTimeAgo(dateString: string) {
+    // Ensure the date string is interpreted as UTC
+    const utcDateString = dateString.endsWith('Z') ? dateString : dateString + 'Z';
     const now = new Date();
-    const past = new Date(dateString);
-    const diff = (now.getTime() - past.getTime()) / 1000;
-  
-    const units = [
-      { max: 60, value: 1, name: 'second' },
-      { max: 3600, value: 60, name: 'minute' },
-      { max: 86400, value: 3600, name: 'hour' },
-      { max: 604800, value: 86400, name: 'day' },
-      { max: 2620800, value: 604800, name: 'week' },
-      { max: 31449600, value: 2620800, name: 'month' },
-      { max: Infinity, value: 31449600, name: 'year' },
-    ];
-  
-    for (const unit of units) {
-      if (diff < unit.max) {
-        const count = Math.floor(diff / unit.value);
-        return `${count}${unit.name[0]} ago`;
-      }
+    const postDate = new Date(utcDateString);
+    const diffInSeconds = Math.floor((now.getTime() - postDate.getTime()) / 1000);
+
+    console.log('🔍 Time Debug:', {
+      inputDate: dateString,
+      utcDateString: utcDateString,
+      parsedDate: postDate.toISOString(),
+      now: now.toISOString(),
+      diffInSeconds,
+      diffInMinutes: Math.floor(diffInSeconds / 60),
+      diffInHours: Math.floor(diffInSeconds / 3600)
+    });
+
+    if (diffInSeconds < 60) {
+      return 'just now';
     }
-  
-    return 'a while ago';
+
+    const diffInMinutes = Math.floor(diffInSeconds / 60);
+    if (diffInMinutes < 60) {
+      return `${diffInMinutes}m ago`;
+    }
+
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) {
+      return `${diffInHours}h ago`;
+    }
+
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays < 30) {
+      return `${diffInDays}d ago`;
+    }
+
+    const diffInMonths = Math.floor(diffInDays / 30);
+    return `${diffInMonths}mo ago`;
   }
   
   const getModeData = (modeName: string) => {
