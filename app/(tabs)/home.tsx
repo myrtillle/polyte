@@ -234,16 +234,15 @@ export default function HomeScreen() {
 
   // Add real-time subscription for notifications
   useEffect(() => {
-    // Set mounted ref to true when the component mounts
     mounted.current = true;
-
+  
     if (!currentUserId) {
       console.log('🚫 No currentUserId, skipping notification subscription.');
       return;
     }
-
-    console.log('Attempting to subscribe to notifications for user:', currentUserId);
-
+  
+    console.log('🔔 Attempting to subscribe to notifications for user:', currentUserId);
+  
     const notificationSubscription = supabase
       .channel('notifications-realtime')
       .on(
@@ -252,43 +251,41 @@ export default function HomeScreen() {
           event: '*',
           schema: 'public',
           table: 'notifications',
-          filter: `user_id=eq.${currentUserId}`,
         },
         async (payload) => {
-          // Check if the component is still mounted before updating state
-          if (!mounted.current) return;
+          const newRow = payload.new as { user_id: string };
 
-          // Immediately show badge for new notifications
+  if (!newRow || newRow.user_id !== currentUserId) return; // ✅ manually filter only your own notifications
+  
           if (payload.eventType === 'INSERT') {
             setShowBadge(true);
           }
-          
+  
           try {
             const count = await notificationService.getUnreadCount(currentUserId);
-            // Check if the component is still mounted before updating state
             if (!mounted.current) return;
             setUnreadCount(count);
             setShowBadge(count > 0);
           } catch (error) {
-            console.error('Error updating notification count:', error);
+            console.error('❌ Error updating notification count:', error);
           }
         }
       )
       .subscribe((status) => {
-        console.log('🔔 Notification subscription status:', status);
+        console.log('🔔 Subscription status:', status);
         if (status === 'SUBSCRIBED') {
           console.log('✅ Notification subscription active');
         } else {
-          console.error('❌ Notification subscription failed:', status);
+          console.warn('⚠️ Subscription status:', status);
         }
       });
-
+  
     return () => {
-      // Set mounted ref to false when the component unmounts
       mounted.current = false;
       supabase.removeChannel(notificationSubscription);
     };
   }, [currentUserId]);
+  
 
   const handleNotificationPress = () => {
     setShowBadge(false); // Hide badge when notification icon is clicked

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import { supabase } from '@/services/supabase';
 import { notificationService } from '@/services/notificationService';
 import { RouteProp, useFocusEffect, useRoute } from '@react-navigation/native';
@@ -16,6 +16,7 @@ export default function Notifications() {
   const messagesNavigation = useNavigation<StackNavigationProp<MessagesStackParamList>>();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const route = useRoute<NotificationsRouteProp>();
   // const { onViewed } = route.params || {};
@@ -34,8 +35,16 @@ export default function Notifications() {
       console.error('Error fetching notifications:', error);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
+
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    if (userId) {
+      await fetchNotifications(userId);
+    }
+  }, [userId]);
 
   useEffect(() => {
     const fetchUserAndNotifications = async () => {
@@ -169,11 +178,21 @@ export default function Notifications() {
   if (loading) return <ActivityIndicator color="#00D964" size="large" style={{ flex: 1 }} />;
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView 
+      contentContainerStyle={styles.container}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={['#00D964']}
+          tintColor="#00D964"
+        />
+      }
+    >
       <Text style={styles.header}>Notifications</Text>
       <TouchableOpacity onPress={handleMarkAllAsRead} style={styles.markAll}>
         <Text style={styles.markAllText}>Mark all as read</Text>
-    </TouchableOpacity>
+      </TouchableOpacity>
 
       {notifications.length === 0 ? (
         <Text style={styles.empty}>No notifications yet.</Text>
