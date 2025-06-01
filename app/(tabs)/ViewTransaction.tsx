@@ -798,7 +798,7 @@ export default function ViewTransaction() {
             </View>
 
             {isBuyer && ( 
-              <View style={{ flexDirection: 'row', gap: 10, marginBottom: 8 }}>               
+              <View style={{ flexDirection: 'row', gap: 10, marginBottom: 8 }}>
                   <TouchableOpacity
                     style={[
                       styles.confirmButton,
@@ -849,7 +849,37 @@ export default function ViewTransaction() {
                     ]}>
                     </Text>
                   </TouchableOpacity>
-              </View>   
+              </View>
+            )}
+            {/* Add CASH ON DELIVERY button below the two payment buttons */}
+            {isBuyer && (
+              <View style={{ flexDirection: 'row', gap: 10, marginBottom: 8 }}>
+                <TouchableOpacity
+                  style={[
+                    styles.confirmButton,
+                    {
+                      flex: 1,
+                      backgroundColor: transaction?.status === 'awaiting_payment' ? '#FFD700' : '#888',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexDirection: 'row',
+                      gap: 8,
+                      borderRadius: 8,
+                      paddingVertical: 12,
+                      paddingHorizontal: 16,
+                    },
+                  ]}
+                  disabled={transaction?.status !== 'awaiting_payment'}
+                  onPress={handleMockPayment}
+                >
+                  <Text style={[
+                    styles.confirmText,
+                    transaction?.status === 'awaiting_payment' ? { color: '#023F0F', fontWeight: 'bold', fontSize: 16 } : { color: '#666' }
+                  ]}>
+                    CASH ON DELIVERY
+                  </Text>
+                </TouchableOpacity>
+              </View>
             )}
 
             {(() => {
