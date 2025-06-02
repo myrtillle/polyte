@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Dimensions, Alert, Platform, KeyboardAvoidingView } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Dimensions, Alert, Platform, KeyboardAvoidingView, Modal } from 'react-native';
 import { TextInput, Button, Title, Text, IconButton, SegmentedButtons, Chip } from 'react-native-paper';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { PostStackParamList, ProfileStackParamList } from '@/types/navigation'; // adjust if needed
+import { PostStackParamList, ProfileStackParamList, RootStackParamList } from '@/types/navigation'; // adjust if needed
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { postsService, CreatePostData } from '../../services/postsService';
 import * as ImagePicker from 'expo-image-picker';
@@ -18,6 +18,10 @@ import Constants from 'expo-constants';
 import { rgbaColor } from 'react-native-reanimated/lib/typescript/Colors';
 import PinImage from '../../assets/images/NEW/PIN.png'; // Make sure this image exists
 import GreenMark from '../../assets/images/greenmark.png';
+import PolyteLogo from '../../assets/images/polyte-logo.png';
+import PETImage from '../../assets/images/PET.png';
+import HDPEImage from '../../assets/images/HDPE.png';
+import PPImage from '../../assets/images/PP.png';
 
 type IconName = 'account-multiple' | 'map-marker' | 'home' | 'image-plus';
 
@@ -79,7 +83,7 @@ export default function PostScreen() {
   };
 
   const navigation = useNavigation<StackNavigationProp<PostStackParamList, 'PostMain'>>();
-  const profileNavigation = useNavigation<StackNavigationProp<ProfileStackParamList>>();
+  const rootNavigation = useNavigation<NavigationProp<RootStackParamList>>();
   
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -217,6 +221,9 @@ export default function PostScreen() {
   // Separate state for UI-only data
   const [selectedMode, setSelectedMode] = useState('');
 
+  // Add state for the popup modal
+  const [showPlasticsInfo, setShowPlasticsInfo] = useState(true);
+  const [showUnderstandBtn, setShowUnderstandBtn] = useState(false);
 
   const pickImages = async () => {
     try {
@@ -445,9 +452,14 @@ export default function PostScreen() {
       }
 
       await postsService.createPost(postData);
-      profileNavigation.navigate('MyPosts');
       resetForm();
       Alert.alert("Success", "Post created successfully! You can view your posts in My Posts section under your profile.");
+      rootNavigation.navigate('Main', {
+        screen: 'Profile',
+        params: {
+          screen: 'MyPosts'
+        }
+      });
     } catch (error) {
       console.error('Error creating post:', error);
       Alert.alert("Error", "Failed to create post.");
@@ -546,269 +558,372 @@ export default function PostScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#023F0F' }}>
-      {/* Remove custom header */}
-      <View style={{ flexDirection: 'row', justifyContent: 'center', padding: 16, marginTop: 8 }}>
-        <View style={styles.stepContainer}>
-          <View style={[styles.stepNumber, step === 1 && styles.activeStep]}>
-            <Text style={[styles.stepNumberText, step === 1 && styles.activeStepText]}>1</Text>
-          </View>
-          <Text style={[styles.stepLabel, step === 1 && styles.activeStepLabel]}>Post & Waste Info</Text>
-        </View>
-        <View style={styles.stepConnector} />
-        <View style={styles.stepContainer}>
-          <View style={[styles.stepNumber, step === 2 && styles.activeStep]}>
-            <Text style={[styles.stepNumberText, step === 2 && styles.activeStepText]}>2</Text>
-          </View>
-          <Text style={[styles.stepLabel, step === 2 && styles.activeStepLabel]}>Location</Text>
-        </View>
-      </View>
-      
-      {step === 1 && (
-        <ScrollView 
-          style={{ padding: 16, backgroundColor: '#023F0F', flex: 1 }}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
-          scrollEnabled={true}  
-          nestedScrollEnabled={true}
-        >
-          {/* Category Selection */}
-          <View style={[styles.categoryContainer, { marginTop: 0 }]}>
-            <Text style={styles.sectionTitle}>CATEGORY</Text>
-
-            {/* SELLING Button */}
-            <TouchableOpacity onPress={() => setFormData(prev => ({ ...prev, category_id: categories[1]?.id }))}>
-              <LinearGradient
-                colors={
-                  formData.category_id === categories[1]?.id
-                    ? ['#023F0F', '#00FF57']  // selected = gradient
-                    : ['#2C5735', '#2C5735']  // not selected = solid color
+    <>
+      <Modal
+        visible={showPlasticsInfo}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowPlasticsInfo(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ backgroundColor: '#0C2A13', borderRadius: 18, padding: 18, width: '95%', maxWidth: 360, alignItems: 'center', maxHeight: '85%' }}>
+            <ScrollView
+              contentContainerStyle={{ alignItems: 'center', paddingBottom: 50 }}
+              showsVerticalScrollIndicator={false}
+              onScroll={({ nativeEvent }) => {
+                const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+                if (layoutMeasurement.height + contentOffset.y >= contentSize.height - 20) {
+                  setShowUnderstandBtn(true);
+                } else {
+                  setShowUnderstandBtn(false);
                 }
-                style={styles.categoryButton}
-              >
-                <Text style={styles.categoryText}>SELLING</Text>
-                <Image source={require('../../assets/images/selling.png')} style={styles.categoryImage} />
-              </LinearGradient>
-            </TouchableOpacity>
+              }}
+              scrollEventThrottle={16}
+            >
+              {/* Polyte Logo */}
+              
+              <Text style={{ color: '#fff', fontWeight: 'regular', fontSize: 16, textAlign: 'left', marginBottom: 2, alignSelf: 'flex-start' }}>
+                Types of Recyclable Plastics in
+              </Text>
+              <Image source={PolyteLogo} style={{ width: 120, height: 40, resizeMode: 'contain', marginBottom: 20, alignSelf: 'flex-start' }} />
 
-            {/* SEEKING Button */}
-            <TouchableOpacity onPress={() => setFormData(prev => ({ ...prev, category_id: categories[0]?.id }))}>
-              <LinearGradient
-                colors={
-                  formData.category_id === categories[0]?.id
-                    ? ['#023F0F', '#00FF57']
-                    : ['#2C5735', '#2C5735']
-                }
-                style={styles.categoryButton}
-              >
-                <Text style={styles.categoryText}>SEEKING</Text>
-                <Image source={require('../../assets/images/seeking.png')} style={styles.categoryImage} />
-              </LinearGradient>
-            </TouchableOpacity>
+              {/* PET Section */}
+              <View style={{ flexDirection: 'row', marginBottom: 18, width: 300, borderWidth: 1, borderColor: '#bbb', borderRadius: 15, padding: 10, position: 'relative', minHeight: 70 }}>
+                <View style={{ flex: 1, paddingRight: 10 }}>
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15, marginBottom: 2 }}>
+                    PET <Text style={{ fontWeight: 'normal', color: '#fff', fontSize: 14 }}>(Polyethylene Terephthalate)</Text>
+                  </Text>
+                  <Text style={{ color: '#fff', fontSize: 13, marginTop: 6, marginBottom: 2 }}>
+                    <Text style={{ color: '#fff', fontWeight: 'bold' }}>Examples:</Text>
+                  </Text>
+                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: 'bold', marginBottom: 6 }}>
+                    Soft drink bottles, Mineral water bottles{"\n"}Peanut butter jars
+                  </Text>
+                  <Text style={{ color: '#fff', fontSize: 12, marginTop: 12, marginBottom: 2 }}>What is it?</Text>
+                  <Text style={{ color: '#ccc', fontSize: 12, marginBottom: 10 }}>
+                    PET is a clear, lightweight plastic commonly used for food and beverage packaging. It's valued for being strong, safe, and easy to recycle.
+                  </Text>
+                  <Text style={{ color: '#fff', fontSize: 12, marginTop: 12, marginBottom: 2 }}>Did You Know?</Text>
+                  <Text style={{ color: '#ccc', fontSize: 12 }}>
+                    PET can be recycled into new bottles, clothing fibers, or packaging materials.
+                  </Text>
+                </View>
+                <Image source={PETImage} style={{ width: 60, height: 60, resizeMode: 'contain', position: 'absolute', top: 10, right: 10 }} />
+              </View>
 
+              {/* HDPE Section */}
+              <View style={{ flexDirection: 'row', marginBottom: 18, width: 300, borderWidth: 1, borderColor: '#bbb', borderRadius: 15, padding: 10, position: 'relative', minHeight: 70 }}>
+                <View style={{ flex: 1, paddingRight: 10 }}>
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15, marginBottom: 2 }}>
+                    HDPE <Text style={{ fontWeight: 'normal', color: '#fff', fontSize: 14 }}>(High-Density Polyethylene)</Text>
+                  </Text>
+                  <Text style={{ color: '#fff', fontSize: 13, marginTop: 6, marginBottom: 2 }}>
+                    <Text style={{ color: '#fff', fontWeight: 'bold' }}>Examples:</Text>
+                  </Text>
+                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: 'bold', marginBottom: 6 }}>
+                    Shampoo bottles, Milk jugs{"\n"}Detergent containers, Ice cream tubs
+                  </Text>
+                  <Text style={{ color: '#fff', fontSize: 12, marginTop: 12, marginBottom: 2 }}>What is it?</Text>
+                  <Text style={{ color: '#ccc', fontSize: 12, marginBottom: 10 }}>
+                    HDPE is a sturdy, opaque plastic often used for containers that hold heavier liquids. It's known for its durability and high resistance to chemicals.
+                  </Text>
+                  <Text style={{ color: '#fff', fontSize: 12, marginTop: 12, marginBottom: 2 }}>Did You Know?</Text>
+                  <Text style={{ color: '#ccc', fontSize: 12 }}>
+                    Recycled HDPE can be turned into plastic lumber, piping, and new containers.
+                  </Text>
+                </View>
+                <Image source={HDPEImage} style={{ width: 60, height: 60, resizeMode: 'contain', position: 'absolute', top: 10, right: 10 }} />
+              </View>
+
+              {/* PP Section */}
+              <View style={{ flexDirection: 'row', marginBottom: 1, width: 300, borderWidth: 1, borderColor: '#bbb', borderRadius: 15, padding: 10, position: 'relative', minHeight: 70 }}>
+                <View style={{ flex: 1, paddingRight: 10 }}>
+                  <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15, marginBottom: 2 }}>
+                    PP <Text style={{ fontWeight: 'normal', color: '#fff', fontSize: 14 }}>(Polypropylene)</Text>
+                  </Text>
+                  <Text style={{ color: '#fff', fontSize: 13, marginTop: 6, marginBottom: 2 }}>
+                    <Text style={{ color: '#fff', fontWeight: 'bold' }}>Examples:</Text>
+                  </Text>
+                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: 'bold', marginBottom: 6 }}>
+                    Microwaveable food containers,{"\n"}Strawless drink cups Plastic pails, {"\n"}Car bumpers and furniture parts
+                  </Text>
+                  <Text style={{ color: '#fff', fontSize: 12, marginTop: 12, marginBottom: 2 }}>What is it?</Text>
+                  <Text style={{ color: '#ccc', fontSize: 12, marginBottom: 10 }}>
+                    PP is a tough yet flexible plastic used in various food and non-food packaging. It resists heat and is commonly used for reusable items.
+                  </Text>
+                  <Text style={{ color: '#fff', fontSize: 12, marginTop: 12, marginBottom: 2 }}>Did You Know?</Text>
+                  <Text style={{ color: '#ccc', fontSize: 12 }}>
+                    PP can be recycled into trays, storage bins, and even battery cases
+                  </Text>
+                </View>
+                <Image source={PPImage} style={{ width: 60, height: 60, resizeMode: 'contain', position: 'absolute', top: 10, right: 10 }} />
+              </View>
+            </ScrollView>
+            <TouchableOpacity
+              style={{
+                backgroundColor: showUnderstandBtn ? '#00D964' : '#888',
+                borderRadius: 20,
+                paddingVertical: 12,
+                marginTop: 10,
+                width: '100%',
+                position: 'absolute',
+                bottom: 16,
+                opacity: showUnderstandBtn ? 1 : 0.6,
+              }}
+              onPress={showUnderstandBtn ? () => setShowPlasticsInfo(false) : undefined}
+              disabled={!showUnderstandBtn}
+            >
+              <Text style={{ color: showUnderstandBtn ? '#023F0F' : '#444', fontWeight: 'bold', fontSize: 16, textAlign: 'center', width: '100%' }}>I Understand</Text>
+            </TouchableOpacity>
           </View>
-
-          <Text style={styles.sectionTitle}>WASTE INFORMATION</Text>
-          {/* Item Types Section */}
-          <View style={styles.itemTypesContainer}>
-            <View style={styles.itemTypesHeader}>
-              <Text style={styles.itemTypesTitle}>TYPE OF PLASTICS</Text>
-              <Text style={styles.itemTypesInfo}>SELECT AT LEAST 1</Text>
-              <MaterialCommunityIcons name="information-outline" size={18} color="limegreen" />
+        </View>
+      </Modal>
+      <View style={{ flex: 1, backgroundColor: '#023F0F' }}>
+        {/* Remove custom header */}
+        <View style={{ flexDirection: 'row', justifyContent: 'center', padding: 16, marginTop: 8 }}>
+          <View style={styles.stepContainer}>
+            <View style={[styles.stepNumber, step === 1 && styles.activeStep]}>
+              <Text style={[styles.stepNumberText, step === 1 && styles.activeStepText]}>1</Text>
             </View>
+            <Text style={[styles.stepLabel, step === 1 && styles.activeStepLabel]}>Post & Waste Info</Text>
+          </View>
+          <View style={styles.stepConnector} />
+          <View style={styles.stepContainer}>
+            <View style={[styles.stepNumber, step === 2 && styles.activeStep]}>
+              <Text style={[styles.stepNumberText, step === 2 && styles.activeStepText]}>2</Text>
+            </View>
+            <Text style={[styles.stepLabel, step === 2 && styles.activeStepLabel]}>Location</Text>
+          </View>
+        </View>
+        
+        {step === 1 && (
+          <ScrollView 
+            style={{ padding: 16, backgroundColor: '#023F0F', flex: 1 }}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+            scrollEnabled={true}  
+            nestedScrollEnabled={true}
+          >
+            {/* Category Selection */}
+            <View style={[styles.categoryContainer, { marginTop: 0 }]}>
+              <Text style={styles.sectionTitle}>CATEGORY</Text>
 
-            <View style={styles.itemTypesGrid}>
-              {itemTypes.map(type => (
-                <TouchableOpacity
-                  key={type.id}
-                  style={[styles.itemTypeButton, formData.item_type_ids.includes(type.id) && styles.selectedItemType]}
-                  onPress={() => toggleItemType(type.id)}
+              {/* SELLING Button */}
+              <TouchableOpacity onPress={() => setFormData(prev => ({ ...prev, category_id: categories[1]?.id }))}>
+                <LinearGradient
+                  colors={
+                    formData.category_id === categories[1]?.id
+                      ? ['#023F0F', '#00FF57']  // selected = gradient
+                      : ['#2C5735', '#2C5735']  // not selected = solid color
+                  }
+                  style={styles.categoryButton}
                 >
-                  <Text style={styles.itemTypeText}>{type.name}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
+                  <Text style={styles.categoryText}>SELLING</Text>
+                  <Image source={require('../../assets/images/selling.png')} style={styles.categoryImage} />
+                </LinearGradient>
+              </TouchableOpacity>
 
-          {/* Description */}
-          <View style={styles.descriptionContainer}>
-            <Text style={styles.sectionTitle}>DESCRIPTION</Text>
-            <View style={styles.descriptionBox}>
-              <TextInput
-                label=""
-                value={formData.description}
-                onChangeText={text => setFormData(prev => ({ ...prev, description: text }))}
-                multiline
-                style={styles.input}
-                underlineColor="transparent"
-                textColor="#FFFFFF"
-                activeUnderlineColor="transparent"
-              />
-            </View>
-          </View>
+              {/* SEEKING Button */}
+              <TouchableOpacity onPress={() => setFormData(prev => ({ ...prev, category_id: categories[0]?.id }))}>
+                <LinearGradient
+                  colors={
+                    formData.category_id === categories[0]?.id
+                      ? ['#023F0F', '#00FF57']
+                      : ['#2C5735', '#2C5735']
+                  }
+                  style={styles.categoryButton}
+                >
+                  <Text style={styles.categoryText}>SEEKING</Text>
+                  <Image source={require('../../assets/images/seeking.png')} style={styles.categoryImage} />
+                </LinearGradient>
+              </TouchableOpacity>
 
-          {/* Weight */}
-          <View style={styles.kilogramsContainer}>
-            <View style={styles.kilogramsLabel}>
-              <Image source={require('../../assets/images/trashbag.png')} style={styles.kilogramsIcon} />
-              <Text style={styles.kilogramsTitle}>TOTAL KILOGRAMS</Text>
             </View>
-            <View style={styles.kilogramsInputWrapper}>
-              <TextInput
-                underlineColor="transparent"
-                activeUnderlineColor="transparent"
-                value={formData.kilograms}
-                onChangeText={text => setFormData(prev => ({ ...prev, kilograms: text }))}
-                keyboardType="numeric"
-                style={[styles.kilogramsInput, { color: '#FFFFFF' }]}
-                textColor="#FFFFFF"
-              />
-            </View>
-          </View>
 
-          {formData.category_id === categories[1]?.id && (
+            <Text style={styles.sectionTitle}>WASTE INFORMATION</Text>
+            {/* Item Types Section */}
+            <View style={styles.itemTypesContainer}>
+              <View style={styles.itemTypesHeader}>
+                <Text style={styles.itemTypesTitle}>TYPE OF PLASTICS</Text>
+                <Text style={styles.itemTypesInfo}>SELECT AT LEAST 1</Text>
+                <MaterialCommunityIcons name="information-outline" size={18} color="limegreen" />
+              </View>
+
+              <View style={styles.itemTypesGrid}>
+                {itemTypes.map(type => (
+                  <TouchableOpacity
+                    key={type.id}
+                    style={[styles.itemTypeButton, formData.item_type_ids.includes(type.id) && styles.selectedItemType]}
+                    onPress={() => toggleItemType(type.id)}
+                  >
+                    <Text style={styles.itemTypeText}>{type.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Description */}
+            <View style={styles.descriptionContainer}>
+              <Text style={styles.sectionTitle}>DESCRIPTION</Text>
+              <View style={styles.descriptionBox}>
+                <TextInput
+                  label=""
+                  value={formData.description}
+                  onChangeText={text => setFormData(prev => ({ ...prev, description: text }))}
+                  multiline
+                  style={styles.input}
+                  underlineColor="transparent"
+                  textColor="#FFFFFF"
+                  activeUnderlineColor="transparent"
+                />
+              </View>
+            </View>
+
+            {/* Weight */}
             <View style={styles.kilogramsContainer}>
               <View style={styles.kilogramsLabel}>
-                <Text style={styles.kilogramsTitle}>PRICE</Text>
+                <Image source={require('../../assets/images/trashbag.png')} style={styles.kilogramsIcon} />
+                <Text style={styles.kilogramsTitle}>TOTAL KILOGRAMS</Text>
               </View>
               <View style={styles.kilogramsInputWrapper}>
                 <TextInput
                   underlineColor="transparent"
                   activeUnderlineColor="transparent"
-                  value={formData.price || ''}
-                  onChangeText={text => setFormData(prev => ({ ...prev, price: text }))}
+                  value={formData.kilograms}
+                  onChangeText={text => setFormData(prev => ({ ...prev, kilograms: text }))}
                   keyboardType="numeric"
                   style={[styles.kilogramsInput, { color: '#FFFFFF' }]}
                   textColor="#FFFFFF"
                 />
               </View>
             </View>
-          )}
 
-          <View style={styles.galleryContainer}>
-            <Text style={styles.sectionTitle}>GALLERY</Text>
-            <Text style={styles.photoLimitText}>{formData.photos.length}/5 photos</Text>
-            
-            <View style={styles.imageUploadWrapper}>
-              {formData.photos.length < 5 && (
-                <TouchableOpacity style={styles.imageUploadBox} onPress={pickImages}>
-                  <MaterialCommunityIcons 
-                    name={'image-plus' as IconName} 
-                    size={50} 
-                    color="#aaa" 
-                  />
-                  <Text style={styles.uploadText}>ADD IMAGE OF YOUR WASTE</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            <View style={styles.imageContainer}>
-              {formData.photos?.map((uri: string, index: number) => (
-                <View key={index} style={styles.imageWrapper}>
-                  <Image source={{ uri }} style={styles.uploadedImage} />
-                  <TouchableOpacity 
-                    style={styles.removeImageButton}
-                    onPress={() => removePhoto(index)}
-                  >
-                    <MaterialCommunityIcons name="close-circle" size={24} color="#FF4444" />
-                  </TouchableOpacity>
+            {formData.category_id === categories[1]?.id && (
+              <View style={styles.kilogramsContainer}>
+                <View style={styles.kilogramsLabel}>
+                  <Text style={styles.kilogramsTitle}>PRICE</Text>
                 </View>
-              ))}
-              {uploading && <ActivityIndicator size="large" color="#00FF57" />}
+                <View style={styles.kilogramsInputWrapper}>
+                  <TextInput
+                    underlineColor="transparent"
+                    activeUnderlineColor="transparent"
+                    value={formData.price || ''}
+                    onChangeText={text => setFormData(prev => ({ ...prev, price: text }))}
+                    keyboardType="numeric"
+                    style={[styles.kilogramsInput, { color: '#FFFFFF' }]}
+                    textColor="#FFFFFF"
+                  />
+                </View>
+              </View>
+            )}
+
+            <View style={styles.galleryContainer}>
+              <Text style={styles.sectionTitle}>GALLERY</Text>
+              <Text style={styles.photoLimitText}>{formData.photos.length}/5 photos</Text>
+              
+              <View style={styles.imageUploadWrapper}>
+                {formData.photos.length < 5 && (
+                  <TouchableOpacity style={styles.imageUploadBox} onPress={pickImages}>
+                    <MaterialCommunityIcons 
+                      name={'image-plus' as IconName} 
+                      size={50} 
+                      color="#aaa" 
+                    />
+                    <Text style={styles.uploadText}>ADD IMAGE OF YOUR WASTE</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              <View style={styles.imageContainer}>
+                {formData.photos?.map((uri: string, index: number) => (
+                  <View key={index} style={styles.imageWrapper}>
+                    <Image source={{ uri }} style={styles.uploadedImage} />
+                    <TouchableOpacity 
+                      style={styles.removeImageButton}
+                      onPress={() => removePhoto(index)}
+                    >
+                      <MaterialCommunityIcons name="close-circle" size={24} color="#FF4444" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+                {uploading && <ActivityIndicator size="large" color="#00FF57" />}
+              </View>
             </View>
-          </View>
 
-          {/* Collection Mode */}
-          <View>
-            <View style={{ marginTop: 20 }}>
-              <Text style={styles.sectionTitle}>MODE OF COLLECTION:</Text>
+            {/* Collection Mode */}
+            <View>
+              <View style={{ marginTop: 20 }}>
+                <Text style={styles.sectionTitle}>MODE OF COLLECTION:</Text>
 
-              {collectionModes.map((mode) => {
-              const modeName = mode.name.toLowerCase();
+                {collectionModes.map((mode) => {
+                const modeName = mode.name.toLowerCase();
 
-              let iconSource;
-              if (modeName.includes('pickup')) {
-                iconSource = require('../../assets/images/NEW/CAR.png');
-              } else if (modeName.includes('drop')) {
-                iconSource = require('../../assets/images/NEW/ORANGE.png');
-              } else if (modeName.includes('meet')) {
-                iconSource = require('../../assets/images/NEW/HOUSE.png');
-              } else {
-                iconSource = require('../../assets/images/NEW/HOUSE.png'); // fallback
-              }
+                let iconSource;
+                if (modeName.includes('pickup')) {
+                  iconSource = require('../../assets/images/NEW/CAR.png');
+                } else if (modeName.includes('drop')) {
+                  iconSource = require('../../assets/images/NEW/ORANGE.png');
+                } else if (modeName.includes('meet')) {
+                  iconSource = require('../../assets/images/NEW/HOUSE.png');
+                } else {
+                  iconSource = require('../../assets/images/NEW/HOUSE.png'); // fallback
+                }
 
-              return (
-                <TouchableOpacity
-                  key={mode.id}
-                  style={[
-                    styles.collectionCard,
-                    formData.collection_mode_id === mode.id && styles.collectionCardSelected,
-                  ]}
-                  onPress={() =>
-                    setFormData((prev) => ({ ...prev, collection_mode_id: mode.id }))
-                  }
-                >
-                  <Image source={iconSource} style={styles.collectionIcon} />
-                  <Text
+                return (
+                  <TouchableOpacity
+                    key={mode.id}
                     style={[
-                      styles.collectionText,
-                      formData.collection_mode_id === mode.id && styles.collectionTextSelected,
+                      styles.collectionCard,
+                      formData.collection_mode_id === mode.id && styles.collectionCardSelected,
                     ]}
+                    onPress={() =>
+                      setFormData((prev) => ({ ...prev, collection_mode_id: mode.id }))
+                    }
                   >
-                    {mode.name.toUpperCase()}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+                    <Image source={iconSource} style={styles.collectionIcon} />
+                    <Text
+                      style={[
+                        styles.collectionText,
+                        formData.collection_mode_id === mode.id && styles.collectionTextSelected,
+                      ]}
+                    >
+                      {mode.name.toUpperCase()}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
 
+              </View>
             </View>
-          </View>
-          <Button 
-            onPress={handleNext} 
-            style={[
-              styles.button,
-              !validateStep1().isValid && styles.buttonDisabled
-            ]}
-            disabled={!validateStep1().isValid}
-          >
-            Next
-          </Button>
-        </ScrollView>
-      )}
+            <Button 
+              onPress={handleNext} 
+              style={[
+                styles.button,
+                !validateStep1().isValid && styles.buttonDisabled
+              ]}
+              disabled={!validateStep1().isValid}
+            >
+              Next
+            </Button>
+          </ScrollView>
+        )}
 
-      {step === 2 && (
-        <View style={{ flex: 1, backgroundColor: '#023F0F', paddingHorizontal: 0 }}>
-          <Text style={{ color: 'white', textAlign: 'center', fontSize: 16, marginVertical: 12, fontWeight: 'bold', letterSpacing: 1 }}>
-            Select your drop-off location
-          </Text>
-          <View style={styles.mapCardContainer}>
-            <View style={styles.mapCardShadow}>
-              <View style={styles.mapCard}>
-                {mapReady ? (
-                  <MapView
-                    ref={mapRef}
-                    provider={PROVIDER_GOOGLE}
-                    style={styles.mapImproved}
-                    initialRegion={region}
-                    onRegionChangeComplete={setRegion}
-                    onPress={async (e) => {
-                      const { latitude, longitude } = e.nativeEvent.coordinate;
-                      setMarker({ latitude, longitude });
-                      setFormData(prev => ({
-                        ...prev,
-                        location: {
-                          ...prev.location,
-                          latitude,
-                          longitude
-                        }
-                      }));
-                      await getAddressFromCoordinates(latitude, longitude);
-                    }}
-                  >
-                    <Marker
-                      coordinate={marker}
-                      draggable
-                      onDragEnd={async (e) => {
+        {step === 2 && (
+          <View style={{ flex: 1, backgroundColor: '#023F0F', paddingHorizontal: 0 }}>
+            <Text style={{ color: 'white', textAlign: 'center', fontSize: 16, marginVertical: 12, fontWeight: 'bold', letterSpacing: 1 }}>
+              Select your drop-off location
+            </Text>
+            <View style={styles.mapCardContainer}>
+              <View style={styles.mapCardShadow}>
+                <View style={styles.mapCard}>
+                  {mapReady ? (
+                    <MapView
+                      ref={mapRef}
+                      provider={PROVIDER_GOOGLE}
+                      style={styles.mapImproved}
+                      initialRegion={region}
+                      onRegionChangeComplete={setRegion}
+                      onPress={async (e) => {
                         const { latitude, longitude } = e.nativeEvent.coordinate;
                         setMarker({ latitude, longitude });
                         setFormData(prev => ({
@@ -821,72 +936,90 @@ export default function PostScreen() {
                         }));
                         await getAddressFromCoordinates(latitude, longitude);
                       }}
-                    />
-                  </MapView>
-                ) : (
-                  <View style={[styles.mapImproved, styles.mapPlaceholder]}>
-                    <ActivityIndicator size="large" color="#00FF57" />
-                  </View>
-                )}
-                {/* Floating Current Location Button */}
-                <TouchableOpacity
-                  style={styles.fabLocation}
-                  onPress={getCurrentLocation}
-                >
-                  <MaterialCommunityIcons name="crosshairs-gps" size={28} color="#fff" />
-                </TouchableOpacity>
+                    >
+                      <Marker
+                        coordinate={marker}
+                        draggable
+                        onDragEnd={async (e) => {
+                          const { latitude, longitude } = e.nativeEvent.coordinate;
+                          setMarker({ latitude, longitude });
+                          setFormData(prev => ({
+                            ...prev,
+                            location: {
+                              ...prev.location,
+                              latitude,
+                              longitude
+                            }
+                          }));
+                          await getAddressFromCoordinates(latitude, longitude);
+                        }}
+                      />
+                    </MapView>
+                  ) : (
+                    <View style={[styles.mapImproved, styles.mapPlaceholder]}>
+                      <ActivityIndicator size="large" color="#00FF57" />
+                    </View>
+                  )}
+                  {/* Floating Current Location Button */}
+                  <TouchableOpacity
+                    style={styles.fabLocation}
+                    onPress={getCurrentLocation}
+                  >
+                    <MaterialCommunityIcons name="crosshairs-gps" size={28} color="#fff" />
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
-          </View>
-          {/* Divider */}
-          <View style={{ height: 16 }} />
-          {/* Address Display Box */}
-          <View style={styles.addressCard}>
-            <Text style={styles.addressLabel}>Selected Location:</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
-              <Image source={GreenMark} style={{ width: 20, height: 20, marginRight: 8 }} resizeMode="contain" />
-              <Text style={styles.addressText}>{address || 'Loading address...'}</Text>
+            {/* Divider */}
+            <View style={{ height: 16 }} />
+            {/* Address Display Box */}
+            <View style={styles.addressCard}>
+              <Text style={styles.addressLabel}>Selected Location:</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                <Image source={GreenMark} style={{ width: 20, height: 20, marginRight: 8 }} resizeMode="contain" />
+                <Text style={styles.addressText}>{address || 'Loading address...'}</Text>
+              </View>
+            </View>
+            <View style={{ flex: 1 }} />
+            <View style={{ flexDirection: 'row', gap: 6, marginHorizontal: 18, marginTop: 24 }}>
+              <Button
+                mode="outlined"
+                onPress={() => setStep(1)}
+                style={{
+                  flex: 1,
+                  borderRadius: 15,
+                  borderWidth: 2,
+                  borderColor: '#888',
+                  height: 55,
+                  marginRight: 3,
+                  justifyContent: 'center',
+                }}
+                labelStyle={{ fontWeight: 'bold', fontSize: 16, color: '#888', letterSpacing: 1 }}
+              >
+                Back
+              </Button>
+              <Button
+                mode="contained"
+                onPress={handleSubmit}
+                loading={loading}
+                style={{
+                  flex: 1,
+                  borderRadius: 15,
+                  backgroundColor: '#00FF57',
+                  height: 55,
+                  marginLeft: 3,
+                  justifyContent: 'center',
+                }}
+                labelStyle={{ fontWeight: 'bold', fontSize: 16, color: '#222', letterSpacing: 1 }}
+              >
+                Submit Post
+              </Button>
             </View>
           </View>
-          <View style={{ flex: 1 }} />
-          <View style={{ flexDirection: 'row', gap: 6, marginHorizontal: 18, marginTop: 24 }}>
-            <Button
-              mode="outlined"
-              onPress={() => setStep(1)}
-              style={{
-                flex: 1,
-                borderRadius: 15,
-                borderWidth: 2,
-                borderColor: '#888',
-                height: 55,
-                marginRight: 3,
-                justifyContent: 'center',
-              }}
-              labelStyle={{ fontWeight: 'bold', fontSize: 16, color: '#888', letterSpacing: 1 }}
-            >
-              Back
-            </Button>
-            <Button
-              mode="contained"
-              onPress={handleSubmit}
-              loading={loading}
-              style={{
-                flex: 1,
-                borderRadius: 15,
-                backgroundColor: '#00FF57',
-                height: 55,
-                marginLeft: 3,
-                justifyContent: 'center',
-              }}
-              labelStyle={{ fontWeight: 'bold', fontSize: 16, color: '#222', letterSpacing: 1 }}
-            >
-              Submit Post
-            </Button>
-          </View>
-        </View>
-      )}
+        )}
 
-    </View>
+      </View>
+    </>
   );
 }
 
