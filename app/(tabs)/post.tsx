@@ -22,8 +22,13 @@ import PolyteLogo from '../../assets/images/polyte-logo.png';
 import PETImage from '../../assets/images/PET.png';
 import HDPEImage from '../../assets/images/HDPE.png';
 import PPImage from '../../assets/images/PP.png';
+import { GOOGLE_MAPS_API_KEY } from '@/constants/constants';
 
 type IconName = 'account-multiple' | 'map-marker' | 'home' | 'image-plus';
+type GooglePrediction = {
+  description: string;
+  place_id: string;
+};
 
 const itemOptions = [
   'Plastic Cups',
@@ -92,6 +97,8 @@ export default function PostScreen() {
   const [userId, setUserId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [predictions, setPredictions] = useState<GooglePrediction[]>([]);
 
   // Form data matching db schema
   const [formData, setFormData] = useState<FormData>({
@@ -197,6 +204,58 @@ export default function PostScreen() {
     } catch (error) {
       console.error('Error getting location:', error);
       Alert.alert('Error', 'Could not get your current location. Using default location instead.');
+    }
+  };
+
+  const fetchPredictions = async (text: string) => {
+    try {
+      setSearchQuery(text);
+      console.log("searching for: ", text);
+      if (text.length < 3) return;
+      const response = await fetch(`https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${text}&key=${GOOGLE_MAPS_API_KEY}&components=country:ph&location=${DAVAO_COORDS.latitude},${DAVAO_COORDS.longitude}&radius=30000`);
+      const data = await response.json();
+
+      console.log('🌐 API response:', data);
+
+      if (data.status === 'OK') {
+        console.log('📍 Predictions:', data.predictions);
+        setPredictions(data.predictions);
+      }  else {
+        console.warn('⚠️ No predictions found');
+      }
+    } catch (error) {
+      console.error('Prediction error:', error);
+    }
+  };
+
+  const handleSelectPrediction = async (prediction: { place_id: string; description: string }) => {
+    try {
+      console.log('📌 Selected prediction:', prediction);
+      console.log('✅ Using API key:', GOOGLE_MAPS_API_KEY);
+      const detailRes = await fetch(`https://maps.googleapis.com/maps/api/place/details/json?place_id=${prediction.place_id}&key=${GOOGLE_MAPS_API_KEY}`);
+      const detailData = await detailRes.json();
+      const { lat, lng } = detailData.result.geometry.location;
+      console.log('📍 Coordinates from details:', lat, lng);
+
+      const newRegion = {
+        latitude: lat,
+        longitude: lng,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      };
+
+      setRegion(newRegion);
+      setMarker({ latitude: lat, longitude: lng });
+      setFormData(prev => ({
+        ...prev,
+        location: { ...prev.location, latitude: lat, longitude: lng }
+      }));
+      await getAddressFromCoordinates(lat, lng);
+      mapRef.current?.animateToRegion(newRegion, 1000);
+      setPredictions([]);
+      setSearchQuery(prediction.description);
+    } catch (error) {
+      console.error('Place detail fetch failed:', error);
     }
   };
 
@@ -909,10 +968,37 @@ export default function PostScreen() {
         )}
 
         {step === 2 && (
-          <View style={{ flex: 1, backgroundColor: '#023F0F', paddingHorizontal: 0 }}>
+          <ScrollView
+          style={{ flex: 1, backgroundColor: '#023F0F' }}
+          contentContainerStyle={{ paddingBottom: 32 }}
+          keyboardShouldPersistTaps="handled"
+        >
             <Text style={{ color: 'white', textAlign: 'center', fontSize: 16, marginVertical: 12, fontWeight: 'bold', letterSpacing: 1 }}>
               Select your drop-off location
             </Text>
+            
+            {/* Search input */}
+            <View style={{ marginHorizontal: 16 }}>
+              <TextInput
+                placeholder="Search location..."
+                value={searchQuery}
+                onChangeText={fetchPredictions}
+                style={{ backgroundColor: 'white', padding: 8, borderRadius: 8, marginBottom: 4 }}
+              />
+              <ScrollView style={{ backgroundColor: 'white', maxHeight: 120 }}>
+                {predictions.map((prediction) => (
+                  <TouchableOpacity
+                    key={prediction.place_id}
+                    onPress={() => handleSelectPrediction(prediction)}
+                    style={{ padding: 10, borderBottomColor: '#ccc', borderBottomWidth: 1 }}
+                  >
+                    <Text>{prediction.description}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+
+            {/* MAP */}
             <View style={styles.mapCardContainer}>
               <View style={styles.mapCardShadow}>
                 <View style={styles.mapCard}>
@@ -1015,7 +1101,7 @@ export default function PostScreen() {
                 Submit Post
               </Button>
             </View>
-          </View>
+          </ScrollView>
         )}
 
       </View>

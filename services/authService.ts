@@ -23,6 +23,11 @@ export const authService = {
     account_type: 'personal' | 'barangay';
   }): Promise<SignUpResponse> {
     try {
+      console.log('🔍 SignUp Data:', {
+        first_name: data.first_name,
+        last_name: data.last_name
+      });
+
       // First, create the auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
@@ -45,6 +50,11 @@ export const authService = {
       // Then, create the user profile based on account type
       if (authData.user) {
         if (data.account_type === 'personal') {
+          console.log('📝 Inserting personal user with:', {
+            first_name: data.first_name,
+            last_name: data.last_name
+          });
+          
           const { error: profileError } = await supabase
             .from('personal_users')
             .insert([{

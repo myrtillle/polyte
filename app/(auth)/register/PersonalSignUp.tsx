@@ -135,6 +135,12 @@ export default function PersonalSignUp() {
       return;
     }
 
+    // Validate purok selection
+    if (barangayId && !purokId) {
+      setError('Please select a purok for your barangay');
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError('Passwords do not match');
       return;
