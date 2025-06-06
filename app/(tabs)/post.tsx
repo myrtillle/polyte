@@ -978,24 +978,36 @@ export default function PostScreen() {
             </Text>
             
             {/* Search input */}
-            <View style={{ marginHorizontal: 16 }}>
-              <TextInput
-                placeholder="Search location..."
-                value={searchQuery}
-                onChangeText={fetchPredictions}
-                style={{ backgroundColor: 'white', padding: 8, borderRadius: 8, marginBottom: 4 }}
-              />
-              <ScrollView style={{ backgroundColor: 'white', maxHeight: 120 }}>
-                {predictions.map((prediction) => (
-                  <TouchableOpacity
-                    key={prediction.place_id}
-                    onPress={() => handleSelectPrediction(prediction)}
-                    style={{ padding: 10, borderBottomColor: '#ccc', borderBottomWidth: 1 }}
-                  >
-                    <Text>{prediction.description}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+            <View style={styles.searchContainer}>
+              <Text style={styles.searchLabel}>SEARCH FOR LOCATION:</Text>
+
+              <View style={styles.searchInputWrapper}>
+                <MaterialCommunityIcons name="magnify" color="white" size={20} style={styles.searchIcon} />
+                <TextInput
+                  placeholder="Enter landmark, purok, or building"
+                  placeholderTextColor="#fff"
+                  value={searchQuery}
+                  onChangeText={fetchPredictions}
+                  style={styles.searchInput}
+                  theme={{ colors: { text: 'white', placeholder: '#ccc' } }}
+                />
+              </View>
+
+              {predictions.length > 0 && (
+                <View style={styles.predictionBox}>
+                  <ScrollView keyboardShouldPersistTaps="handled">
+                    {predictions.map((prediction) => (
+                      <TouchableOpacity
+                        key={prediction.place_id}
+                        onPress={() => handleSelectPrediction(prediction)}
+                        style={styles.predictionItem}
+                      >
+                        <Text style={styles.predictionText}>{prediction.description}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
             </View>
 
             {/* MAP */}
@@ -1628,5 +1640,51 @@ const styles = StyleSheet.create({
     fontSize: 16,
     letterSpacing: 1,
     color: '#222',
+  },
+  searchContainer: {
+    marginHorizontal: 18,
+    marginBottom: 12,
+  },
+  searchLabel: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 14,
+    marginBottom: 6,
+    letterSpacing: 0.5,
+  },
+  searchInputWrapper: {
+    backgroundColor: '#1A3620',
+    borderRadius: 15,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    color: 'white',
+    fontSize: 14,
+    backgroundColor: '#1A3620'
+  },
+  predictionBox: {
+    backgroundColor: '#1A3620',
+    borderRadius: 12,
+    marginTop: 6,
+    maxHeight: 180,
+    borderWidth: 1,
+    borderColor: '#00FF57',
+  },
+  predictionItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomColor: '#2D4F38',
+    borderBottomWidth: 1,
+  },
+  predictionText: {
+    color: 'white',
+    fontSize: 13,
   },
 }); 
